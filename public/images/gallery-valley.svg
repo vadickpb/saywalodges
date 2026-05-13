@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6BA3C8"/>
+      <stop offset="100%" stop-color="#A8CEDE"/>
+    </linearGradient>
+    <linearGradient id="valley" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3D7A4A"/>
+      <stop offset="100%" stop-color="#2A5535"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky3)"/>
+  <ellipse cx="200" cy="250" rx="300" ry="200" fill="#2D4A3E"/>
+  <ellipse cx="650" cy="230" rx="280" ry="180" fill="#1F3329"/>
+  <ellipse cx="400" cy="290" rx="250" ry="160" fill="#243D30"/>
+  <rect x="0" y="380" width="800" height="220" fill="url(#valley)"/>
+  <ellipse cx="400" cy="380" rx="400" ry="80" fill="#4A8A5A" opacity="0.6"/>
+  <rect x="0" y="500" width="800" height="100" fill="#2A5535" opacity="0.8"/>
+  <text x="400" y="560" text-anchor="middle" font-family="Georgia" font-size="18" fill="#FAFAF7" opacity="0.7">Sacred Valley Views</text>
+</svg>

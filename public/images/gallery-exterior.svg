@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="sky4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7BA8C8"/>
+      <stop offset="100%" stop-color="#B8D4E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky4)"/>
+  <ellipse cx="650" cy="200" rx="220" ry="160" fill="#2D4A3E" opacity="0.8"/>
+  <ellipse cx="100" cy="220" rx="180" ry="140" fill="#1F3329" opacity="0.85"/>
+  <rect x="150" y="300" width="500" height="220" rx="6" fill="#C8B99A"/>
+  <rect x="150" y="300" width="500" height="40" rx="6" fill="#8B7355"/>
+  <rect x="200" y="360" width="120" height="100" fill="#D4C9B5" stroke="#B0A080" stroke-width="2"/>
+  <rect x="480" y="360" width="120" height="100" fill="#D4C9B5" stroke="#B0A080" stroke-width="2"/>
+  <rect x="340" y="380" width="120" height="140" rx="2" fill="#8B7355"/>
+  <rect x="0" y="500" width="800" height="100" fill="#4A6B3A" opacity="0.7"/>
+  <rect x="100" y="460" width="30" height="80" fill="#3A5A2A" opacity="0.8"/>
+  <rect x="670" y="450" width="30" height="90" fill="#3A5A2A" opacity="0.8"/>
+  <text x="400" y="560" text-anchor="middle" font-family="Georgia" font-size="18" fill="#FAFAF7" opacity="0.7">Lodge Exterior</text>
+</svg>

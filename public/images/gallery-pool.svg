@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#A8C5DA"/>
+  <rect x="0" y="300" width="800" height="300" fill="#2D4A3E"/>
+  <rect x="100" y="350" width="600" height="180" rx="4" fill="#4A90D9" opacity="0.9"/>
+  <rect x="100" y="350" width="600" height="12" fill="#7DC8F0" opacity="0.7"/>
+  <rect x="50" y="320" width="700" height="20" fill="#5A4A3A" opacity="0.5"/>
+  <text x="400" y="200" text-anchor="middle" font-family="Georgia" font-size="18" fill="#1a1a1a" opacity="0.4">Private Pool</text>
+</svg>

@@ -1,0 +1,145 @@
+const en = {
+  nav: {
+    about: "About",
+    gallery: "Gallery",
+    rates: "Rates",
+    location: "Location",
+    bookNow: "Book Now",
+  },
+  hero: {
+    label: "Sacred Valley · Cusco · Perú",
+    title: "Your private sanctuary",
+    titleItalic: "in the Sacred Valley",
+    subtitle: "Urubamba · Cusco · Perú",
+    whatsapp: "Book via WhatsApp",
+    viewGallery: "View Gallery",
+  },
+  amenities: {
+    label: "What's included",
+    title: "A completely",
+    titleItalic: "private experience",
+    items: [
+      {
+        title: "Private Pool",
+        description: "Exclusive pool with panoramic views of the Sacred Valley.",
+      },
+      {
+        title: "Full Kitchen",
+        description: "Fully equipped kitchen with everything you need to cook your meals.",
+      },
+      {
+        title: "Mountain Views",
+        description: "Breathtaking Andean landscapes from every corner of the lodge.",
+      },
+      {
+        title: "Private Lodge",
+        description: "Exclusive property. Just for you and your companions.",
+      },
+      {
+        title: "Sacred Valley",
+        description: "In the heart of the Sacred Valley of the Incas, Urubamba.",
+      },
+      {
+        title: "Near Machu Picchu",
+        description: "1.5 hours from the world's most famous citadel.",
+      },
+    ],
+  },
+  gallery: {
+    label: "Gallery",
+    title: "The space that",
+    titleItalic: "awaits you",
+    cta: "Interested? Write to us",
+  },
+  rates: {
+    label: "Rates",
+    title: "Choose your",
+    titleItalic: "experience",
+    note: "Minimum 2 nights. Prices in USD per night, taxes included.",
+    bottomNote: "Large group or extended stay? Contact us for special rates.",
+    plans: [
+      {
+        name: "Standard",
+        description: "Low season",
+        price: 180,
+        period: "night",
+        features: [
+          "Full private lodge",
+          "Exclusive pool",
+          "Equipped kitchen",
+          "Up to 6 guests",
+          "High-speed WiFi",
+        ],
+        cta: "Check availability",
+      },
+      {
+        name: "High Season",
+        description: "Peak season (Jun–Sep)",
+        price: 250,
+        period: "night",
+        features: [
+          "Full private lodge",
+          "Exclusive pool",
+          "Equipped kitchen",
+          "Up to 6 guests",
+          "High-speed WiFi",
+          "Flexible check-in",
+        ],
+        cta: "Book now",
+      },
+      {
+        name: "Full Lodge",
+        description: "Premium experience",
+        price: 380,
+        period: "night",
+        features: [
+          "Full private lodge",
+          "Exclusive pool",
+          "Equipped kitchen",
+          "Up to 10 guests",
+          "High-speed WiFi",
+          "Flexible check-in",
+          "Sacred Valley tour included",
+        ],
+        cta: "Check availability",
+      },
+    ],
+  },
+  location: {
+    label: "Location",
+    title: "In the heart of the",
+    titleItalic: "Sacred Valley",
+    description:
+      "Saywa Lodges is in Urubamba, at 2,800 m above sea level, surrounded by Andean mountains and along the sacred river. A privileged location connecting you to the main archaeological and historical sites of the Inca Sacred Valley.",
+    mapsLink: "View on Google Maps",
+    altitude: "2,800 m above sea level",
+    distances: [
+      { place: "Ollantaytambo", time: "45 min", icon: "🚗" },
+      { place: "Cusco", time: "2 hours", icon: "🚗" },
+      { place: "Machu Picchu", time: "1.5 hours", icon: "🚂" },
+      { place: "Pisac & Market", time: "25 min", icon: "🚗" },
+      { place: "Urubamba River", time: "5 min", icon: "🚶" },
+      { place: "Moray & Salt Mines", time: "30 min", icon: "🚗" },
+    ],
+  },
+  footer: {
+    tagline: "Private vacation lodge in Urubamba,\nSacred Valley of the Incas, Cusco, Perú.",
+    ctaTitle: "Ready for your Andean escape?",
+    ctaDesc:
+      "Write to us on WhatsApp and we'll reply within 2 hours with availability and details for your stay.",
+    ctaBtn: "Write on WhatsApp",
+    exploreLabel: "Explore",
+    contactLabel: "Contact",
+    explore: [
+      { label: "About the Lodge", href: "#amenities" },
+      { label: "Gallery", href: "#gallery" },
+      { label: "Rates", href: "#rates" },
+      { label: "Location", href: "#location" },
+    ],
+    copyright: "Saywa Lodges. Urubamba, Cusco, Perú.",
+    altitude: "Sacred Valley · 2,800 m",
+  },
+};
+
+export default en;
+export type Dict = typeof en;
