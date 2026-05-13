@@ -1,4 +1,5 @@
 import type { Dict } from "@/dictionaries";
+import { MAPS_URL } from "@/config/site";
 
 type Props = { dict: Dict["location"] };
 
@@ -29,7 +30,7 @@ export default function Location({ dict }: Props) {
             </div>
 
             <a
-              href="https://maps.google.com/?q=Urubamba,Cusco,Peru"
+              href={MAPS_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-forest border-b border-forest/40 pb-0.5 hover:border-forest transition-colors duration-200 tracking-wide"

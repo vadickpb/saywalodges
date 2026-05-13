@@ -25,7 +25,9 @@ export default function Navbar({ dict, lang }: Props) {
     { label: dict.about, href: "#amenities" },
     { label: dict.gallery, href: "#gallery" },
     { label: dict.rates, href: "#rates" },
+    { label: dict.availability, href: "#availability" },
     { label: dict.location, href: "#location" },
+    { label: dict.contact, href: "#contact" },
   ];
 
   return (

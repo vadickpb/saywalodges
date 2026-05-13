@@ -1,4 +1,5 @@
 import type { Dict } from "@/dictionaries";
+import { WHATSAPP_NUMBER } from "@/config/site";
 
 type Props = { dict: Dict["rates"] };
 
@@ -60,7 +61,7 @@ export default function Rates({ dict }: Props) {
 
                 <div className="px-8 pb-8">
                   <a
-                    href={`https://wa.me/51999999999?text=${encodeURIComponent(`Hi, I'm interested in the ${plan.name} plan at Saywa Lodges`)}`}
+                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hi, I'm interested in the ${plan.name} plan at Saywa Lodges`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`block text-center text-sm tracking-wide py-3 rounded-full transition-all duration-200 ${

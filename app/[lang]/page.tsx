@@ -6,7 +6,10 @@ import Amenities from "@/components/Amenities";
 import Gallery from "@/components/Gallery";
 import Rates from "@/components/Rates";
 import Location from "@/components/Location";
+import Availability from "@/components/Availability";
+import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
 
 export default async function Home({
   params,
@@ -26,9 +29,12 @@ export default async function Home({
         <Amenities dict={dict.amenities} />
         <Gallery dict={dict.gallery} />
         <Rates dict={dict.rates} />
+        <Availability dict={dict.availability} />
         <Location dict={dict.location} />
+        <ContactSection dict={dict.contact} lang={lang} />
       </main>
       <Footer dict={dict.footer} lang={lang} />
+      <WhatsAppFloat />
     </>
   );
 }

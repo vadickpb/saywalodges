@@ -8,7 +8,7 @@ export default function Hero({ dict }: Props) {
     <section
       id="hero"
       className="relative h-screen min-h-[600px] flex items-center justify-center overflow-hidden"
-      style={{ backgroundImage: "url('/images/hero-pool.svg')" }}
+      style={{ backgroundImage: "url('/images/foto3.jpeg')" }}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
 

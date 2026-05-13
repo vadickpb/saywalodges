@@ -2,12 +2,12 @@ import Image from "next/image";
 import type { Dict } from "@/dictionaries";
 
 const photos = [
-  { src: "/images/gallery-pool.svg", alt: "Private pool with Sacred Valley views" },
-  { src: "/images/gallery-kitchen.svg", alt: "Fully equipped kitchen" },
-  { src: "/images/gallery-bedroom.svg", alt: "Master bedroom with mountain view" },
-  { src: "/images/gallery-terrace.svg", alt: "Mountain terrace panoramic view" },
-  { src: "/images/gallery-valley.svg", alt: "Sacred Valley views from the lodge" },
-  { src: "/images/gallery-exterior.svg", alt: "Lodge exterior" },
+  { src: "/images/foto1.jpeg", alt: "Lodge exterior with garden and Andean landscape" },
+  { src: "/images/foto4.jpeg", alt: "Private pool illuminated at night" },
+  { src: "/images/foto5.jpeg", alt: "Outdoor BBQ area with garden views" },
+  { src: "/images/foto6.jpeg", alt: "Master bedroom with Sacred Valley view" },
+  { src: "/images/foto7.jpeg", alt: "Double bedroom with wooden floors" },
+  { src: "/images/foto8.jpeg", alt: "Twin bedroom with mountain window view" },
 ];
 
 type Props = { dict: Dict["gallery"] };
