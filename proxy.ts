@@ -11,13 +11,22 @@ function getLocale(request: NextRequest): string {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const hasLocale = locales.some(
+  const matchedLocale = locales.find(
     (l) => pathname.startsWith(`/${l}/`) || pathname === `/${l}`
   );
-  if (hasLocale) return;
+  const hasLocale = Boolean(matchedLocale);
+  const lang = matchedLocale ?? getLocale(request);
 
-  const locale = getLocale(request);
-  request.nextUrl.pathname = `/${locale}${pathname}`;
+  // Forward the active locale as a request header so the root layout
+  // can set <html lang="..."> correctly on the server.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-lang", lang);
+
+  if (hasLocale) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  request.nextUrl.pathname = `/${lang}${pathname}`;
   return NextResponse.redirect(request.nextUrl);
 }
 

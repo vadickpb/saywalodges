@@ -25,9 +25,9 @@ export default async function Home({
     <>
       <Navbar dict={dict.nav} lang={lang} />
       <main>
-        <Hero dict={dict.hero} />
+        <Hero dict={dict.hero} lang={lang} />
         <Amenities dict={dict.amenities} />
-        <Gallery dict={dict.gallery} />
+        <Gallery dict={dict.gallery} lang={lang} />
         <Rates dict={dict.rates} />
         <Availability dict={dict.availability} />
         <Location dict={dict.location} />
