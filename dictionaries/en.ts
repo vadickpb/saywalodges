@@ -162,6 +162,7 @@ const en = {
     emailLabel: "Prefer email?",
     emailDesc: "Send us an inquiry and we'll get back to you within 24 hours.",
     fieldName: "Your name",
+    fieldEmail: "Email",
     fieldGuests: "Guests",
     fieldDates: "Dates",
     datesPlaceholder: "e.g. Jul 10–15, 2025",

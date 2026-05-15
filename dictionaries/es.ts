@@ -164,6 +164,7 @@ const es: Dict = {
     emailLabel: "¿Prefieres email?",
     emailDesc: "Envíanos una consulta y te respondemos en menos de 24 horas.",
     fieldName: "Tu nombre",
+    fieldEmail: "Email",
     fieldGuests: "Personas",
     fieldDates: "Fechas",
     datesPlaceholder: "Ej. 10–15 Jul 2025",

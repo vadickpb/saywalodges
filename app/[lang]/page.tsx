@@ -28,8 +28,8 @@ export default async function Home({
         <Hero dict={dict.hero} lang={lang} />
         <Amenities dict={dict.amenities} />
         <Gallery dict={dict.gallery} lang={lang} />
-        <Rates dict={dict.rates} />
-        <Availability dict={dict.availability} />
+        <Rates dict={dict.rates} lang={lang} />
+        <Availability dict={dict.availability} lang={lang} />
         <Location dict={dict.location} />
         <ContactSection dict={dict.contact} lang={lang} />
       </main>

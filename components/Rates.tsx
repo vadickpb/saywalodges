@@ -1,9 +1,11 @@
 import type { Dict } from "@/dictionaries";
-import { WHATSAPP_NUMBER } from "@/config/site";
+import { WHATSAPP_NUMBER, WHATSAPP_MESSAGE_EN, WHATSAPP_MESSAGE_ES } from "@/config/site";
 
-type Props = { dict: Dict["rates"] };
+type Props = { dict: Dict["rates"]; lang: string };
 
-export default function Rates({ dict }: Props) {
+export default function Rates({ dict, lang }: Props) {
+  const waMessage = lang === "es" ? WHATSAPP_MESSAGE_ES : WHATSAPP_MESSAGE_EN;
+
   return (
     <section id="rates" className="py-24 lg:py-32 bg-cream">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
@@ -20,6 +22,7 @@ export default function Rates({ dict }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
           {dict.plans.map((plan, i) => {
             const highlighted = i === 1;
+            const planMsg = `${waMessage} — ${plan.name}`;
             return (
               <div
                 key={plan.name}
@@ -50,7 +53,7 @@ export default function Rates({ dict }: Props) {
                   <ul className="space-y-3">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm">
-                        <svg className={`w-4 h-4 mt-0.5 shrink-0 ${highlighted ? "text-earth" : "text-forest"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-4 h-4 mt-0.5 shrink-0 ${highlighted ? "text-earth" : "text-forest"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                         <span className={highlighted ? "text-white/85" : "text-stone"}>{f}</span>
@@ -61,7 +64,7 @@ export default function Rates({ dict }: Props) {
 
                 <div className="px-8 pb-8">
                   <a
-                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hi, I'm interested in the ${plan.name} plan at Saywa Lodges`)}`}
+                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(planMsg)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`block text-center text-sm tracking-wide py-3 rounded-full transition-all duration-200 ${

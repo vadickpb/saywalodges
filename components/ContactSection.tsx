@@ -90,7 +90,7 @@ export default function ContactSection({ dict, lang }: Props) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-stone uppercase tracking-wide">Email</label>
+              <label className="text-xs text-stone uppercase tracking-wide">{dict.fieldEmail}</label>
               <input
                 required
                 type="email"
