@@ -8,47 +8,47 @@
     {
       "id": "suite",
       "folder": "suite",
-      "photos": []
+      "photos": ["suite-01.jpeg"]
     },
     {
       "id": "queen-a",
       "folder": "queen-a",
-      "photos": []
+      "photos": ["queen-a-01.jpeg", "queen-a-02.jpeg"]
     },
     {
       "id": "queen-b",
       "folder": "queen-b",
-      "photos": []
+      "photos": ["queen-b-01.jpeg", "queen-b-02.jpeg"]
     },
     {
       "id": "queen-c",
       "folder": "queen-c",
-      "photos": []
+      "photos": ["queen-c-01.jpeg", "queen-c-02.jpeg"]
     },
     {
       "id": "bunks",
       "folder": "bunks",
-      "photos": []
+      "photos": ["bunks-01.jpeg", "bunks-02.jpeg"]
     },
     {
       "id": "living",
       "folder": "living",
-      "photos": []
+      "photos": ["living-01.jpeg", "living-02.jpeg", "living-03.jpeg"]
     },
     {
       "id": "garden",
       "folder": "garden",
-      "photos": []
+      "photos": ["garden-01.jpeg", "garden-02.jpeg", "garden-03.jpeg"]
     },
     {
       "id": "bbq",
       "folder": "bbq",
-      "photos": []
+      "photos": ["bbq-01.jpeg"]
     },
     {
       "id": "exterior",
       "folder": "exterior",
-      "photos": []
+      "photos": ["exterior-01.jpeg"]
     }
   ]
 }
