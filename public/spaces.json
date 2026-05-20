@@ -1,0 +1,54 @@
+{
+  "spaces": [
+    {
+      "id": "pool",
+      "folder": "pool",
+      "photos": []
+    },
+    {
+      "id": "suite",
+      "folder": "suite",
+      "photos": []
+    },
+    {
+      "id": "queen-a",
+      "folder": "queen-a",
+      "photos": []
+    },
+    {
+      "id": "queen-b",
+      "folder": "queen-b",
+      "photos": []
+    },
+    {
+      "id": "queen-c",
+      "folder": "queen-c",
+      "photos": []
+    },
+    {
+      "id": "bunks",
+      "folder": "bunks",
+      "photos": []
+    },
+    {
+      "id": "living",
+      "folder": "living",
+      "photos": []
+    },
+    {
+      "id": "garden",
+      "folder": "garden",
+      "photos": []
+    },
+    {
+      "id": "bbq",
+      "folder": "bbq",
+      "photos": []
+    },
+    {
+      "id": "exterior",
+      "folder": "exterior",
+      "photos": []
+    }
+  ]
+}

@@ -55,6 +55,15 @@ const en = {
     titleItalic: "awaits you",
     cta: "Interested? Write to us",
   },
+  spaces: {
+    label: "Rooms & Spaces",
+    title: "Every corner of",
+    titleItalic: "Saywa Lodges",
+    subtitle: "Explore each area of the lodge — rooms, pool, gardens and outdoor spaces.",
+    noPhotos: "Photos coming soon",
+    capacity: "guests",
+    viewMore: "More photos",
+  },
   rates: {
     label: "Rates",
     title: "Choose your",

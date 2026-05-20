@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Amenities from "@/components/Amenities";
 import Gallery from "@/components/Gallery";
+import SpacesSection from "@/components/SpacesSection";
 import Rates from "@/components/Rates";
 import Location from "@/components/Location";
 import Availability from "@/components/Availability";
@@ -28,6 +29,7 @@ export default async function Home({
         <Hero dict={dict.hero} lang={lang} />
         <Amenities dict={dict.amenities} />
         <Gallery dict={dict.gallery} lang={lang} />
+        <SpacesSection dict={dict.spaces} lang={lang} />
         <Rates dict={dict.rates} lang={lang} />
         <Availability dict={dict.availability} lang={lang} />
         <Location dict={dict.location} />

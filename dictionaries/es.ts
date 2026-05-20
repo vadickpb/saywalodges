@@ -57,6 +57,15 @@ const es: Dict = {
     titleItalic: "te espera",
     cta: "¿Te interesa? Escríbenos",
   },
+  spaces: {
+    label: "Habitaciones & Espacios",
+    title: "Cada rincón de",
+    titleItalic: "Saywa Lodges",
+    subtitle: "Explora cada área del lodge — habitaciones, piscina, jardines y espacios al aire libre.",
+    noPhotos: "Fotos próximamente",
+    capacity: "personas",
+    viewMore: "Más fotos",
+  },
   rates: {
     label: "Tarifas",
     title: "Elige tu",
