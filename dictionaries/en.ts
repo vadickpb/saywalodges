@@ -9,12 +9,14 @@ const en = {
     bookNow: "Book Now",
   },
   hero: {
-    label: "Sacred Valley · Cusco · Perú",
-    title: "Your private sanctuary",
-    titleItalic: "in the Sacred Valley",
-    subtitle: "Urubamba · Cusco · Perú",
+    label: "Valle Sagrado · Urubamba · Cusco · Perú",
+    title: "Private country house in Urubamba",
+    titleItalic: "with heated pool, hot tub & mountain views",
+    highlights: ["Heated pool · Hot tub", "Up to 13 guests", "Gardens · BBQ · Clay oven", "Sacred Valley"],
+    subtitle:
+      "An exclusive stay in the Sacred Valley, ideal for families and groups of up to 13 guests. Saywa Lodges features a heated covered pool with hot tub, spacious gardens, terrace bedrooms, BBQ area, clay oven and a prime location to explore Urubamba, Ollantaytambo and Machu Picchu.",
     whatsapp: "Book via WhatsApp",
-    viewGallery: "View Gallery",
+    viewGallery: "View rooms & photos",
   },
   amenities: {
     label: "What's included",

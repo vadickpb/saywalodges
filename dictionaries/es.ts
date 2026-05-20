@@ -11,12 +11,14 @@ const es: Dict = {
     bookNow: "Reservar",
   },
   hero: {
-    label: "Valle Sagrado · Cusco · Perú",
-    title: "Tu santuario privado",
-    titleItalic: "en el Valle Sagrado",
-    subtitle: "Urubamba · Cusco · Perú",
+    label: "Valle Sagrado · Urubamba · Cusco · Perú",
+    title: "Casa de campo privada en Urubamba",
+    titleItalic: "con piscina temperada, hidromasaje y vistas a montañas",
+    highlights: ["Piscina temperada · Hidromasaje", "Hasta 13 personas", "Jardines · Parrilla · Horno de barro", "Valle Sagrado"],
+    subtitle:
+      "Disfruta una estadía exclusiva en el Valle Sagrado, ideal para familias y grupos de hasta 13 personas. Saywa Lodges cuenta con piscina temperada/cubierta con hidromasaje, amplios jardines, habitaciones con terraza, zona de parrilla, horno de barro y una ubicación estratégica para visitar Urubamba, Ollantaytambo y Machu Picchu.",
     whatsapp: "Reservar por WhatsApp",
-    viewGallery: "Ver Galería",
+    viewGallery: "Ver habitaciones y fotos",
   },
   amenities: {
     label: "Lo que incluye",
