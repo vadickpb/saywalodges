@@ -3,7 +3,7 @@
     {
       "id": "pool",
       "folder": "pool",
-      "photos": []
+      "photos": ["pool-01.jpeg", "pool-02.jpeg", "pool-03.jpeg"]
     },
     {
       "id": "suite",

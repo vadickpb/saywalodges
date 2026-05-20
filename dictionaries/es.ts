@@ -61,7 +61,7 @@ const es: Dict = {
     label: "Habitaciones & Espacios",
     title: "Cada rincón de",
     titleItalic: "Saywa Lodges",
-    subtitle: "Explora cada área del lodge — habitaciones, piscina, jardines y espacios al aire libre.",
+    subtitle: "La casa cuenta con 5 habitaciones en diferentes niveles, pensadas para familias y grupos. La mayoría cuenta con baño privado, terraza o vista a las montañas.",
     noPhotos: "Fotos próximamente",
     capacity: "personas",
     viewMore: "Más fotos",

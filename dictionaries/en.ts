@@ -59,7 +59,7 @@ const en = {
     label: "Rooms & Spaces",
     title: "Every corner of",
     titleItalic: "Saywa Lodges",
-    subtitle: "Explore each area of the lodge — rooms, pool, gardens and outdoor spaces.",
+    subtitle: "The house has 5 rooms spread across different levels, designed for families and groups seeking comfort, privacy and Sacred Valley views. Most rooms have a private bathroom, terrace or mountain views.",
     noPhotos: "Photos coming soon",
     capacity: "guests",
     viewMore: "More photos",

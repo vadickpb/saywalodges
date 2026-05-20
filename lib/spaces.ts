@@ -32,23 +32,22 @@ export const SPACES_META: SpaceMeta[] = [
     folder: "suite",
     category: "rooms",
     icon: "🛏️",
-    label: { en: "Master Suite", es: "Suite Principal" },
+    label: { en: "Patio Room", es: "Habitación Patio" },
     desc: {
-      en: "King bed, private bathroom and terrace with mountain views. Maximum comfort.",
-      es: "Cama king, baño privado y terraza con vista a las montañas. Máximo confort.",
+      en: "Double bed, private bathroom with hot shower, and views of the patio and mountains. First floor.",
+      es: "Cama de 2 plazas, baño privado con ducha de agua caliente y vista al patio y las montañas. Primer piso.",
     },
     capacity: "2",
-    badge: { en: "Master suite", es: "Suite principal" },
   },
   {
     id: "queen-a",
     folder: "queen-a",
     category: "rooms",
     icon: "🛏️",
-    label: { en: "Queen Room A", es: "Habitación Queen A" },
+    label: { en: "Panoramic Queen Room", es: "Habitación Panorámica Queen" },
     desc: {
-      en: "Queen bed with private terrace and Andean mountain views.",
-      es: "Cama queen con terraza privada y vistas a las montañas andinas.",
+      en: "Queen bed, private bathroom and terrace with panoramic mountain views. Second floor.",
+      es: "Cama queen, baño privado y terraza con vista panorámica a las montañas. Segundo piso.",
     },
     capacity: "2",
   },
@@ -57,10 +56,10 @@ export const SPACES_META: SpaceMeta[] = [
     folder: "queen-b",
     category: "rooms",
     icon: "🛏️",
-    label: { en: "Queen Room B", es: "Habitación Queen B" },
+    label: { en: "Terrace Queen Room", es: "Habitación Terraza Queen" },
     desc: {
-      en: "Queen bed with terrace and garden views. Natural light all day.",
-      es: "Cama queen con terraza y vista al jardín. Luz natural todo el día.",
+      en: "Queen bed, private bathroom, terrace and views of the mountains and patio. Second floor.",
+      es: "Cama queen, baño privado, terraza y vista a las montañas y al patio. Segundo piso.",
     },
     capacity: "2",
   },
@@ -68,26 +67,27 @@ export const SPACES_META: SpaceMeta[] = [
     id: "queen-c",
     folder: "queen-c",
     category: "rooms",
-    icon: "🛏️",
-    label: { en: "Queen Room C", es: "Habitación Queen C" },
+    icon: "🏔️",
+    label: { en: "Valley View Room", es: "Habitación Mirador del Valle" },
     desc: {
-      en: "Queen bed with access to shared terrace and valley views.",
-      es: "Cama queen con acceso a terraza compartida y vistas al valle.",
+      en: "2 full-size beds, large panoramic window and access to a rooftop terrace with sweeping Sacred Valley views. Shared bathroom.",
+      es: "2 camas de plaza y media, amplio ventanal tipo mirador y acceso a terraza superior con vista panorámica al Valle Sagrado. Baño compartido.",
     },
-    capacity: "2",
+    capacity: "3–4",
+    badge: { en: "Valley views", es: "Vista al Valle" },
   },
   {
     id: "bunks",
     folder: "bunks",
     category: "rooms",
     icon: "👨‍👩‍👧‍👦",
-    label: { en: "Family / Group Room", es: "Habitación Familiar / Grupal" },
+    label: { en: "Family Room with Bunks", es: "Habitación Familiar con Literas" },
     desc: {
-      en: "Bunk beds perfect for families, kids and groups. Fits up to 4–5 guests.",
-      es: "Literas ideales para familias, niños y grupos. Capacidad para 4–5 personas.",
+      en: "Full-size bed plus 2 bunk beds, private bathroom, terrace and views of the patio and mountains. Ideal for families and groups.",
+      es: "Cama de plaza y media, 2 literas, baño privado, terraza y vista al patio y las montañas. Ideal para familias, niños o grupos.",
     },
-    capacity: "4–5",
-    badge: { en: "Ideal for kids", es: "Ideal para niños" },
+    capacity: "5–6",
+    badge: { en: "Ideal for families", es: "Ideal para familias" },
   },
   {
     id: "living",
@@ -149,14 +149,12 @@ type SpacesConfig = {
   spaces: { id: string; folder: string; photos: string[] }[];
 };
 
-let _cache: SpacesConfig | null = null;
-
 export async function getSpacesConfig(): Promise<SpacesConfig> {
-  if (_cache) return _cache;
+  // No in-memory cache — Next.js handles request-level deduplication.
+  // This ensures new photos appear immediately after spaces.json is updated.
   const file = path.join(process.cwd(), "public", "spaces.json");
   const raw = await fs.readFile(file, "utf-8");
-  _cache = JSON.parse(raw) as SpacesConfig;
-  return _cache;
+  return JSON.parse(raw) as SpacesConfig;
 }
 
 // Merge static metadata with dynamic photos
