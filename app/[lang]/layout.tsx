@@ -5,6 +5,7 @@ import { SITE_URL } from "@/config/site";
 import { getProperty, getAmenities, resolveAmenity } from "@/lib/property";
 import { getSpaces } from "@/lib/spaces";
 import { getPhotosConfig } from "@/lib/photos";
+import { toJsonLd } from "@/lib/json-ld";
 
 export async function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
@@ -123,7 +124,7 @@ export default async function LangLayout({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
       />
       {children}
     </>
