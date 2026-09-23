@@ -4,7 +4,7 @@ import { locales, defaultLocale } from "./dictionaries";
 
 // ─── Admin Basic Auth ────────────────────────────────────────────────────────
 // Protected paths: the UI and the API routes it calls.
-const ADMIN_PATHS = ["/admin", "/api/photos", "/api/upload"];
+const ADMIN_PATHS = ["/admin", "/api/admin"];
 
 function requiresAuth(pathname: string) {
   return ADMIN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
