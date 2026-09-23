@@ -1,88 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getProperty } from "@/lib/property";
+import { contentPayloadSchema } from "@/lib/validation/admin";
+import { serverError, validationError } from "@/lib/api-error";
 
 // Single-tenant admin: reads/writes the one property plus its rooms, rate
 // tiers, amenities and distances in one payload — mirrors the single-file
 // save pattern the old photos.json admin used.
-
-type RoomInput = {
-  id?: string;
-  key: string;
-  category: "pool" | "rooms" | "common" | "outdoor";
-  icon: string;
-  capacity: string | null;
-  badgeEn: string | null;
-  badgeEs: string | null;
-  labelEn: string;
-  labelEs: string;
-  descEn: string;
-  descEs: string;
-  sortOrder: number;
-};
-
-type RateTierInput = {
-  id?: string;
-  seasonEn: string;
-  seasonEs: string;
-  fromEn: string;
-  fromEs: string;
-  periodEn: string;
-  periodEs: string;
-  tagEn: string;
-  tagEs: string;
-  sortOrder: number;
-};
-
-type AmenityInput = {
-  id?: string;
-  icon: string;
-  titleEn: string;
-  titleEs: string;
-  descEn: string;
-  descEs: string;
-  sortOrder: number;
-};
-
-type DistanceInput = {
-  id?: string;
-  placeEn: string;
-  placeEs: string;
-  timeEn: string;
-  timeEs: string;
-  icon: string;
-  sortOrder: number;
-};
-
-type ContentPayload = {
-  property: {
-    name: string;
-    whatsappNumber: string;
-    whatsappMessageEn: string;
-    whatsappMessageEs: string;
-    email: string;
-    mapsUrl: string;
-    airbnbUrl: string;
-    addressLocality: string;
-    addressRegion: string;
-    addressCountry: string;
-    latitude: number | null;
-    longitude: number | null;
-    metaTitleEn: string;
-    metaTitleEs: string;
-    metaDescriptionEn: string;
-    metaDescriptionEs: string;
-    metaKeywordsEn: string[];
-    metaKeywordsEs: string[];
-    priceRange: string;
-    starRating: number | null;
-    petsAllowed: boolean;
-  };
-  rooms: RoomInput[];
-  rateTiers: RateTierInput[];
-  amenities: AmenityInput[];
-  distances: DistanceInput[];
-};
 
 // Replaces the set of rows for `table` scoped to `propertyId`: updates rows
 // whose id already exists, inserts new ones, deletes rows no longer present.
@@ -133,7 +57,7 @@ export async function GET() {
   ]);
 
   for (const res of [rooms, rateTiers, amenities, distances]) {
-    if (res.error) return NextResponse.json({ error: res.error.message }, { status: 500 });
+    if (res.error) return serverError("admin/content GET", res.error);
   }
 
   return NextResponse.json({
@@ -186,7 +110,11 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const body = (await request.json()) as ContentPayload;
+  const json = await request.json();
+  const parsed = contentPayloadSchema.safeParse(json);
+  if (!parsed.success) return validationError("admin/content PUT", parsed.error);
+  const body = parsed.data;
+
   const property = await getProperty();
   const supabase = getSupabase();
 
@@ -283,7 +211,7 @@ export async function PUT(request: Request) {
       }))
     );
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return serverError("admin/content PUT", err);
   }
 
   return NextResponse.json({ ok: true });

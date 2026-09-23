@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabase, getPublicPhotoUrl, PHOTOS_BUCKET } from "@/lib/supabase";
 import { getProperty } from "@/lib/property";
+import {
+  photosOrderPayloadSchema,
+  photoDeletePayloadSchema,
+  validateImageFile,
+} from "@/lib/validation/admin";
+import { serverError, validationError } from "@/lib/api-error";
 
 // Manages the top-level hero + gallery photos (room_id null). Room photos are
 // seeded once by the migration script and not yet editable here — see the
@@ -17,7 +23,7 @@ export async function GET() {
     .order("role")
     .order("sort_order");
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError("admin/photos GET", error);
 
   return NextResponse.json({
     photos: (data ?? []).map((p) => ({
@@ -34,6 +40,9 @@ export async function POST(request: Request) {
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
+  const fileError = validateImageFile(file);
+  if (fileError) return NextResponse.json({ error: fileError }, { status: 400 });
+
   const supabase = getSupabase();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `gallery/${Date.now()}-${safeName}`;
@@ -41,7 +50,7 @@ export async function POST(request: Request) {
   const { error: uploadError } = await supabase.storage
     .from(PHOTOS_BUCKET)
     .upload(storagePath, file, { contentType: file.type });
-  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  if (uploadError) return serverError("admin/photos POST upload", uploadError);
 
   const { data: existing, error: readError } = await supabase
     .from("photos")
@@ -50,7 +59,7 @@ export async function POST(request: Request) {
     .eq("role", "gallery")
     .order("sort_order", { ascending: false })
     .limit(1);
-  if (readError) return NextResponse.json({ error: readError.message }, { status: 500 });
+  if (readError) return serverError("admin/photos POST read", readError);
 
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1;
 
@@ -65,19 +74,23 @@ export async function POST(request: Request) {
     })
     .select("id")
     .single();
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (insertError) return serverError("admin/photos POST insert", insertError);
 
   return NextResponse.json({ id: inserted.id, url: getPublicPhotoUrl(storagePath) });
 }
 
 export async function PUT(request: Request) {
-  const { heroId, order } = (await request.json()) as { heroId: string | null; order: string[] };
+  const json = await request.json();
+  const parsed = photosOrderPayloadSchema.safeParse(json);
+  if (!parsed.success) return validationError("admin/photos PUT", parsed.error);
+  const { heroId, order } = parsed.data;
+
   const supabase = getSupabase();
 
   try {
     if (heroId) {
       const { error } = await supabase.from("photos").update({ role: "hero" }).eq("id", heroId);
-      if (error) throw new Error(error.message);
+      if (error) throw error;
     }
 
     for (let i = 0; i < order.length; i++) {
@@ -85,18 +98,20 @@ export async function PUT(request: Request) {
         .from("photos")
         .update({ role: "gallery", sort_order: i })
         .eq("id", order[i]);
-      if (error) throw new Error(error.message);
+      if (error) throw error;
     }
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return serverError("admin/photos PUT", err);
   }
 
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(request: Request) {
-  const { id } = (await request.json()) as { id: string };
-  if (!id) return NextResponse.json({ error: "Invalid" }, { status: 400 });
+  const json = await request.json();
+  const parsed = photoDeletePayloadSchema.safeParse(json);
+  if (!parsed.success) return validationError("admin/photos DELETE", parsed.error);
+  const { id } = parsed.data;
 
   const supabase = getSupabase();
   const { data: photo, error: readError } = await supabase
@@ -109,10 +124,10 @@ export async function DELETE(request: Request) {
   const { error: storageError } = await supabase.storage
     .from(PHOTOS_BUCKET)
     .remove([photo.storage_path]);
-  if (storageError) return NextResponse.json({ error: storageError.message }, { status: 500 });
+  if (storageError) return serverError("admin/photos DELETE storage", storageError);
 
   const { error: deleteError } = await supabase.from("photos").delete().eq("id", id);
-  if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  if (deleteError) return serverError("admin/photos DELETE", deleteError);
 
   return NextResponse.json({ ok: true });
 }
