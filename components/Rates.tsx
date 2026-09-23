@@ -1,10 +1,11 @@
 import type { Dict } from "@/dictionaries/en";
-import { WHATSAPP_URL_EN, WHATSAPP_URL_ES } from "@/config/site";
+import { getRateTiers, resolveRateTier } from "@/lib/property";
 
-type Props = { dict: Dict["rates"]; lang: string };
+type Props = { dict: Dict["rates"]; lang: string; propertyId: string; waUrl: string };
 
-export default function Rates({ dict, lang }: Props) {
-  const waUrl = lang === "es" ? WHATSAPP_URL_ES : WHATSAPP_URL_EN;
+export default async function Rates({ dict, lang, propertyId, waUrl }: Props) {
+  const rows = await getRateTiers(propertyId);
+  const tiers = rows.map((row) => resolveRateTier(row, lang));
 
   return (
     <section id="rates" className="py-24 lg:py-32 bg-white">
@@ -32,7 +33,7 @@ export default function Rates({ dict, lang }: Props) {
 
         {/* Rate tiers */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-          {dict.tiers.map((tier, i) => {
+          {tiers.map((tier, i) => {
             const highlighted = i === 1; // High season
             return (
               <div

@@ -1,23 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { WHATSAPP_URL_EN, WHATSAPP_URL_ES, EMAIL } from "@/config/site";
 import type { Dict } from "@/dictionaries/en";
 
-type Props = { dict: Dict["contact"]; lang: string };
+type Props = { dict: Dict["contact"]; lang: string; waUrl: string; email: string; name: string };
 
-export default function ContactSection({ dict, lang }: Props) {
+export default function ContactSection({ dict, waUrl, email, name }: Props) {
   const [form, setForm] = useState({ name: "", email: "", dates: "", guests: "", message: "" });
-
-  const waUrl = lang === "es" ? WHATSAPP_URL_ES : WHATSAPP_URL_EN;
 
   function handleMailto(e: React.FormEvent) {
     e.preventDefault();
-    const subject = encodeURIComponent(`Saywa Lodges Inquiry – ${form.name}`);
+    const subject = encodeURIComponent(`${name} Inquiry – ${form.name}`);
     const body = encodeURIComponent(
       `Name: ${form.name}\nEmail: ${form.email}\nDates: ${form.dates}\nGuests: ${form.guests}\n\n${form.message}`
     );
-    window.open(`mailto:${EMAIL}?subject=${subject}&body=${body}`);
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`);
   }
 
   return (
@@ -56,8 +53,8 @@ export default function ContactSection({ dict, lang }: Props) {
             <div className="p-8 rounded-2xl bg-white border border-stone/10">
               <p className="text-xs uppercase tracking-[0.2em] text-stone mb-3">{dict.emailLabel}</p>
               <p className="text-charcoal text-sm leading-relaxed mb-4">{dict.emailDesc}</p>
-              <a href={`mailto:${EMAIL}`} className="text-forest text-sm border-b border-forest/40 pb-0.5 hover:border-forest transition-colors">
-                {EMAIL}
+              <a href={`mailto:${email}`} className="text-forest text-sm border-b border-forest/40 pb-0.5 hover:border-forest transition-colors">
+                {email}
               </a>
             </div>
           </div>

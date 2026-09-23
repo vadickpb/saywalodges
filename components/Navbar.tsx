@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Dict } from "@/dictionaries";
 
-type Props = { dict: Dict["nav"]; lang: string };
+type Props = { dict: Dict["nav"]; lang: string; name: string; logoUrl: string };
 
-export default function Navbar({ dict, lang }: Props) {
+export default function Navbar({ dict, lang, name, logoUrl }: Props) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -39,11 +40,15 @@ export default function Navbar({ dict, lang }: Props) {
       <nav className="max-w-7xl mx-auto px-6 lg:px-10 h-18 flex items-center justify-between">
         <Link
           href={`/${lang}`}
-          className={`text-lg font-semibold tracking-wide transition-colors duration-300 ${
+          className={`flex items-center text-lg font-semibold tracking-wide transition-colors duration-300 ${
             scrolled ? "text-forest" : "text-white"
           }`}
         >
-          Saywa Lodges
+          {logoUrl ? (
+            <Image src={logoUrl} alt={name} width={140} height={40} className="h-9 w-auto object-contain" />
+          ) : (
+            name
+          )}
         </Link>
 
         {/* Desktop nav */}

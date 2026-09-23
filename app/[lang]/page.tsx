@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getDictionary, hasLocale } from "@/dictionaries";
+import { getProperty, whatsappUrl } from "@/lib/property";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Amenities from "@/components/Amenities";
@@ -21,22 +22,37 @@ export default async function Home({
   if (!hasLocale(lang)) notFound();
 
   const dict = await getDictionary(lang);
+  const property = await getProperty();
+  const waUrl = whatsappUrl(property, lang);
 
   return (
     <>
-      <Navbar dict={dict.nav} lang={lang} />
+      <Navbar dict={dict.nav} lang={lang} name={property.name} logoUrl={property.logoUrl} />
       <main>
-        <Hero dict={dict.hero} lang={lang} />
-        <Amenities dict={dict.amenities} />
-        <Gallery dict={dict.gallery} lang={lang} />
-        <SpacesSection dict={dict.spaces} lang={lang} />
-        <Rates dict={dict.rates} lang={lang} />
-        <Availability dict={dict.availability} lang={lang} />
-        <Location dict={dict.location} />
-        <ContactSection dict={dict.contact} lang={lang} />
+        <Hero dict={dict.hero} lang={lang} propertyId={property.id} waUrl={waUrl} name={property.name} />
+        <Amenities dict={dict.amenities} lang={lang} propertyId={property.id} />
+        <Gallery dict={dict.gallery} lang={lang} propertyId={property.id} waUrl={waUrl} name={property.name} />
+        <SpacesSection dict={dict.spaces} lang={lang} propertyId={property.id} name={property.name} />
+        <Rates dict={dict.rates} lang={lang} propertyId={property.id} waUrl={waUrl} />
+        <Availability
+          dict={dict.availability}
+          lang={lang}
+          waUrl={waUrl}
+          airbnbUrl={property.airbnbUrl}
+        />
+        <Location
+          dict={dict.location}
+          lang={lang}
+          propertyId={property.id}
+          mapsUrl={property.mapsUrl}
+          name={property.name}
+          addressLocality={property.addressLocality}
+          addressRegion={property.addressRegion}
+        />
+        <ContactSection dict={dict.contact} lang={lang} waUrl={waUrl} email={property.email} name={property.name} />
       </main>
-      <Footer dict={dict.footer} lang={lang} />
-      <WhatsAppFloat />
+      <Footer dict={dict.footer} lang={lang} waUrl={waUrl} email={property.email} airbnbUrl={property.airbnbUrl} name={property.name} />
+      <WhatsAppFloat waUrl={whatsappUrl(property, "en")} />
     </>
   );
 }
