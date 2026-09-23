@@ -148,20 +148,29 @@ export default function AdminPage() {
     setUploading(true);
     const fd = new FormData();
     fd.append("file", file);
-    await fetch("/api/admin/photos", { method: "POST", body: fd });
-    await loadPhotos();
+    const res = await fetch("/api/admin/photos", { method: "POST", body: fd });
     setUploading(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      flash(data?.error ?? "Upload failed ✗");
+      return;
+    }
+    await loadPhotos();
     flash("Photo uploaded ✓");
     if (fileRef.current) fileRef.current.value = "";
   }
 
   async function deletePhoto(id: string) {
     if (!confirm("Delete this photo?")) return;
-    await fetch("/api/admin/photos", {
+    const res = await fetch("/api/admin/photos", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
+    if (!res.ok) {
+      flash("Delete failed ✗");
+      return;
+    }
     await loadPhotos();
     flash("Deleted ✓");
   }
@@ -185,13 +194,17 @@ export default function AdminPage() {
     setSaving(true);
     const hero = photos.find((p) => p.role === "hero");
     const gallery = photos.filter((p) => p.role === "gallery");
-    await fetch("/api/admin/photos", {
+    const res = await fetch("/api/admin/photos", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ heroId: hero?.id ?? null, order: gallery.map((p) => p.id) }),
     });
-    await loadPhotos();
     setSaving(false);
+    if (!res.ok) {
+      flash("Save failed ✗");
+      return;
+    }
+    await loadPhotos();
     flash("Saved ✓");
   }
 
@@ -204,16 +217,25 @@ export default function AdminPage() {
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch("/api/admin/logo", { method: "POST", body: fd });
+    setLogoUploading(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      flash(data?.error ?? "Logo upload failed ✗");
+      return;
+    }
     const data = await res.json();
     setContent({ ...content, property: { ...content.property, logoUrl: data.url } });
-    setLogoUploading(false);
     flash("Logo uploaded ✓");
     if (logoRef.current) logoRef.current.value = "";
   }
 
   async function removeLogo() {
     if (!content) return;
-    await fetch("/api/admin/logo", { method: "DELETE" });
+    const res = await fetch("/api/admin/logo", { method: "DELETE" });
+    if (!res.ok) {
+      flash("Remove logo failed ✗");
+      return;
+    }
     setContent({ ...content, property: { ...content.property, logoUrl: "" } });
     flash("Logo removed ✓");
   }
@@ -223,13 +245,17 @@ export default function AdminPage() {
   async function saveContent() {
     if (!content) return;
     setSaving(true);
-    await fetch("/api/admin/content", {
+    const res = await fetch("/api/admin/content", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(content),
     });
-    await loadContent();
     setSaving(false);
+    if (!res.ok) {
+      flash("Save failed ✗");
+      return;
+    }
+    await loadContent();
     flash("Saved ✓");
   }
 
