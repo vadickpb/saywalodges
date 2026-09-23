@@ -1,9 +1,28 @@
 import type { Dict } from "@/dictionaries";
-import { MAPS_URL } from "@/config/site";
+import { getDistances, resolveDistance } from "@/lib/property";
 
-type Props = { dict: Dict["location"] };
+type Props = {
+  dict: Dict["location"];
+  lang: string;
+  propertyId: string;
+  mapsUrl: string;
+  name: string;
+  addressLocality: string;
+  addressRegion: string;
+};
 
-export default function Location({ dict }: Props) {
+export default async function Location({
+  dict,
+  lang,
+  propertyId,
+  mapsUrl,
+  name,
+  addressLocality,
+  addressRegion,
+}: Props) {
+  const rows = await getDistances(propertyId);
+  const distances = rows.map((row) => resolveDistance(row, lang));
+
   return (
     <section id="location" className="py-24 lg:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
@@ -18,7 +37,7 @@ export default function Location({ dict }: Props) {
             <p className="text-stone leading-relaxed mb-8 text-sm max-w-md">{dict.description}</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-              {dict.distances.map((d) => (
+              {distances.map((d) => (
                 <div key={d.place} className="flex items-center gap-3 p-4 rounded-xl bg-cream hover:bg-cream/80 transition-colors duration-200">
                   <span className="text-xl">{d.icon}</span>
                   <div>
@@ -30,7 +49,7 @@ export default function Location({ dict }: Props) {
             </div>
 
             <a
-              href={MAPS_URL}
+              href={mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-forest border-b border-forest/40 pb-0.5 hover:border-forest transition-colors duration-200 tracking-wide"
@@ -56,9 +75,9 @@ export default function Location({ dict }: Props) {
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                 </svg>
               </div>
-              <p className="text-forest font-medium text-base">Saywa Lodges</p>
-              <p className="text-stone text-sm mt-1">Urubamba, Valle Sagrado</p>
-              <p className="text-stone/70 text-xs mt-1">Cusco, Perú · {dict.altitude}</p>
+              <p className="text-forest font-medium text-base">{name}</p>
+              <p className="text-stone text-sm mt-1">{addressLocality}</p>
+              <p className="text-stone/70 text-xs mt-1">{addressRegion} · {dict.altitude}</p>
             </div>
           </div>
         </div>

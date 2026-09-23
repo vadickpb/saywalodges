@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getDictionary, hasLocale, locales } from "@/dictionaries";
-import { SITE_URL, WHATSAPP_NUMBER, EMAIL, MAPS_URL } from "@/config/site";
+import { hasLocale, locales } from "@/dictionaries";
+import { SITE_URL } from "@/config/site";
+import { getProperty, getAmenities, resolveAmenity } from "@/lib/property";
+import { getSpaces } from "@/lib/spaces";
+import { getPhotosConfig } from "@/lib/photos";
+import { toJsonLd } from "@/lib/json-ld";
 
 export async function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
@@ -16,45 +20,30 @@ export async function generateMetadata({
   if (!hasLocale(lang)) return {};
 
   const isEs = lang === "es";
-  const title = "Saywa Lodges · Valle Sagrado, Cusco, Perú";
-  const description = isEs
-    ? "Lodge vacacional privado en Urubamba, Valle Sagrado de los Incas. Piscina privada, vistas a montañas andinas y acceso a Machu Picchu desde $180/noche."
-    : "Private vacation lodge in Urubamba, Sacred Valley of the Incas. Private pool, Andean mountain views and access to Machu Picchu from $180/night.";
+  const property = await getProperty();
+  const { hero } = await getPhotosConfig(property.id);
+  const title = isEs ? property.metaTitleEs : property.metaTitleEn;
+  const description = isEs ? property.metaDescriptionEs : property.metaDescriptionEn;
+  const keywords = isEs ? property.metaKeywordsEs : property.metaKeywordsEn;
 
   return {
-    title: { default: title, template: `%s | Saywa Lodges` },
+    title: { default: title, template: `%s | ${property.name}` },
     description,
-    keywords: isEs
-      ? [
-          "lodge valle sagrado",
-          "alquiler vacacional cusco",
-          "urubamba hospedaje",
-          "piscina privada peru",
-          "cerca machu picchu",
-          "saywa lodges",
-        ]
-      : [
-          "sacred valley lodge",
-          "vacation rental cusco",
-          "urubamba accommodation",
-          "private pool peru",
-          "near machu picchu",
-          "saywa lodges",
-        ],
+    keywords,
     openGraph: {
       type: "website",
       locale: isEs ? "es_PE" : "en_US",
       alternateLocale: isEs ? "en_US" : "es_PE",
       url: `${SITE_URL}/${lang}`,
-      siteName: "Saywa Lodges",
+      siteName: property.name,
       title,
       description,
       images: [
         {
-          url: "/images/foto3.jpeg",
+          url: hero,
           width: 1200,
           height: 800,
-          alt: "Saywa Lodges — private pool and Andean landscape, Valle Sagrado",
+          alt: title,
         },
       ],
     },
@@ -62,7 +51,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: ["/images/foto3.jpeg"],
+      images: [hero],
     },
     alternates: {
       canonical: `${SITE_URL}/${lang}`,
@@ -85,63 +74,57 @@ export default async function LangLayout({
   if (!hasLocale(lang)) notFound();
 
   const isEs = lang === "es";
+  const property = await getProperty();
+  const { hero } = await getPhotosConfig(property.id);
+  const [spaces, amenityRows] = await Promise.all([
+    getSpaces(property.id),
+    getAmenities(property.id),
+  ]);
+  const numberOfRooms = spaces.filter((s) => s.category === "rooms").length;
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LodgingBusiness",
-    name: "Saywa Lodges",
-    description: isEs
-      ? "Lodge vacacional privado en Urubamba, Valle Sagrado de los Incas, Cusco, Perú."
-      : "Private vacation lodge in Urubamba, Sacred Valley of the Incas, Cusco, Peru.",
+    name: property.name,
+    description: isEs ? property.metaDescriptionEs : property.metaDescriptionEn,
     url: `${SITE_URL}/${lang}`,
-    telephone: `+${WHATSAPP_NUMBER}`,
-    email: EMAIL,
+    telephone: `+${property.whatsappNumber}`,
+    email: property.email,
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Urubamba",
-      addressRegion: "Cusco",
-      addressCountry: "PE",
+      addressLocality: property.addressLocality,
+      addressRegion: property.addressRegion,
+      addressCountry: property.addressCountry,
     },
-    geo: {
-      "@type": "GeoCoordinates",
-      latitude: -13.3162,
-      longitude: -72.1263,
-    },
-    hasMap: MAPS_URL,
-    priceRange: "$$",
-    image: `${SITE_URL}/images/foto3.jpeg`,
-    amenityFeature: [
-      {
-        "@type": "LocationFeatureSpecification",
-        name: "Private Pool",
-        value: true,
-      },
-      {
-        "@type": "LocationFeatureSpecification",
-        name: "Full Kitchen",
-        value: true,
-      },
-      {
-        "@type": "LocationFeatureSpecification",
-        name: "Mountain Views",
-        value: true,
-      },
-      {
-        "@type": "LocationFeatureSpecification",
-        name: "Free WiFi",
-        value: true,
-      },
-    ],
-    numberOfRooms: 3,
-    petsAllowed: false,
-    starRating: { "@type": "Rating", ratingValue: "4" },
+    ...(property.latitude != null && property.longitude != null
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: property.latitude,
+            longitude: property.longitude,
+          },
+        }
+      : {}),
+    hasMap: property.mapsUrl,
+    priceRange: property.priceRange,
+    image: hero,
+    amenityFeature: amenityRows.map((row) => ({
+      "@type": "LocationFeatureSpecification",
+      name: resolveAmenity(row, lang).title,
+      value: true,
+    })),
+    numberOfRooms,
+    petsAllowed: property.petsAllowed,
+    ...(property.starRating != null
+      ? { starRating: { "@type": "Rating", ratingValue: String(property.starRating) } }
+      : {}),
   };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
       />
       {children}
     </>
