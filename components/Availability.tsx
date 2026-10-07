@@ -1,11 +1,8 @@
-import { AIRBNB_URL, WHATSAPP_URL_EN, WHATSAPP_URL_ES } from "@/config/site";
 import type { Dict } from "@/dictionaries";
 
-type Props = { dict: Dict["availability"]; lang: string };
+type Props = { dict: Dict["availability"]; lang: string; waUrl: string; airbnbUrl: string };
 
-export default function Availability({ dict, lang }: Props) {
-  const waUrl = lang === "es" ? WHATSAPP_URL_ES : WHATSAPP_URL_EN;
-
+export default function Availability({ dict, waUrl, airbnbUrl }: Props) {
   return (
     <section id="availability" className="py-24 lg:py-32 bg-white">
       <div className="max-w-5xl mx-auto px-6 lg:px-10">
@@ -19,10 +16,10 @@ export default function Availability({ dict, lang }: Props) {
           <p className="mt-5 text-stone text-sm max-w-md mx-auto leading-relaxed">{dict.subtitle}</p>
         </div>
 
-        {AIRBNB_URL ? (
+        {airbnbUrl ? (
           <div className="rounded-2xl overflow-hidden border border-stone/10 shadow-sm">
             <iframe
-              src={`${AIRBNB_URL}?enableIframeModal=true`}
+              src={`${airbnbUrl}?enableIframeModal=true`}
               className="w-full h-[600px] border-0"
               title="Airbnb availability calendar"
               loading="lazy"

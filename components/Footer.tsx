@@ -1,11 +1,9 @@
 import Link from "next/link";
 import type { Dict } from "@/dictionaries";
-import { WHATSAPP_URL_EN, WHATSAPP_URL_ES } from "@/config/site";
 
-type Props = { dict: Dict["footer"]; lang: string };
+type Props = { dict: Dict["footer"]; lang: string; waUrl: string; email: string; airbnbUrl: string; name: string };
 
-export default function Footer({ dict, lang }: Props) {
-  const waUrl = lang === "es" ? WHATSAPP_URL_ES : WHATSAPP_URL_EN;
+export default function Footer({ dict, waUrl, email, airbnbUrl, name }: Props) {
   return (
     <footer className="bg-forest text-white/80">
       <div className="border-b border-white/10 py-16">
@@ -33,7 +31,7 @@ export default function Footer({ dict, lang }: Props) {
       <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
-            <p className="text-white font-semibold text-lg tracking-wide mb-3">Saywa Lodges</p>
+            <p className="text-white font-semibold text-lg tracking-wide mb-3">{name}</p>
             <p className="text-white/50 text-xs leading-relaxed whitespace-pre-line">{dict.tagline}</p>
           </div>
 
@@ -60,17 +58,19 @@ export default function Footer({ dict, lang }: Props) {
                 </a>
               </li>
               <li>
-                <a href="mailto:reservas@saywalodges.com" className="flex items-center gap-2.5 text-sm text-white/60 hover:text-white transition-colors duration-200">
+                <a href={`mailto:${email}`} className="flex items-center gap-2.5 text-sm text-white/60 hover:text-white transition-colors duration-200">
                   <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                  reservas@saywalodges.com
+                  {email}
                 </a>
               </li>
-              <li>
-                <a href="https://www.airbnb.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-sm text-white/60 hover:text-white transition-colors duration-200">
-                  <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-6l-4-4 1.414-1.414L11 13.172l5.586-5.586L18 9l-7 7z" /></svg>
-                  Airbnb
-                </a>
-              </li>
+              {airbnbUrl && (
+                <li>
+                  <a href={airbnbUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-sm text-white/60 hover:text-white transition-colors duration-200">
+                    <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-6l-4-4 1.414-1.414L11 13.172l5.586-5.586L18 9l-7 7z" /></svg>
+                    Airbnb
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>

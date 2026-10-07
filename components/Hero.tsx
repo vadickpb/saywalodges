@@ -2,13 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Dict } from "@/dictionaries";
 import { getPhotosConfig } from "@/lib/photos";
-import { WHATSAPP_URL_EN, WHATSAPP_URL_ES } from "@/config/site";
 
-type Props = { dict: Dict["hero"]; lang: string };
+type Props = { dict: Dict["hero"]; lang: string; propertyId: string; waUrl: string; name: string };
 
-export default async function Hero({ dict, lang }: Props) {
-  const { hero } = await getPhotosConfig();
-  const whatsappUrl = lang === "es" ? WHATSAPP_URL_ES : WHATSAPP_URL_EN;
+export default async function Hero({ dict, propertyId, waUrl, name }: Props) {
+  const { hero } = await getPhotosConfig(propertyId);
+  const whatsappUrl = waUrl;
 
   return (
     <section
@@ -17,8 +16,8 @@ export default async function Hero({ dict, lang }: Props) {
     >
       {/* Background photo — LCP element loaded with highest priority */}
       <Image
-        src={`/images/${hero}`}
-        alt="Saywa Lodges — casa de campo privada con piscina temperada en el Valle Sagrado, Urubamba, Cusco"
+        src={hero}
+        alt={name}
         fill
         priority
         fetchPriority="high"

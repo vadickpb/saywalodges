@@ -2,16 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { SpaceMeta, SPACE_CATEGORIES } from "@/lib/spaces";
+import type { SpaceWithPhotos, SPACE_CATEGORIES } from "@/lib/spaces";
 
 type Category = (typeof SPACE_CATEGORIES)[number]["id"];
-
-type SpaceWithPhotos = SpaceMeta & { photos: string[] };
 
 type Props = {
   spaces: SpaceWithPhotos[];
   categories: typeof SPACE_CATEGORIES;
   lang: string;
+  name: string;
   dict: {
     label: string;
     title: string;
@@ -25,7 +24,7 @@ type Props = {
 
 type Lightbox = { spaceId: string; index: number } | null;
 
-export default function Spaces({ spaces, categories, lang, dict }: Props) {
+export default function Spaces({ spaces, categories, lang, dict, name }: Props) {
   const [active, setActive] = useState<Category>("all");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<Lightbox>(null);
@@ -34,7 +33,7 @@ export default function Spaces({ spaces, categories, lang, dict }: Props) {
 
   // Compute all photos for the current lightbox space
   const lbSpace = lightbox ? spaces.find((s) => s.id === lightbox.spaceId) : null;
-  const lbPhotos = lbSpace ? lbSpace.photos.map((p) => `/images/${lbSpace.folder}/${p}`) : [];
+  const lbPhotos = lbSpace ? lbSpace.photos : [];
   const lbTotal = lbPhotos.length;
 
   const openLightbox = useCallback((spaceId: string, index: number) => {
@@ -113,9 +112,7 @@ export default function Spaces({ spaces, categories, lang, dict }: Props) {
           {filtered.map((space) => {
             const isExpanded = expanded === space.id;
             const hasPhotos = space.photos.length > 0;
-            const coverPhoto = hasPhotos
-              ? `/images/${space.folder}/${space.photos[0]}`
-              : null;
+            const coverPhoto = hasPhotos ? space.photos[0] : null;
             const extraPhotos = space.photos.slice(1);
 
             return (
@@ -133,7 +130,7 @@ export default function Spaces({ spaces, categories, lang, dict }: Props) {
                     >
                       <Image
                         src={coverPhoto}
-                        alt={`${space.label[isEs ? "es" : "en"]} — Saywa Lodges, Urubamba, Valle Sagrado`}
+                        alt={`${space.label[isEs ? "es" : "en"]} — ${name}`}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -215,8 +212,8 @@ export default function Spaces({ spaces, categories, lang, dict }: Props) {
                         aria-label={`Ver foto ${i + 2} de ${space.label[isEs ? "es" : "en"]}`}
                       >
                         <Image
-                          src={`/images/${space.folder}/${photo}`}
-                          alt={`${space.label[isEs ? "es" : "en"]} foto ${i + 2} — Saywa Lodges`}
+                          src={photo}
+                          alt={`${space.label[isEs ? "es" : "en"]} foto ${i + 2} — ${name}`}
                           fill
                           sizes="(max-width: 640px) 50vw, 25vw"
                           className="object-cover group-hover:scale-105 transition-transform duration-500"

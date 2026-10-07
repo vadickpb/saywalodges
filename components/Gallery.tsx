@@ -1,7 +1,6 @@
 import Image from "next/image";
 import type { Dict } from "@/dictionaries";
 import { getPhotosConfig } from "@/lib/photos";
-import { WHATSAPP_URL_EN, WHATSAPP_URL_ES } from "@/config/site";
 
 const ALT_TAGS: Record<string, string> = {
   "foto1.jpeg": "Lodge exterior with garden and Andean landscape",
@@ -14,11 +13,11 @@ const ALT_TAGS: Record<string, string> = {
   "foto8.jpeg": "Twin bedroom with mountain window view",
 };
 
-type Props = { dict: Dict["gallery"]; lang: string };
+type Props = { dict: Dict["gallery"]; lang: string; propertyId: string; waUrl: string; name: string };
 
-export default async function Gallery({ dict, lang }: Props) {
-  const { gallery } = await getPhotosConfig();
-  const whatsappUrl = lang === "es" ? WHATSAPP_URL_ES : WHATSAPP_URL_EN;
+export default async function Gallery({ dict, propertyId, waUrl, name }: Props) {
+  const { gallery } = await getPhotosConfig(propertyId);
+  const whatsappUrl = waUrl;
 
   return (
     <section id="gallery" className="py-24 lg:py-32 bg-white">
@@ -41,8 +40,8 @@ export default async function Gallery({ dict, lang }: Props) {
               className="relative aspect-[4/3] overflow-hidden rounded-xl bg-stone/10"
             >
               <Image
-                src={`/images/${filename}`}
-                alt={ALT_TAGS[filename] ?? `Saywa Lodges photo ${i + 1}`}
+                src={filename}
+                alt={ALT_TAGS[filename.split("/").pop() ?? ""] ?? `${name} photo ${i + 1}`}
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="object-cover hover:scale-105 transition-transform duration-500"

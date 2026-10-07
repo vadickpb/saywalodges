@@ -24,32 +24,6 @@ const es: Dict = {
     label: "Lo que incluye",
     title: "Una experiencia",
     titleItalic: "completamente privada",
-    items: [
-      {
-        title: "Piscina Privada",
-        description: "Piscina exclusiva con vistas panorámicas al Valle Sagrado.",
-      },
-      {
-        title: "Cocina Completa",
-        description: "Cocina equipada con todo lo necesario para preparar tus comidas.",
-      },
-      {
-        title: "Vistas a Montañas",
-        description: "Paisajes andinos imponentes desde cada rincón del lodge.",
-      },
-      {
-        title: "Lodge Privado",
-        description: "Propiedad exclusiva. Solo para ti y tus acompañantes.",
-      },
-      {
-        title: "Valle Sagrado",
-        description: "En el corazón del Valle Sagrado de los Incas, Urubamba.",
-      },
-      {
-        title: "Cerca Machu Picchu",
-        description: "A 1.5 horas de la ciudadela más famosa del mundo.",
-      },
-    ],
   },
   gallery: {
     label: "Galería",
@@ -72,32 +46,6 @@ const es: Dict = {
     titleItalic: "temporada",
     subtitle: "Nuestras tarifas varían según fecha, número de huéspedes y duración de la estadía. La casa se alquila de forma completa y privada, con capacidad máxima para hasta 13 huéspedes.",
     capacity: "Hasta 13 huéspedes · Casa completa y privada",
-    tiers: [
-      {
-        season: "Temporada baja",
-        from: "desde USD 220",
-        period: "noche",
-        tag: "",
-      },
-      {
-        season: "Temporada alta",
-        from: "desde USD 300",
-        period: "noche",
-        tag: "Jun – Sep",
-      },
-      {
-        season: "Feriados y fechas especiales",
-        from: "Consultar",
-        period: "",
-        tag: "Según disponibilidad",
-      },
-      {
-        season: "Estadías de 7 noches o más",
-        from: "Tarifa especial",
-        period: "",
-        tag: "Estadía prolongada",
-      },
-    ],
     note: "Consulta disponibilidad por WhatsApp para recibir la mejor tarifa según tus fechas.",
     cta: "Consultar disponibilidad por WhatsApp",
   },
@@ -109,14 +57,6 @@ const es: Dict = {
       "Saywa Lodges se encuentra en Urubamba, a 2,800 msnm, rodeado de montañas andinas y a orillas del río sagrado. Una ubicación privilegiada que te conecta con los principales destinos arqueológicos e históricos del Valle Sagrado de los Incas.",
     mapsLink: "Ver en Google Maps",
     altitude: "2,800 msnm",
-    distances: [
-      { place: "Ollantaytambo", time: "45 min", icon: "🚗" },
-      { place: "Cusco", time: "2 horas", icon: "🚗" },
-      { place: "Machu Picchu", time: "1.5 horas", icon: "🚂" },
-      { place: "Pisac & Mercado", time: "25 min", icon: "🚗" },
-      { place: "Río Urubamba", time: "5 min", icon: "🚶" },
-      { place: "Moray & Salineras", time: "30 min", icon: "🚗" },
-    ],
   },
   footer: {
     tagline: "Lodge vacacional privado en Urubamba,\nValle Sagrado de los Incas, Cusco, Perú.",

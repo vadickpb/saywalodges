@@ -1,11 +1,11 @@
 "use client";
 
-import { WHATSAPP_URL_EN } from "@/config/site";
+type Props = { waUrl: string };
 
-export default function WhatsAppFloat() {
+export default function WhatsAppFloat({ waUrl }: Props) {
   return (
     <a
-      href={WHATSAPP_URL_EN}
+      href={waUrl}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat on WhatsApp"

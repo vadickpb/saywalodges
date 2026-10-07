@@ -38,14 +38,26 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 ## Fase 0 — Estabilizar (M0)
 
-### [ ] SD-001 · chore: commit Supabase content migration and reactivate project
-`S` · Depende: — · Review: `R+S`
+### [x] SD-001 · chore: commit Supabase content migration and reactivate project
+`S` (real: `M` — ver nota) · Depende: — · Review: `R+S`
 - **Objetivo**: dejar en `main` el trabajo pendiente (contenido en Supabase, `/api/admin/*`) y la BD operativa.
 - **Alcance**: revisar el diff pendiente, reactivar el proyecto Supabase, commit en rama propia.
 - **Criterios**
-  - [ ] El proyecto Supabase está activo y el sitio carga en local con datos reales.
-  - [ ] El trabajo pendiente está mergeado en `main` en commits coherentes.
-  - [ ] Las imágenes borradas de `public/images` están efectivamente en Storage.
+  - [x] El proyecto Supabase está activo y el sitio carga en local con datos reales.
+  - [x] El trabajo pendiente está mergeado en `main` en commits coherentes.
+  - [x] Las imágenes borradas de `public/images` están efectivamente en Storage.
+- **Nota de cierre**: el proyecto Supabase estaba activo pero con 0 filas en las 6 tablas — solo se
+  había creado el esquema, nunca se cargó contenido. Se recuperó el contenido real y las 27 fotos
+  desde el propio historial de git (`HEAD` previo) con `scripts/seed-content.mjs` (verificado:
+  1 propiedad, 10 espacios, 27 fotos, 4 tarifas, 6 amenities, 6 distancias, mapeo foto↔habitación
+  correcto). `security-reviewer` encontró un **XSS almacenado crítico** (JSON-LD sin escapar, ahora
+  alimentado por contenido editable) más URLs sin validar (`javascript:` en `mapsUrl`/`airbnbUrl`),
+  falta de zod en los 4 payloads de `/api/admin/*` y uploads sin validar MIME/tamaño; `reviewer`
+  encontró que el panel admin no revisaba `res.ok` (mostraba "Saved ✓" aunque la BD rechazara el
+  cambio). Todo esto se corrigió dentro de este ticket (no se difirió) por ser explotable de inmediato
+  en producción: `lib/json-ld.ts` (escape), `lib/validation/admin.ts` (zod + validación de uploads),
+  `lib/api-error.ts` (errores genéricos), fixes en `app/admin/page.tsx`. Esto adelanta la mayor parte
+  del alcance de SD-005 — ver nota ahí.
 
 ### [ ] SD-002 · chore(db): version current schema with Supabase CLI
 `M` · Depende: SD-001 · Review: `R+S`
@@ -78,11 +90,16 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 ### [ ] SD-005 · fix(security): harden current production surface
 `S` · Depende: SD-001 · Review: `R+S`
 - **Objetivo**: cerrar lo explotable mientras el sitio actual sigue en producción.
-- **Alcance**: escapar JSON-LD (`<` → `<`); no devolver `error.message` de BD; validar MIME (jpeg/png/webp) y tamaño
-  (≤ 5 MB) en uploads; filtrar por `property_id` en `PUT/DELETE /api/admin/photos`.
+- **Ya resuelto en SD-001** (adelantado por hallazgos de review, no re-hacer): JSON-LD escapado
+  (`lib/json-ld.ts`), errores genéricos en vez de `error.message` (`lib/api-error.ts`), MIME/tamaño
+  validados en uploads (`lib/validation/admin.ts`), zod en los 4 payloads de `/api/admin/*`.
+- **Alcance restante**: filtrar por `property_id` en `PUT/DELETE /api/admin/photos` (hoy son IDOR de
+  bajo impacto real porque solo existe una propiedad — se vuelve relevante recién en Fase 1); test
+  unitario formal de `toJsonLd()` una vez exista Vitest (SD-003) — hoy solo verificado manualmente.
 - **Criterios**
-  - [ ] Un nombre de propiedad con `</script>` no rompe el HTML (test unitario del serializador).
-  - [ ] Subir un SVG o un archivo de 10 MB devuelve 400.
+  - [x] Un nombre de propiedad con `</script>` no rompe el HTML (verificado manualmente en SD-001;
+        falta el test automatizado formal).
+  - [x] Subir un SVG o un archivo de 10 MB devuelve 400.
   - [ ] Borrar una foto con un id de otra propiedad devuelve 404.
 
 ### [ ] SD-006 · docs: README, ADRs and roadmap

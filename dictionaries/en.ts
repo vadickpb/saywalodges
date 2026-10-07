@@ -22,32 +22,6 @@ const en = {
     label: "What's included",
     title: "A completely",
     titleItalic: "private experience",
-    items: [
-      {
-        title: "Private Pool",
-        description: "Exclusive pool with panoramic views of the Sacred Valley.",
-      },
-      {
-        title: "Full Kitchen",
-        description: "Fully equipped kitchen with everything you need to cook your meals.",
-      },
-      {
-        title: "Mountain Views",
-        description: "Breathtaking Andean landscapes from every corner of the lodge.",
-      },
-      {
-        title: "Private Lodge",
-        description: "Exclusive property. Just for you and your companions.",
-      },
-      {
-        title: "Sacred Valley",
-        description: "In the heart of the Sacred Valley of the Incas, Urubamba.",
-      },
-      {
-        title: "Near Machu Picchu",
-        description: "1.5 hours from the world's most famous citadel.",
-      },
-    ],
   },
   gallery: {
     label: "Gallery",
@@ -70,32 +44,6 @@ const en = {
     titleItalic: "season",
     subtitle: "Our rates vary by date, number of guests and length of stay. The house is rented as a whole private property — exclusively for you and your group.",
     capacity: "Up to 13 guests · Full private lodge",
-    tiers: [
-      {
-        season: "Low season",
-        from: "from USD 220",
-        period: "per night",
-        tag: "",
-      },
-      {
-        season: "High season",
-        from: "from USD 300",
-        period: "per night",
-        tag: "Jun – Sep",
-      },
-      {
-        season: "Holidays & special dates",
-        from: "On request",
-        period: "",
-        tag: "Subject to availability",
-      },
-      {
-        season: "7 nights or more",
-        from: "Special rate",
-        period: "",
-        tag: "Extended stay",
-      },
-    ],
     note: "Contact us on WhatsApp to get the best rate for your exact dates.",
     cta: "Check availability on WhatsApp",
   },
@@ -107,14 +55,6 @@ const en = {
       "Saywa Lodges is in Urubamba, at 2,800 m above sea level, surrounded by Andean mountains and along the sacred river. A privileged location connecting you to the main archaeological and historical sites of the Inca Sacred Valley.",
     mapsLink: "View on Google Maps",
     altitude: "2,800 m above sea level",
-    distances: [
-      { place: "Ollantaytambo", time: "45 min", icon: "🚗" },
-      { place: "Cusco", time: "2 hours", icon: "🚗" },
-      { place: "Machu Picchu", time: "1.5 hours", icon: "🚂" },
-      { place: "Pisac & Market", time: "25 min", icon: "🚗" },
-      { place: "Urubamba River", time: "5 min", icon: "🚶" },
-      { place: "Moray & Salt Mines", time: "30 min", icon: "🚗" },
-    ],
   },
   footer: {
     tagline: "Private vacation lodge in Urubamba,\nSacred Valley of the Incas, Cusco, Perú.",
