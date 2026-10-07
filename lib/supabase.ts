@@ -1,26 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
-import type { WebSocketLikeConstructor } from "@supabase/realtime-js";
-import ws from "ws";
+import { env } from "./env";
 import type { Database } from "./database.types";
 
 // Server-only client — uses the secret/service-role key, never exposed to the browser.
 // Public reads for the site and all admin writes go through this client; there is no
-// client-side Supabase usage in this app. We never use Realtime, but supabase-js
-// initializes a RealtimeClient regardless, which needs a WebSocket constructor —
-// Node < 22 has no native `WebSocket` global, so it's provided explicitly here.
+// client-side Supabase usage in this app.
 //
 // Typed with Database (generated from supabase/migrations via
 // `supabase gen types typescript --local` — see SD-002). Regenerate after any
 // schema change: `npx supabase gen types typescript --local > lib/database.types.ts`.
 export function getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars");
-  }
-  return createClient<Database>(url, key, {
+  return createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
-    realtime: { transport: ws as unknown as WebSocketLikeConstructor },
   });
 }
 

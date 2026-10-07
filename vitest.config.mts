@@ -1,0 +1,16 @@
+import { defineConfig } from "vitest/config";
+import path from "node:path";
+
+// Unit tests for pure/server logic (lib/**). No React component testing
+// here — see CLAUDE.md: UI is verified manually with `npm run dev`.
+export default defineConfig({
+  test: {
+    environment: "node",
+    include: ["lib/**/*.test.ts"],
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "."),
+    },
+  },
+});

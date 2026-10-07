@@ -30,7 +30,9 @@ de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura
 
 ### Requisitos
 
-- Node.js ≥ 22 (usa `--env-file`, soporte nativo de `WebSocket`).
+- Node.js ≥ 24 (`engines.node` en `package.json`; coincide con el runtime por defecto de Vercel). El
+  mínimo técnico real para `--env-file` y `WebSocket` nativo es Node 22, pero se fija en 24 para que
+  `@types/node` y el runtime de producción no se desalineen.
 - [Docker](https://www.docker.com/) corriendo (lo usa la CLI de Supabase para levantar Postgres
   localmente).
 - La [CLI de Supabase](https://supabase.com/docs/guides/cli) (se invoca vía `npx supabase`, no
@@ -84,7 +86,8 @@ npx supabase gen types typescript --local > lib/database.types.ts
 | `npm run dev` | Servidor de desarrollo |
 | `npm run build` | Build de producción |
 | `npm run lint` | ESLint |
-| `npx tsc --noEmit` | Typecheck (script `npm run typecheck` llega en SD-003) |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run test` | Tests unitarios (Vitest) |
 
 ## Estado del proyecto
 

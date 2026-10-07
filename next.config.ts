@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import { env } from "./lib/env";
+
+// Scoped to this project's own Storage host instead of *.supabase.co, so an
+// image URL from a different Supabase project can't be proxied through
+// next/image. Derived from SUPABASE_URL (single source of truth) instead of
+// hardcoding the project ref.
+const supabaseHostname = new URL(env.SUPABASE_URL).hostname;
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.18.12"],
@@ -12,7 +19,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "*.supabase.co",
+        hostname: supabaseHostname,
         pathname: "/storage/v1/object/public/**",
       },
     ],
@@ -20,13 +27,13 @@ const nextConfig: NextConfig = {
 
   async headers() {
     return [
-      // Security headers on every response
+      // Security headers on every response. Only here now — vercel.json's
+      // copy was removed (SD-003) to avoid two sources of truth.
       {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "X-XSS-Protection", value: "1; mode=block" },
           {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",

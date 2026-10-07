@@ -80,15 +80,23 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   explotable porque RLS está activo sin políticas (deniega todo), pero SD-102 debe estrechar estos
   GRANTs al definir las políticas reales, no asumir que el grant por defecto es seguro.
 
-### [ ] SD-003 · chore: tooling baseline
-`S` · Depende: SD-001 · Review: `R`
+### [x] SD-003 · chore: tooling baseline
+`S` · Depende: SD-001 · Review: `R+S`
 - **Alcance**: scripts `typecheck` y `test`; Vitest configurado; `lib/env.ts` con zod (falla al arrancar si falta una
   variable); eliminar `ws` y subir `@types/node` a 24 (verificar runtime de Vercel); eliminar `vercel.json` y dejar headers
   solo en `next.config.ts` sin `X-XSS-Protection`; acotar `images.remotePatterns` al host del proyecto.
 - **Criterios**
-  - [ ] `npm run typecheck` y `npm run test` existen y pasan (con un test de humo).
-  - [ ] Arrancar sin `SUPABASE_URL` produce un error claro.
-  - [ ] Headers de seguridad presentes en una respuesta (verificado con `curl -I`).
+  - [x] `npm run typecheck` y `npm run test` existen y pasan (19 tests reales, no solo de humo).
+  - [x] Arrancar sin `SUPABASE_URL` produce un error claro.
+  - [x] Headers de seguridad presentes en una respuesta (verificado con `curl -I`).
+- **Nota de cierre**: `R+S` porque el diff toca variables de entorno (regla de delegación de `CLAUDE.md`), aunque
+  el plan original decía solo `R`. Los tests de `lib/json-ld.ts` y `lib/validation/admin.ts` formalizan la
+  verificación manual de SD-001 (cerraba un pendiente explícito de la nota de SD-005). `images.remotePatterns`
+  ahora deriva el host de `env.SUPABASE_URL` en vez de un ref hardcodeado, para no romper si cambia el proyecto.
+  Confirmado que Node ≥22 tiene `WebSocket` global nativo (se usaba `ws` solo como polyfill), pero
+  `package.json` declara `engines.node >= 24` para que coincida con `@types/node` y con el runtime real
+  de Vercel (si no, el typecheck aceptaría APIs de Node 24 inexistentes en un runtime de Node 22 —
+  hallazgo de `reviewer`, corregido).
 
 ### [ ] SD-004 · ci: GitHub Actions pipeline
 `S` · Depende: SD-002, SD-003 · Review: `R`
