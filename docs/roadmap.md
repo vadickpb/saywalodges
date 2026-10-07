@@ -59,15 +59,26 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   `lib/api-error.ts` (errores genéricos), fixes en `app/admin/page.tsx`. Esto adelanta la mayor parte
   del alcance de SD-005 — ver nota ahí.
 
-### [ ] SD-002 · chore(db): version current schema with Supabase CLI
+### [x] SD-002 · chore(db): version current schema with Supabase CLI
 `M` · Depende: SD-001 · Review: `R+S`
 - **Objetivo**: poder reconstruir la BD desde cero.
 - **Alcance**: `supabase init`, `supabase db pull` → `supabase/migrations`, `seed.sql` con el contenido de Saywa,
-  tipos generados en `lib/supabase/database.types.ts`, tipar el cliente actual con ellos.
+  tipos generados, tipar el cliente actual con ellos.
 - **Criterios**
-  - [ ] `npx supabase start && npx supabase db reset` levanta el sitio en local sin el proyecto remoto.
-  - [ ] Los tipos generados se usan en `lib/supabase.ts` (sin `select("*")` sin tipar).
-  - [ ] README documenta el setup local.
+  - [x] `npx supabase start && npx supabase db reset` levanta el sitio en local sin el proyecto remoto.
+  - [x] Los tipos generados se usan en `lib/supabase.ts` (sin `select("*")` sin tipar).
+  - [x] README documenta el setup local.
+- **Nota de cierre**: tipos en `lib/database.types.ts` (no `lib/supabase/database.types.ts` — ese
+  directorio no existe hasta el refactor de SD-103; mover entonces). El remoto tenía 2 migraciones
+  registradas de cuando se creó el esquema fuera de este repo, sin archivos locales; se repararon
+  con `supabase migration repair --status reverted` (solo metadata, sin tocar esquema/datos) antes
+  de poder pullear. `syncTable()` en `app/api/admin/content/route.ts` necesitó un `as never` acotado
+  para las operaciones genéricas sobre las 4 tablas (documentado in situ); no es un bypass de
+  validación — zod ya corre antes, en el `PUT`.
+  **Hallazgo para Fase 1**: el esquema real tiene `GRANT` amplio (INSERT/UPDATE/DELETE/SELECT) a
+  `anon` y `authenticated` en las 6 tablas (default del table editor de Supabase). Hoy no es
+  explotable porque RLS está activo sin políticas (deniega todo), pero SD-102 debe estrechar estos
+  GRANTs al definir las políticas reales, no asumir que el grant por defecto es seguro.
 
 ### [ ] SD-003 · chore: tooling baseline
 `S` · Depende: SD-001 · Review: `R`
@@ -102,11 +113,13 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [x] Subir un SVG o un archivo de 10 MB devuelve 400.
   - [ ] Borrar una foto con un id de otra propiedad devuelve 404.
 
-### [ ] SD-006 · docs: README, ADRs and roadmap
+### [x] SD-006 · docs: README, ADRs and roadmap
 `S` · Depende: — · Review: `R`
 - **Alcance**: README del proyecto (qué es, stack, arquitectura, setup, scripts), ADR 0001–0004, este roadmap.
 - **Criterios**
-  - [ ] Una persona nueva levanta el proyecto siguiendo solo el README.
+  - [x] Una persona nueva levanta el proyecto siguiendo solo el README.
+- **Nota de cierre**: hecho junto con SD-002 (el setup local de Supabase era la pieza que faltaba
+  para que el README fuera completo). ADRs y roadmap ya existían desde el setup de Claude Code.
 
 ---
 
@@ -126,6 +139,8 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 `L` · Depende: SD-101 · Review: `R+S`
 - **Alcance**: RLS en todas las tablas; políticas por operación con `is_member`; lectura `anon` solo de propiedades
   `published` y su contenido; Storage con rutas `org_id/...` y políticas por prefijo; migrar rutas existentes.
+  **Incluye** estrechar los `GRANT` heredados (hoy INSERT/UPDATE/DELETE/SELECT abierto a `anon`/`authenticated`
+  en las 6 tablas — ver nota de cierre de SD-002) a lo mínimo que cada política realmente necesita.
 - **Criterios**
   - [ ] pgTAP por tabla: owner de `demo` no lee ni escribe datos de `saywa-lodges`.
   - [ ] `anon` no ve propiedades `published = false`.

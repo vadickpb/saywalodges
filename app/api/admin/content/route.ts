@@ -8,12 +8,21 @@ import { serverError, validationError } from "@/lib/api-error";
 // tiers, amenities and distances in one payload — mirrors the single-file
 // save pattern the old photos.json admin used.
 
+// The four child tables this handler syncs — kept as a literal union (not
+// `string`) so a typo here is a compile error against the generated schema.
+type ChildTable = "rooms" | "rate_tiers" | "amenities" | "distances";
+
 // Replaces the set of rows for `table` scoped to `propertyId`: updates rows
 // whose id already exists, inserts new ones, deletes rows no longer present.
 // Safe for `rooms` too — only genuinely removed rooms are deleted (which
 // correctly cascades their photos); edited rooms keep their id and photos.
+//
+// `rest` below is `as never` for insert/update: this helper is intentionally
+// generic over 4 differently-shaped tables, which the typed client can't
+// express without per-table overloads. The actual safety net is zod, already
+// applied to the request body before any row reaches this function (see PUT).
 async function syncTable(
-  table: string,
+  table: ChildTable,
   propertyId: string,
   incoming: Array<{ id?: string } & Record<string, unknown>>
 ) {
@@ -36,10 +45,15 @@ async function syncTable(
   for (const row of incoming) {
     const { id, ...rest } = row;
     if (id && existingIds.has(id)) {
-      const { error } = await supabase.from(table).update(rest).eq("id", id);
+      const { error } = await supabase
+        .from(table)
+        .update(rest as never)
+        .eq("id", id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await supabase.from(table).insert({ ...rest, property_id: propertyId });
+      const { error } = await supabase
+        .from(table)
+        .insert({ ...rest, property_id: propertyId } as never);
       if (error) throw new Error(error.message);
     }
   }
