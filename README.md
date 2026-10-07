@@ -1,5 +1,7 @@
 # Saywa Direct
 
+[![CI](https://github.com/vadickpb/saywalodges/actions/workflows/ci.yml/badge.svg)](https://github.com/vadickpb/saywalodges/actions/workflows/ci.yml)
+
 SaaS multi-tenant de reservas directas para alojamientos independientes en Perú: web con dominio
 propio, tarifas, cotizador/link de reserva, pagos, calendario sincronizado con Airbnb/Booking (iCal)
 y CRM básico de huéspedes — sin comisión por reserva.

@@ -98,13 +98,25 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   de Vercel (si no, el typecheck aceptaría APIs de Node 24 inexistentes en un runtime de Node 22 —
   hallazgo de `reviewer`, corregido).
 
-### [ ] SD-004 · ci: GitHub Actions pipeline
+### [x] SD-004 · ci: GitHub Actions pipeline
 `S` · Depende: SD-002, SD-003 · Review: `R`
 - **Alcance**: workflow en PR y push a `main`: install con caché, lint, typecheck, test, Supabase local + `supabase test db`, build.
 - **Criterios**
-  - [ ] Un PR con error de tipos falla el CI.
-  - [ ] Badge de CI en el README.
-  - [ ] Protección de rama `main`: requiere CI verde.
+  - [x] Un PR con error de tipos falla el CI.
+  - [x] Badge de CI en el README.
+  - [ ] Protección de rama `main`: requiere CI verde. **Acción manual pendiente del usuario** — no
+        automatizable sin `gh`/API de GitHub: Settings → Branches → Add rule → `main` → "Require status
+        checks to pass" → marcar `lint, typecheck, test, build` y `supabase db reset, pgTAP`.
+- **Nota de cierre**: dos jobs en paralelo (`app`: lint/typecheck/test/build; `db`: `supabase start` +
+  `db reset` + `test db`), no uno secuencial — más rápido y sin que `build` dependa de que el stack de
+  Supabase esté arriba. `build` nunca llega a conectarse a Supabase de verdad (todas las rutas que leen
+  contenido son dinámicas, no prerenderizadas — confirmado en el output de `next build`), así que usa
+  credenciales *placeholder* solo para pasar la validación de `lib/env.ts`; verificado localmente con
+  esos mismos valores antes de confiar en que funcionaría en CI. `supabase test db` fallaba con
+  "NOTESTS" porque no había ningún test pgTAP todavía — se agregó `supabase/tests/0001_rls_enabled.test.sql`
+  (verifica que RLS sigue habilitado en las 6 tablas; sin políticas aún, así que no prueba aislamiento,
+  solo que nadie lo desactivó por error) para que el paso tenga algo real que ejecutar en vez de fallar
+  siempre por definición.
 
 ### [ ] SD-005 · fix(security): harden current production surface
 `S` · Depende: SD-001 · Review: `R+S`

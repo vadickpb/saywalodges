@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# No job needs to write anything — default to read-only so a compromised
+# action in the supply chain (see pinned SHAs below) has the smallest
+# possible blast radius via GITHUB_TOKEN.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm run test
+
+      # The build never connects to Supabase (every route that reads
+      # property content is server-rendered on demand, not statically
+      # generated — see app/[lang] in the build output). It only needs
+      # lib/env.ts's validation (a well-formed URL + non-empty key) and
+      # next.config.ts's `new URL(...).hostname` to succeed, so a
+      # placeholder is enough and keeps this job independent of the `db`
+      # job below (no Docker, no waiting on the Supabase stack).
+      - name: Build
+        env:
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key"
+        run: npm run build
+
+  db:
+    name: supabase db reset, pgTAP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: latest
+
+      - run: supabase start
+
+      # Applies supabase/migrations/* + supabase/seed.sql — fails the job if
+      # either has an error, same as a contributor running this locally.
+      - run: supabase db reset
+
+      - run: supabase test db
