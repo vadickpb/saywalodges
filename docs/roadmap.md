@@ -186,6 +186,23 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Usable a 375 px de ancho.
   - [ ] Usuario sin membresías ve un estado vacío claro, no un error.
 
+### [ ] SD-107 · feat(ui): dashboard design system
+`M` · Depende: — (hacerlo antes o junto con SD-106, que lo usa) · Review: `R`
+- **Objetivo**: que el dashboard se vea como un producto profesional y consistente desde la primera pantalla, no
+  como un formulario de administración.
+- **Alcance**: shadcn/ui sobre Tailwind v4; tokens de diseño en un solo lugar (CSS variables en `app/globals.css`:
+  primario, acento, neutros, éxito/alerta/error, radios, sombras, tipografía), de modo que la paleta de Saywa
+  Direct se cambie sin tocar componentes; modo claro y oscuro. Componentes base: botones, inputs, select, selector
+  de fechas, tablas con estados vacío/cargando/error, tarjetas de métricas, badges de estado (confirmada,
+  pendiente, bloqueada), toasts, diálogos de confirmación, sidebar en escritorio y barra inferior en móvil.
+  Página interna `/app/ui` (solo en desarrollo) que muestra todos los componentes. Guía breve en `docs/design.md`
+  (paleta, tipografía, espaciado, cuándo usar cada componente).
+- **Criterios**
+  - [ ] Cambiar 1–2 variables recolorea todo el dashboard (verificado con una paleta alternativa).
+  - [ ] Contraste de texto AA (WCAG) en modo claro y oscuro.
+  - [ ] Las pantallas del dashboard usan solo componentes de `components/ui` (sin estilos sueltos).
+  - [ ] Usable a 375 px de ancho.
+
 ---
 
 ## Fase 2 — Contenido, unidades y tarifas (M2)
@@ -250,12 +267,28 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 ### [ ] SD-208 · feat(site): data-driven rates section and theming
 `M` · Depende: SD-207 · Review: `R`
-- **Alcance**: sección Tarifas con "desde S/ X" derivado de datos numéricos; eliminar `rate_tiers`; tema del tenant
-  vía CSS variables; componentes públicos movidos a `components/site`; textos de UI genéricos (sin copy de Saywa
-  en `dictionaries/`).
+- **Alcance**: sección Tarifas con "desde S/ X" derivado de datos numéricos; eliminar `rate_tiers`; componentes
+  públicos movidos a `components/site`; textos de UI genéricos (sin copy de Saywa en `dictionaries/`).
+  El tema por tenant (colores, tipografía) se hace en SD-209.
 - **Criterios**
-  - [ ] El tenant `demo` luce con sus propios colores y textos.
+  - [ ] El tenant `demo` muestra sus propios textos y tarifas.
   - [ ] Ningún texto específico de Saywa queda en código.
+
+### [ ] SD-209 · feat(site): customizable public site template
+`L` · Depende: SD-201, SD-208 · Review: `R+S`
+- **Objetivo**: que el sitio de cada alojamiento se vea profesional, con la marca de cada dueño, y convierta
+  visitas en consultas y reservas.
+- **Alcance**: rediseño de la plantilla pública (`components/site`): hero con CTA de reserva y WhatsApp, galería,
+  espacios, amenities, tarifas, ubicación, reseñas, FAQ y contacto; mobile-first. Tema por tenant en
+  `properties.theme` (jsonb validado con zod): color primario, acento, fondo, 3–4 pares tipográficos predefinidos y
+  radio de bordes; 4–6 paletas predefinidas más color personalizado. Editor en el dashboard (Sitio → Apariencia)
+  con vista previa en vivo y advertencia si el contraste no cumple AA. Los valores se inyectan como CSS variables
+  en el layout del sitio; no se acepta CSS arbitrario del usuario.
+- **Criterios**
+  - [ ] `saywa-lodges` y `demo` se ven con marcas distintas solo cambiando el tema, sin código.
+  - [ ] Un color con contraste insuficiente muestra advertencia y el CTA sigue siendo legible.
+  - [ ] El tema solo acepta valores validados (hex, presets); intentar inyectar CSS falla (test).
+  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad.
 
 ---
 
@@ -483,6 +516,16 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Alcance**: diagrama de arquitectura, capturas, tenant demo público, sección "decisiones técnicas" en el README
   enlazando ADRs.
 
-### [ ] SD-704 · feat(marketing): saywa.pe landing
-`M` · Depende: SD-105 · Review: `R`
-- **Alcance**: landing comercial en el dominio raíz con formulario de contacto a WhatsApp.
+### [ ] SD-704 · feat(marketing): Saywa Direct landing
+`M` · Depende: SD-105, SD-107 · Review: `R`
+- **Objetivo**: atraer dueños de alojamientos (clientes del SaaS) y convertir visitas en conversaciones de venta.
+- **Alcance**: landing comercial en el dominio raíz: hero con la propuesta de valor ("Convierte tus chats de
+  WhatsApp en reservas pagadas"), problema y solución, cómo funciona en 3 pasos, funcionalidades (link de reserva,
+  calendario sincronizado con Airbnb/Booking, pagos con Yape/transferencia/Mercado Pago, web con dominio propio),
+  caso Saywa Lodges con números reales, planes y precios, FAQ, CTA a WhatsApp o agendar demo, enlace al sitio demo.
+  Usa los mismos tokens de SD-107: cambiar la paleta en un solo lugar recolorea landing y dashboard. SEO
+  (metadata, Open Graph, sitemap) y registro de clics en el CTA.
+- **Criterios**
+  - [ ] Cambiar la paleta en los tokens recolorea la landing sin tocar componentes.
+  - [ ] Lighthouse móvil ≥ 90 en rendimiento, accesibilidad y SEO.
+  - [ ] El CTA abre WhatsApp con mensaje prellenado y el clic queda registrado.
