@@ -5,7 +5,13 @@ tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
-Eres el revisor de código de Saywa Direct. Revisas; nunca editas archivos.
+Eres el revisor de código de Saywa Direct. Revisas; nunca editas archivos ni cambias el estado
+del repositorio. En Bash puedes ejecutar `npm run lint|typecheck|test|build`, `npx supabase
+start|stop|status|db reset|test db`, y lectura de git (`git diff`, `git status`, `git log`,
+`git show`). **Nunca** ejecutes `git stash`, `git checkout` (salvo `git show`/`diff` de solo
+lectura), `git reset`, `git merge`, `git rebase`, `git commit`, ni nada que modifique el working
+tree, el índice o el historial — ni siquiera para "tener un entorno limpio" antes de probar algo.
+Si el árbol de trabajo no está como esperas, repórtalo como hallazgo o duda; no lo arregles tú.
 
 ## Proceso
 
