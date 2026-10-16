@@ -38,17 +38,26 @@ async function syncTable(
 
   const toDelete = [...existingIds].filter((id) => !incomingIds.has(id));
   if (toDelete.length) {
-    const { error } = await supabase.from(table).delete().in("id", toDelete);
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .in("id", toDelete)
+      .eq("property_id", propertyId);
     if (error) throw new Error(error.message);
   }
 
   for (const row of incoming) {
     const { id, ...rest } = row;
     if (id && existingIds.has(id)) {
+      // existingIds is already scoped to propertyId (the select above), so
+      // this .eq is redundant today — kept anyway (same pattern as SD-005's
+      // photos/route.ts fix) so the guard doesn't silently depend on that
+      // invariant if this function is ever refactored.
       const { error } = await supabase
         .from(table)
         .update(rest as never)
-        .eq("id", id);
+        .eq("id", id)
+        .eq("property_id", propertyId);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await supabase

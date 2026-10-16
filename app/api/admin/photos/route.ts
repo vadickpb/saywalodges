@@ -85,11 +85,16 @@ export async function PUT(request: Request) {
   if (!parsed.success) return validationError("admin/photos PUT", parsed.error);
   const { heroId, order } = parsed.data;
 
+  const property = await getProperty();
   const supabase = getSupabase();
 
   try {
     if (heroId) {
-      const { error } = await supabase.from("photos").update({ role: "hero" }).eq("id", heroId);
+      const { error } = await supabase
+        .from("photos")
+        .update({ role: "hero" })
+        .eq("id", heroId)
+        .eq("property_id", property.id);
       if (error) throw error;
     }
 
@@ -97,7 +102,8 @@ export async function PUT(request: Request) {
       const { error } = await supabase
         .from("photos")
         .update({ role: "gallery", sort_order: i })
-        .eq("id", order[i]);
+        .eq("id", order[i])
+        .eq("property_id", property.id);
       if (error) throw error;
     }
   } catch (err) {
@@ -113,11 +119,13 @@ export async function DELETE(request: Request) {
   if (!parsed.success) return validationError("admin/photos DELETE", parsed.error);
   const { id } = parsed.data;
 
+  const property = await getProperty();
   const supabase = getSupabase();
   const { data: photo, error: readError } = await supabase
     .from("photos")
     .select("storage_path")
     .eq("id", id)
+    .eq("property_id", property.id)
     .single();
   if (readError || !photo) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -126,7 +134,11 @@ export async function DELETE(request: Request) {
     .remove([photo.storage_path]);
   if (storageError) return serverError("admin/photos DELETE storage", storageError);
 
-  const { error: deleteError } = await supabase.from("photos").delete().eq("id", id);
+  const { error: deleteError } = await supabase
+    .from("photos")
+    .delete()
+    .eq("id", id)
+    .eq("property_id", property.id);
   if (deleteError) return serverError("admin/photos DELETE", deleteError);
 
   return NextResponse.json({ ok: true });

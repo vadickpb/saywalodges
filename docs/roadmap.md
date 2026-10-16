@@ -118,20 +118,24 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   solo que nadie lo desactivó por error) para que el paso tenga algo real que ejecutar en vez de fallar
   siempre por definición.
 
-### [ ] SD-005 · fix(security): harden current production surface
+### [x] SD-005 · fix(security): harden current production surface
 `S` · Depende: SD-001 · Review: `R+S`
 - **Objetivo**: cerrar lo explotable mientras el sitio actual sigue en producción.
 - **Ya resuelto en SD-001** (adelantado por hallazgos de review, no re-hacer): JSON-LD escapado
   (`lib/json-ld.ts`), errores genéricos en vez de `error.message` (`lib/api-error.ts`), MIME/tamaño
   validados en uploads (`lib/validation/admin.ts`), zod en los 4 payloads de `/api/admin/*`.
 - **Alcance restante**: filtrar por `property_id` en `PUT/DELETE /api/admin/photos` (hoy son IDOR de
-  bajo impacto real porque solo existe una propiedad — se vuelve relevante recién en Fase 1); test
-  unitario formal de `toJsonLd()` una vez exista Vitest (SD-003) — hoy solo verificado manualmente.
+  bajo impacto real porque solo existe una propiedad — se vuelve relevante recién en Fase 1).
+- **Nota de cierre**: el test unitario de `toJsonLd()` ya cubría el escape de `</script>` desde SD-003;
+  el cambio de este ticket limita todas las mutaciones de fotos al `property_id` resuelto por el handler.
+  Verificado de punta a punta contra Supabase local (no solo lectura de código): se sembró una segunda
+  propiedad con una foto propia y se invocó el handler `DELETE` real con ese id — con el código viejo
+  **sí la borraba** (IDOR real, no solo teórico); con el fix, devuelve 404 y la fila sobrevive. Lo mismo
+  para `PUT` (fijar hero / reordenar): responde 200 pero no toca la fila de la otra propiedad.
 - **Criterios**
-  - [x] Un nombre de propiedad con `</script>` no rompe el HTML (verificado manualmente en SD-001;
-        falta el test automatizado formal).
+  - [x] Un nombre de propiedad con `</script>` no rompe el HTML (test unitario en `lib/json-ld.test.ts`).
   - [x] Subir un SVG o un archivo de 10 MB devuelve 400.
-  - [ ] Borrar una foto con un id de otra propiedad devuelve 404.
+  - [x] Borrar una foto con un id de otra propiedad devuelve 404.
 
 ### [x] SD-006 · docs: README, ADRs and roadmap
 `S` · Depende: — · Review: `R`
