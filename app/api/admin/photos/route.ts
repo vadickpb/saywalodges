@@ -67,6 +67,7 @@ export async function POST(request: Request) {
     .from("photos")
     .insert({
       property_id: property.id,
+      org_id: property.orgId,
       room_id: null,
       storage_path: storagePath,
       role: "gallery",

@@ -3,7 +3,22 @@
 -- live project with `supabase db dump --data-only` (see SD-002). It gives
 -- local development the same content as production, without touching it.
 --
--- Single-tenant for now (no org_id yet — see Fase 1, SD-101/SD-102).
+-- SD-101 added org_id (not null) to every business table. Rather than
+-- rewriting each VALUES row below (the original, unmodified dump), a
+-- temporary column default fills it in; dropped again right after. Real
+-- app code should never rely on this default — mutations always pass
+-- org_id explicitly (see lib/dal/* from SD-104 onward).
+INSERT INTO "public"."organizations" ("id", "name")
+VALUES ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'Saywa Lodges')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE "public"."properties" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+ALTER TABLE "public"."rooms" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+ALTER TABLE "public"."photos" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+ALTER TABLE "public"."rate_tiers" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+ALTER TABLE "public"."amenities" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+ALTER TABLE "public"."distances" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+ALTER TABLE "public"."properties" ALTER COLUMN "subdomain" SET DEFAULT 'saywa-lodges';
 
 INSERT INTO "public"."properties"
   ("id", "slug", "name", "whatsapp_number", "whatsapp_message_en", "whatsapp_message_es",
@@ -144,3 +159,86 @@ VALUES
 INSERT INTO "storage"."buckets" ("id", "name", "public")
 VALUES ('property-photos', 'property-photos', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- Real app code must always pass org_id explicitly — drop the convenience
+-- default now that the single-tenant rows above are seeded.
+UPDATE "public"."properties" SET "published" = true WHERE "slug" = 'saywa-lodges';
+
+ALTER TABLE "public"."properties" ALTER COLUMN "org_id" DROP DEFAULT;
+ALTER TABLE "public"."rooms" ALTER COLUMN "org_id" DROP DEFAULT;
+ALTER TABLE "public"."photos" ALTER COLUMN "org_id" DROP DEFAULT;
+ALTER TABLE "public"."rate_tiers" ALTER COLUMN "org_id" DROP DEFAULT;
+ALTER TABLE "public"."amenities" ALTER COLUMN "org_id" DROP DEFAULT;
+ALTER TABLE "public"."distances" ALTER COLUMN "org_id" DROP DEFAULT;
+ALTER TABLE "public"."properties" ALTER COLUMN "subdomain" DROP DEFAULT;
+
+-- ─── Demo tenant (SD-101) ────────────────────────────────────────────────────
+-- A second, independent org + property, purely for exercising multi-tenant
+-- isolation locally (pgTAP here, host-based routing from SD-105 on). Content
+-- is deliberately minimal placeholder text, not real business data.
+
+INSERT INTO "public"."organizations" ("id", "name")
+VALUES ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'Demo Org');
+
+INSERT INTO "public"."properties"
+  ("id", "org_id", "slug", "name", "whatsapp_number", "email", "subdomain", "published",
+   "address_locality", "address_region", "address_country", "price_range")
+VALUES
+  ('57f914ac-3890-47c1-9d6d-1492782cf712', 'ff24bacc-47d2-40bc-9210-f860e98892fd', 'demo', 'Demo Lodge',
+   '51900000000', 'demo@example.com', 'demo', true, 'Lima', 'Lima', 'PE', '$');
+
+INSERT INTO "public"."rooms"
+  ("id", "org_id", "property_id", "key", "category", "icon", "label_en", "label_es", "desc_en", "desc_es", "sort_order")
+VALUES
+  ('b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712',
+   'demo-room', 'rooms', '🛏️', 'Demo Room', 'Habitación Demo', 'Placeholder room for local testing.', 'Habitación de ejemplo para pruebas locales.', 0);
+
+INSERT INTO "public"."amenities"
+  ("id", "org_id", "property_id", "icon", "title_en", "title_es", "desc_en", "desc_es", "sort_order")
+VALUES
+  ('c3f2b1c2-8b8f-4a3b-9d0b-1c2d3e4f5a6b', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712',
+   '📶', 'Wi-Fi', 'Wi-Fi', 'Placeholder amenity.', 'Amenity de ejemplo.', 0);
+
+-- ─── Local-only auth users + memberships (SD-101) ───────────────────────────
+-- Passwords are fixed, publicly-known dev credentials — fine today because
+-- this file only ever runs against the local Supabase stack (`supabase db
+-- reset`); Claude has no access to run it against the remote project
+-- (db push / link are denied — see .claude/settings.json), and Supabase
+-- Branching is not enabled on this project (verified: no branches).
+-- No password here would be safe if that ever changes: this file is
+-- committed to a public-by-default repo, so any credential in it is
+-- public by definition. Before ever enabling Branching (which runs
+-- seed.sql on internet-reachable preview databases), these seeded users
+-- and the real Saywa Lodges content copied into this file need a
+-- different plan — e.g. a separate, gitignored local-only seed, or
+-- branch-specific seeding that excludes real data and real-looking
+-- credentials entirely. Not usable for real sign-in until SD-103 wires
+-- up Supabase Auth in the app.
+
+INSERT INTO "auth"."users" (
+  "instance_id", "id", "aud", "role", "email", "encrypted_password",
+  "email_confirmed_at", "raw_app_meta_data", "raw_user_meta_data",
+  "created_at", "updated_at", "confirmation_token", "email_change",
+  "email_change_token_new", "recovery_token"
+) VALUES
+  ('00000000-0000-0000-0000-000000000000', 'a3b45db1-7c15-4528-a4ba-be625665fb6d', 'authenticated', 'authenticated',
+   'owner@saywalodges.com', crypt('devpassword123', gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', 'authenticated', 'authenticated',
+   'owner@demo.saywadirect.test', crypt('devpassword123', gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
+
+INSERT INTO "auth"."identities" (
+  "id", "user_id", "identity_data", "provider", "provider_id", "last_sign_in_at", "created_at", "updated_at"
+) VALUES
+  ('b62f1d19-322d-4fad-b8ba-54802f4b720e', 'a3b45db1-7c15-4528-a4ba-be625665fb6d',
+   '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d","email":"owner@saywalodges.com"}'::jsonb,
+   'email', 'a3b45db1-7c15-4528-a4ba-be625665fb6d', now(), now(), now()),
+  ('889e1602-ef22-492b-9c1c-fbd4d1a131b0', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880',
+   '{"sub":"bd6a1c86-01e2-40a4-ba79-4e28b373e880","email":"owner@demo.saywadirect.test"}'::jsonb,
+   'email', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', now(), now(), now());
+
+INSERT INTO "public"."memberships" ("org_id", "user_id", "role")
+VALUES
+  ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a3b45db1-7c15-4528-a4ba-be625665fb6d', 'owner'),
+  ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', 'owner');

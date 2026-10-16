@@ -40,6 +40,7 @@ export type Database = {
           desc_es: string;
           icon: string;
           id: string;
+          org_id: string;
           property_id: string;
           sort_order: number;
           title_en: string;
@@ -51,6 +52,7 @@ export type Database = {
           desc_es?: string;
           icon?: string;
           id?: string;
+          org_id: string;
           property_id: string;
           sort_order?: number;
           title_en: string;
@@ -61,12 +63,20 @@ export type Database = {
           desc_es?: string;
           icon?: string;
           id?: string;
+          org_id?: string;
           property_id?: string;
           sort_order?: number;
           title_en?: string;
           title_es?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "amenities_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "amenities_property_id_fkey";
             columns: ["property_id"];
@@ -80,6 +90,7 @@ export type Database = {
         Row: {
           icon: string;
           id: string;
+          org_id: string;
           place_en: string;
           place_es: string;
           property_id: string;
@@ -91,6 +102,7 @@ export type Database = {
         Insert: {
           icon?: string;
           id?: string;
+          org_id: string;
           place_en: string;
           place_es: string;
           property_id: string;
@@ -101,6 +113,7 @@ export type Database = {
         Update: {
           icon?: string;
           id?: string;
+          org_id?: string;
           place_en?: string;
           place_es?: string;
           property_id?: string;
@@ -110,6 +123,13 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "distances_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "distances_property_id_fkey";
             columns: ["property_id"];
             isOneToOne: false;
@@ -118,9 +138,59 @@ export type Database = {
           },
         ];
       };
+      memberships: {
+        Row: {
+          created_at: string;
+          org_id: string;
+          role: Database["public"]["Enums"]["membership_role"];
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          org_id: string;
+          role?: Database["public"]["Enums"]["membership_role"];
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          org_id?: string;
+          role?: Database["public"]["Enums"]["membership_role"];
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "memberships_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      organizations: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+        };
+        Relationships: [];
+      };
       photos: {
         Row: {
           id: string;
+          org_id: string;
           property_id: string;
           role: Database["public"]["Enums"]["photo_role"];
           room_id: string | null;
@@ -130,6 +200,7 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           id?: string;
+          org_id: string;
           property_id: string;
           role: Database["public"]["Enums"]["photo_role"];
           room_id?: string | null;
@@ -138,6 +209,7 @@ export type Database = {
         };
         Update: {
           id?: string;
+          org_id?: string;
           property_id?: string;
           role?: Database["public"]["Enums"]["photo_role"];
           room_id?: string | null;
@@ -145,6 +217,13 @@ export type Database = {
           storage_path?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "photos_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "photos_property_id_fkey";
             columns: ["property_id"];
@@ -168,6 +247,7 @@ export type Database = {
           address_region: string;
           airbnb_url: string;
           created_at: string;
+          custom_domain: string | null;
           email: string;
           id: string;
           latitude: number | null;
@@ -181,11 +261,14 @@ export type Database = {
           meta_title_en: string;
           meta_title_es: string;
           name: string;
+          org_id: string;
           pets_allowed: boolean;
           price_range: string;
+          published: boolean;
           site_url: string;
           slug: string;
           star_rating: number | null;
+          subdomain: string;
           whatsapp_message_en: string;
           whatsapp_message_es: string;
           whatsapp_number: string;
@@ -197,6 +280,7 @@ export type Database = {
           address_region?: string;
           airbnb_url?: string;
           created_at?: string;
+          custom_domain?: string | null;
           email?: string;
           id?: string;
           latitude?: number | null;
@@ -210,11 +294,14 @@ export type Database = {
           meta_title_en?: string;
           meta_title_es?: string;
           name: string;
+          org_id: string;
           pets_allowed?: boolean;
           price_range?: string;
+          published?: boolean;
           site_url?: string;
           slug: string;
           star_rating?: number | null;
+          subdomain: string;
           whatsapp_message_en?: string;
           whatsapp_message_es?: string;
           whatsapp_number: string;
@@ -225,6 +312,7 @@ export type Database = {
           address_region?: string;
           airbnb_url?: string;
           created_at?: string;
+          custom_domain?: string | null;
           email?: string;
           id?: string;
           latitude?: number | null;
@@ -238,22 +326,34 @@ export type Database = {
           meta_title_en?: string;
           meta_title_es?: string;
           name?: string;
+          org_id?: string;
           pets_allowed?: boolean;
           price_range?: string;
+          published?: boolean;
           site_url?: string;
           slug?: string;
           star_rating?: number | null;
+          subdomain?: string;
           whatsapp_message_en?: string;
           whatsapp_message_es?: string;
           whatsapp_number?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "properties_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       rate_tiers: {
         Row: {
           from_en: string;
           from_es: string;
           id: string;
+          org_id: string;
           period_en: string;
           period_es: string;
           property_id: string;
@@ -268,6 +368,7 @@ export type Database = {
           from_en: string;
           from_es: string;
           id?: string;
+          org_id: string;
           period_en?: string;
           period_es?: string;
           property_id: string;
@@ -281,6 +382,7 @@ export type Database = {
           from_en?: string;
           from_es?: string;
           id?: string;
+          org_id?: string;
           period_en?: string;
           period_es?: string;
           property_id?: string;
@@ -291,6 +393,13 @@ export type Database = {
           tag_es?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "rate_tiers_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "rate_tiers_property_id_fkey";
             columns: ["property_id"];
@@ -313,6 +422,7 @@ export type Database = {
           key: string;
           label_en: string;
           label_es: string;
+          org_id: string;
           property_id: string;
           sort_order: number;
         };
@@ -329,6 +439,7 @@ export type Database = {
           key: string;
           label_en: string;
           label_es: string;
+          org_id: string;
           property_id: string;
           sort_order?: number;
         };
@@ -344,10 +455,18 @@ export type Database = {
           key?: string;
           label_en?: string;
           label_es?: string;
+          org_id?: string;
           property_id?: string;
           sort_order?: number;
         };
         Relationships: [
+          {
+            foreignKeyName: "rooms_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "rooms_property_id_fkey";
             columns: ["property_id"];
@@ -362,9 +481,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      is_member: { Args: { target_org_id: string }; Returns: boolean };
     };
     Enums: {
+      membership_role: "owner" | "staff";
       photo_role: "hero" | "gallery" | "room";
       room_category: "pool" | "rooms" | "common" | "outdoor";
     };
@@ -497,6 +617,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      membership_role: ["owner", "staff"],
       photo_role: ["hero", "gallery", "room"],
       room_category: ["pool", "rooms", "common", "outdoor"],
     },

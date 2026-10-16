@@ -149,15 +149,24 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 ## Fase 1 — Multi-tenant y autenticación (M1)
 
-### [ ] SD-101 · feat(db): organizations, memberships and org scoping
+### [x] SD-101 · feat(db): organizations, memberships and org scoping
 `L` · Depende: SD-002 · Review: `R+S`
 - **Alcance**: tablas `organizations`, `memberships (role owner|staff)`; función `is_member(org_id)`
   (`security definer`, `search_path = ''`); `org_id not null` + índice en todas las tablas existentes con backfill
   a la org `saywa-lodges`; columnas `subdomain`, `custom_domain`, `published` en `properties`.
 - **Criterios**
-  - [ ] Migración aplicada sobre datos existentes sin pérdida (verificado con seed).
-  - [ ] Seed con dos orgs: `saywa-lodges` y `demo`, cada una con su propiedad y usuario owner.
-  - [ ] pgTAP: `is_member` devuelve true/false correctamente.
+  - [x] Migración aplicada sobre datos existentes sin pérdida (verificado con seed).
+  - [x] Seed con dos orgs: `saywa-lodges` y `demo`, cada una con su propiedad y usuario owner.
+  - [x] pgTAP: `is_member` devuelve true/false correctamente.
+- **Nota de cierre**: la app **no se tocó para leer/autorizar por org** — eso es SD-104/SD-105. Sí fue
+  necesario actualizar los 2 `insert` existentes que ya escribían en tablas ahora con `org_id not null`
+  (`app/api/admin/{content,photos}/route.ts`), o `main` no compilaría; `lib/property.ts` ahora expone
+  `orgId`. Seed: dos orgs reales (`Saywa Lodges` y `Demo Org`), cada una con su propiedad y un usuario
+  en `auth.users` con `memberships.role = 'owner'` (contraseña de desarrollo fija — solo corre contra
+  Supabase local, nunca contra el remoto). Las filas existentes de Saywa Lodges en `seed.sql` no se
+  reescribieron fila por fila: un `DEFAULT` temporal en `org_id`/`subdomain` las completa, luego se
+  elimina — las mutaciones reales de la app siempre pasan `org_id` explícito. pgTAP simula sesión de
+  cada owner vía `request.jwt.claims` + `set local role authenticated` (ver `supabase/tests/0002_is_member.test.sql`).
 
 ### [ ] SD-102 · feat(db): row level security on all tables and storage
 `L` · Depende: SD-101 · Review: `R+S`
@@ -165,6 +174,18 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   `published` y su contenido; Storage con rutas `org_id/...` y políticas por prefijo; migrar rutas existentes.
   **Incluye** estrechar los `GRANT` heredados (hoy INSERT/UPDATE/DELETE/SELECT abierto a `anon`/`authenticated`
   en las 6 tablas — ver nota de cierre de SD-002) a lo mínimo que cada política realmente necesita.
+- **Hallazgos de `security-reviewer` en SD-101, para resolver aquí** (sin vía de explotación todavía —
+  hoy solo el servidor escribe estas tablas; se vuelven relevantes en cuanto existan políticas de
+  insert/update con `is_member(org_id)`):
+  - **Consistencia `org_id` padre↔hijo**: nada impide hoy que `rooms.org_id` (o `photos`/`rate_tiers`/etc.)
+    no coincida con el `org_id` de su `properties.property_id` — ni que `photos.room_id` sea de otra org.
+    En cuanto exista una policy de insert para un miembro de la org A, podría colar una fila con
+    `org_id = A` pero `property_id` de una propiedad de B. Arreglo: `unique (id, org_id)` en
+    `properties`/`rooms` + FK compuesta `(property_id, org_id) references properties(id, org_id)`
+    (y análogo para `room_id` en `photos`), o un `check`/trigger que valide la propiedad padre.
+  - **`subdomain`/`custom_domain`**: sin normalización (mayúsculas) ni lista de nombres reservados.
+    Antes de que SD-105 enrute por host, agregar `check` de formato DNS en minúsculas y reservar
+    `app`, `www`, `api`, etc., para que ningún tenant pueda reclamar el host del dashboard.
 - **Criterios**
   - [ ] pgTAP por tabla: owner de `demo` no lee ni escribe datos de `saywa-lodges`.
   - [ ] `anon` no ve propiedades `published = false`.

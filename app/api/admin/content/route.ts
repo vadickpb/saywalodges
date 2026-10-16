@@ -24,6 +24,7 @@ type ChildTable = "rooms" | "rate_tiers" | "amenities" | "distances";
 async function syncTable(
   table: ChildTable,
   propertyId: string,
+  orgId: string,
   incoming: Array<{ id?: string } & Record<string, unknown>>
 ) {
   const supabase = getSupabase();
@@ -62,7 +63,7 @@ async function syncTable(
     } else {
       const { error } = await supabase
         .from(table)
-        .insert({ ...rest, property_id: propertyId } as never);
+        .insert({ ...rest, property_id: propertyId, org_id: orgId } as never);
       if (error) throw new Error(error.message);
     }
   }
@@ -173,6 +174,7 @@ export async function PUT(request: Request) {
     await syncTable(
       "rooms",
       property.id,
+      property.orgId,
       body.rooms.map((r) => ({
         id: r.id,
         key: r.key,
@@ -192,6 +194,7 @@ export async function PUT(request: Request) {
     await syncTable(
       "rate_tiers",
       property.id,
+      property.orgId,
       body.rateTiers.map((r) => ({
         id: r.id,
         season_en: r.seasonEn,
@@ -209,6 +212,7 @@ export async function PUT(request: Request) {
     await syncTable(
       "amenities",
       property.id,
+      property.orgId,
       body.amenities.map((r) => ({
         id: r.id,
         icon: r.icon,
@@ -223,6 +227,7 @@ export async function PUT(request: Request) {
     await syncTable(
       "distances",
       property.id,
+      property.orgId,
       body.distances.map((r) => ({
         id: r.id,
         place_en: r.placeEn,

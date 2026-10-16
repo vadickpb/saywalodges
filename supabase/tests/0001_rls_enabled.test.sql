@@ -3,7 +3,7 @@
 -- someone accidentally disabling RLS — not against unauthorized access.
 -- supabase/CLAUDE.md: every table needs a pgTAP test; this is it for now.
 begin;
-select plan(6);
+select plan(8);
 
 select ok(
   (select relrowsecurity from pg_class where relname = 'properties' and relnamespace = 'public'::regnamespace),
@@ -28,6 +28,14 @@ select ok(
 select ok(
   (select relrowsecurity from pg_class where relname = 'distances' and relnamespace = 'public'::regnamespace),
   'RLS enabled on public.distances'
+);
+select ok(
+  (select relrowsecurity from pg_class where relname = 'organizations' and relnamespace = 'public'::regnamespace),
+  'RLS enabled on public.organizations'
+);
+select ok(
+  (select relrowsecurity from pg_class where relname = 'memberships' and relnamespace = 'public'::regnamespace),
+  'RLS enabled on public.memberships'
 );
 
 select * from finish();

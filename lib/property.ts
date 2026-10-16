@@ -6,6 +6,7 @@ const PROPERTY_SLUG = "saywa-lodges";
 
 export type Property = {
   id: string;
+  orgId: string;
   slug: string;
   name: string;
   whatsappNumber: string;
@@ -36,7 +37,7 @@ export async function getProperty(): Promise<Property> {
   const { data, error } = await getSupabase()
     .from("properties")
     .select(
-      "id, slug, name, whatsapp_number, whatsapp_message_en, whatsapp_message_es, email, maps_url, airbnb_url, site_url, address_locality, address_region, address_country, latitude, longitude, meta_title_en, meta_title_es, meta_description_en, meta_description_es, meta_keywords_en, meta_keywords_es, price_range, star_rating, pets_allowed, logo_path"
+      "id, org_id, slug, name, whatsapp_number, whatsapp_message_en, whatsapp_message_es, email, maps_url, airbnb_url, site_url, address_locality, address_region, address_country, latitude, longitude, meta_title_en, meta_title_es, meta_description_en, meta_description_es, meta_keywords_en, meta_keywords_es, price_range, star_rating, pets_allowed, logo_path"
     )
     .eq("slug", PROPERTY_SLUG)
     .single();
@@ -45,6 +46,7 @@ export async function getProperty(): Promise<Property> {
 
   return {
     id: data.id,
+    orgId: data.org_id,
     slug: data.slug,
     name: data.name,
     whatsappNumber: data.whatsapp_number,
