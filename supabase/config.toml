@@ -387,7 +387,12 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+# Disabled: the Logflare container repeatedly crash-looped on this machine
+# during Fase 1 (missing its own internal migrations in this environment),
+# blocking every `supabase start`/`db reset`/`test db` until it was turned
+# off. Not needed for app development — logs/metrics aren't used by any
+# ticket so far. Re-enable if that ever changes.
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
