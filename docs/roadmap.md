@@ -168,28 +168,82 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   elimina — las mutaciones reales de la app siempre pasan `org_id` explícito. pgTAP simula sesión de
   cada owner vía `request.jwt.claims` + `set local role authenticated` (ver `supabase/tests/0002_is_member.test.sql`).
 
-### [ ] SD-102 · feat(db): row level security on all tables and storage
+### [~] SD-102 · feat(db): row level security on all tables
 `L` · Depende: SD-101 · Review: `R+S`
-- **Alcance**: RLS en todas las tablas; políticas por operación con `is_member`; lectura `anon` solo de propiedades
-  `published` y su contenido; Storage con rutas `org_id/...` y políticas por prefijo; migrar rutas existentes.
+- **Alcance**: RLS en las 8 tablas (las 6 de negocio + `organizations`/`memberships`); políticas por operación
+  con `is_member(org_id)`; lectura `anon`/`authenticated` solo de propiedades `published` y su contenido.
   **Incluye** estrechar los `GRANT` heredados (hoy INSERT/UPDATE/DELETE/SELECT abierto a `anon`/`authenticated`
-  en las 6 tablas — ver nota de cierre de SD-002) a lo mínimo que cada política realmente necesita.
-- **Hallazgos de `security-reviewer` en SD-101, para resolver aquí** (sin vía de explotación todavía —
-  hoy solo el servidor escribe estas tablas; se vuelven relevantes en cuanto existan políticas de
-  insert/update con `is_member(org_id)`):
-  - **Consistencia `org_id` padre↔hijo**: nada impide hoy que `rooms.org_id` (o `photos`/`rate_tiers`/etc.)
-    no coincida con el `org_id` de su `properties.property_id` — ni que `photos.room_id` sea de otra org.
-    En cuanto exista una policy de insert para un miembro de la org A, podría colar una fila con
-    `org_id = A` pero `property_id` de una propiedad de B. Arreglo: `unique (id, org_id)` en
-    `properties`/`rooms` + FK compuesta `(property_id, org_id) references properties(id, org_id)`
-    (y análogo para `room_id` en `photos`), o un `check`/trigger que valide la propiedad padre.
-  - **`subdomain`/`custom_domain`**: sin normalización (mayúsculas) ni lista de nombres reservados.
-    Antes de que SD-105 enrute por host, agregar `check` de formato DNS en minúsculas y reservar
-    `app`, `www`, `api`, etc., para que ningún tenant pueda reclamar el host del dashboard.
+  en las 6 tablas — ver nota de cierre de SD-002) a lo mínimo que cada política realmente necesita; la FK
+  compuesta `(property_id, org_id)` que cierra el hallazgo de consistencia de SD-101 (necesaria ahora: sin
+  ella, una policy de insert con `is_member(org_id)` permitiría colar `org_id` propio con `property_id` ajeno);
+  y un `check` de formato (minúsculas, DNS-válido) + lista de reservados (`app`, `www`, `api`, …) en
+  `properties.subdomain`/`custom_domain`, antes de que SD-105 enrute por host.
+- **Fuera de alcance (movido a SD-202)**: políticas de RLS en `storage.objects` y migrar las rutas reales de
+  Storage a un prefijo por org. Hoy el admin usa siempre la `service_role` key (ignora RLS), así que esas
+  políticas no tendrían efecto práctico hasta SD-103/104; mover archivos reales de producción merece su propio
+  ticket, revisado con el mismo cuidado que SD-001, junto con la reescritura del gestor de fotos.
 - **Criterios**
-  - [ ] pgTAP por tabla: owner de `demo` no lee ni escribe datos de `saywa-lodges`.
-  - [ ] `anon` no ve propiedades `published = false`.
-  - [ ] `get_advisors` (security) sin alertas de RLS.
+  - [x] pgTAP por tabla: owner de `demo` no lee ni escribe datos de `saywa-lodges`.
+  - [x] `anon` no ve propiedades `published = false`.
+  - [ ] `get_advisors` (security) sin alertas de RLS — **no verificable desde aquí**: el remoto todavía
+        no tiene esta migración (Claude no tiene `db push`). Pendiente de que el usuario la aplique
+        (`npx supabase db push` o pegarla en el SQL Editor) y luego corra `get_advisors` para confirmar.
+- **Nota de cierre**: "owner de demo no lee datos de saywa-lodges" se verificó con precisión — un
+  supuesto inicial equivocado trataba "puede leer contenido publicado de otra org" como fallo; no lo
+  es, es el diseño correcto (contenido publicado es público por definición). Lo que sí se verificó de
+  punta a punta contra Supabase local, con sesiones reales (login real vía GoTrue con las contraseñas
+  sembradas en SD-101, no solo políticas leídas): un no-miembro nunca puede escribir una fila ajena
+  (`UPDATE`/`DELETE` afectan 0 filas), nunca puede leer una fila **no publicada** de otra org, y un
+  miembro sigue viendo y pudiendo escribir su propia org incluso sin publicar. Se añadió
+  `is_property_published()` (mismo patrón que `is_member()`) para que la policy de `select` de las
+  tablas hijas no dependa de una interacción implícita con la RLS de `properties`.
+
+  **Dos rondas de `reviewer`/`security-reviewer` encontraron 4 huecos reales en la primera versión de
+  este ticket, los 4 corregidos antes de cerrar** (no quedaron para después):
+  1. El hallazgo de SD-101 sobre consistencia `org_id` padre↔hijo solo se cerró a medias: la FK
+     compuesta `(property_id, org_id)` no cubría `photos.room_id`, que seguía con FK simple a
+     `rooms(id)` — un miembro podía insertar/mover una foto propia apuntando `room_id` a un room de
+     otra org. Arreglado con `unique(id, property_id)` en `rooms` + FK compuesta
+     `(room_id, property_id) references rooms(id, property_id)` en `photos`.
+  2. `is_member()`/`is_property_published()` quedaban invocables vía `/rest/v1/rpc/...` (`EXECUTE`
+     a `PUBLIC` por defecto) — exactamente el patrón que el advisor de seguridad de Supabase marca.
+     Movidas a un schema `private` (no listado en `api.schemas` de `supabase/config.toml`), con
+     `usage`/`execute` otorgado explícitamente; las policies (SQL dentro de Postgres, no HTTP) siguen
+     funcionando igual. Verificado: `/rpc/is_member` ahora da 404.
+  3. Cualquier `authenticated` podía `INSERT` una propiedad nueva reclamando cualquier `subdomain`
+     libre, o `UPDATE` el propio `subdomain`/`custom_domain` — choca con que SD-603 asigna la creación
+     de tenants a un superadmin y SD-604 exige verificación de dominio. Arreglado quitando el `GRANT
+     INSERT` de `properties` para `authenticated` (la creación queda solo para `service_role`) y
+     pasando el `UPDATE` a privilegios por columna, excluyendo `id`/`org_id`/`slug`/`subdomain`/`custom_domain`.
+  4. `organizations`/`memberships` no habían recibido el mismo `revoke all` que las 6 tablas de
+     negocio, así que conservaban el `GRANT` amplio heredado del default del schema — el commit
+     original afirmaba incorrectamente que ya estaban angostas. Corregido.
+
+  `supabase/tests/0003_org_isolation.test.sql` quedó con 19 asserts: el patrón real de SD-101 (org
+  propia + `property_id` ajeno, que ejercita la FK compuesta — la primera versión del test probaba
+  la dirección equivocada, que RLS bloqueaba antes de llegar a la FK), el caso de `photos.room_id`,
+  los 2 `check` de `subdomain`/`custom_domain` (3 asserts), el `GRANT` narrowing de `properties`
+  (creación/`subdomain` denegados) y de una tabla de negocio para `anon`, y que un miembro sigue
+  pudiendo leer/escribir lo suyo. Verificado también que el admin actual (usa `service_role`, ignora
+  RLS) sigue funcionando exactamente igual tras todos estos cambios.
+
+  **Segunda ronda de revisión** (sobre los 4 arreglos de arriba, ya commiteados): ambos revisores
+  confirmaron en vivo contra Supabase local que los 4 quedaron cerrados — no solo que se agregó
+  código, sino reconstruyendo el bypass original y viendo que ahora falla. Encontraron un quinto
+  hallazgo (medio, no explotable hoy): sin login real todavía (SD-103), nadie externo puede obtener
+  sesión, pero una vez que la haya, `authenticated` puede escribir `properties` directo por
+  PostgREST sin pasar por el zod de `app/api/admin` — concretamente, `maps_url`/`airbnb_url` se
+  pintan como `href`/`src` de iframe en el sitio público (`components/Location.tsx`, `Footer.tsx`,
+  `Availability.tsx`), así que un valor `javascript:` ahí es XSS almacenado contra los huéspedes de
+  ese tenant. Arreglado con `check` a nivel de BD (`https://` o vacío) en `maps_url`, `airbnb_url` y
+  `site_url` — la capa que vale sin importar qué código escriba ahí en el futuro (server action,
+  RPC, o REST directo). Verificado con una sesión real, no solo pgTAP: un `PATCH` directo con
+  `maps_url: "javascript:alert(1)"` devuelve 400 con el nombre del constraint. `supabase/tests/0003_org_isolation.test.sql`
+  quedó con 22 asserts (se agregó también `hasnt_function` confirmando que `public.is_member` ya no
+  existe, y el caso de `photos.room_id` vía `UPDATE`, no solo `INSERT`). Pendiente, anotado para
+  cuando exista la DAL (SD-104): replicar a nivel de BD los límites de longitud de zod, y algunos
+  tests de introspección de privilegios (`table_privs_are`/`column_privs_are`) que quedaron fuera
+  por ser más pulido que hallazgo real.
 
 ### [ ] SD-103 · feat(auth): Supabase Auth and data access layer
 `M` · Depende: SD-101 · Review: `R+S`
@@ -264,12 +318,19 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 ### [ ] SD-202 · feat(dashboard): site content and photo manager
 `L` · Depende: SD-201 · Review: `R+S`
 - **Alcance**: migración `rooms` → `spaces`; CRUD de spaces, amenities y distances con reordenamiento; gestor de fotos
-  (hero, galería, por espacio) con validación de tipo/tamaño, rutas `org_id/`, borrado de Storage consistente
-  (RPC o compensación).
+  (hero, galería, por espacio) con validación de tipo/tamaño, rutas nuevas con prefijo `{org_id}/...`, borrado de
+  Storage consistente (RPC o compensación). **Incluye lo movido desde SD-102**: políticas de RLS en
+  `storage.objects` (insert/update/delete solo si `(storage.foldername(name))[1]::uuid` es una org de la que el
+  usuario es miembro; lectura pública sin cambios, el bucket ya es público) y migrar las 27 rutas reales de
+  Saywa Lodges al nuevo prefijo — mover los objetos en Storage y actualizar `photos.storage_path`/
+  `properties.logo_path` en una sola operación verificada (mismo patrón de script + verificación que
+  `scripts/seed-content.mjs` en SD-001), confirmando que cada foto sigue cargando en el sitio después del move.
 - **Criterios**
   - [ ] Reordenar y guardar persiste el orden en el sitio.
   - [ ] Borrar un espacio borra sus fotos de BD y Storage.
   - [ ] Las fotos de espacios ya son editables (antes no lo eran).
+  - [ ] Las 27 fotos reales siguen cargando tras la migración de rutas; ninguna URL rota.
+  - [ ] Un usuario de otra org no puede subir/borrar en el prefijo de otra (verificado, no solo política escrita).
 
 ### [ ] SD-203 · chore: remove legacy admin
 `S` · Depende: SD-202 · Review: `R+S`

@@ -78,11 +78,11 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "amenities_property_id_fkey";
-            columns: ["property_id"];
+            foreignKeyName: "amenities_property_id_org_id_fkey";
+            columns: ["property_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "properties";
-            referencedColumns: ["id"];
+            referencedColumns: ["id", "org_id"];
           },
         ];
       };
@@ -130,11 +130,11 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "distances_property_id_fkey";
-            columns: ["property_id"];
+            foreignKeyName: "distances_property_id_org_id_fkey";
+            columns: ["property_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "properties";
-            referencedColumns: ["id"];
+            referencedColumns: ["id", "org_id"];
           },
         ];
       };
@@ -225,18 +225,18 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "photos_property_id_fkey";
-            columns: ["property_id"];
+            foreignKeyName: "photos_property_id_org_id_fkey";
+            columns: ["property_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "properties";
-            referencedColumns: ["id"];
+            referencedColumns: ["id", "org_id"];
           },
           {
-            foreignKeyName: "photos_room_id_fkey";
-            columns: ["room_id"];
+            foreignKeyName: "photos_room_id_property_id_fkey";
+            columns: ["room_id", "property_id"];
             isOneToOne: false;
             referencedRelation: "rooms";
-            referencedColumns: ["id"];
+            referencedColumns: ["id", "property_id"];
           },
         ];
       };
@@ -401,11 +401,11 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "rate_tiers_property_id_fkey";
-            columns: ["property_id"];
+            foreignKeyName: "rate_tiers_property_id_org_id_fkey";
+            columns: ["property_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "properties";
-            referencedColumns: ["id"];
+            referencedColumns: ["id", "org_id"];
           },
         ];
       };
@@ -468,11 +468,11 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "rooms_property_id_fkey";
-            columns: ["property_id"];
+            foreignKeyName: "rooms_property_id_org_id_fkey";
+            columns: ["property_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "properties";
-            referencedColumns: ["id"];
+            referencedColumns: ["id", "org_id"];
           },
         ];
       };
@@ -481,7 +481,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      is_member: { Args: { target_org_id: string }; Returns: boolean };
+      [_ in never]: never;
     };
     Enums: {
       membership_role: "owner" | "staff";
