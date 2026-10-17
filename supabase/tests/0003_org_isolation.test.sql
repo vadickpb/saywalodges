@@ -11,7 +11,7 @@
 -- wrong assumption while implementing this ticket treated "can read another
 -- org's published room" as a failure; it isn't.
 begin;
-select plan(22);
+select plan(25);
 
 select hasnt_function(
   'public', 'is_member', array['uuid'],
@@ -91,6 +91,29 @@ select throws_like(
     where property_id = '131583b5-785e-4127-81f0-e097163c5654' and org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817'$$,
   '%foreign key constraint%',
   'Cannot move an own-org room onto another org''s property (composite FK)'
+);
+
+-- Found by reviewer: the same composite (property_id, org_id) FK exists on
+-- rate_tiers/amenities/distances (identical pattern to rooms/photos above),
+-- but only rooms/photos had a test exercising it. One INSERT-direction
+-- assertion per remaining table, same shape as the rooms case.
+select throws_like(
+  $$insert into public.rate_tiers (season_en, season_es, from_en, from_es, property_id, org_id)
+    values ('x', 'x', 'x', 'x', '57f914ac-3890-47c1-9d6d-1492782cf712', 'bf88f504-051f-4fdc-ab73-4fa12d715817')$$,
+  '%foreign key constraint%',
+  'rate_tiers: cannot insert own org_id paired with another org''s property_id'
+);
+select throws_like(
+  $$insert into public.amenities (title_en, title_es, property_id, org_id)
+    values ('x', 'x', '57f914ac-3890-47c1-9d6d-1492782cf712', 'bf88f504-051f-4fdc-ab73-4fa12d715817')$$,
+  '%foreign key constraint%',
+  'amenities: cannot insert own org_id paired with another org''s property_id'
+);
+select throws_like(
+  $$insert into public.distances (place_en, place_es, time_en, time_es, property_id, org_id)
+    values ('x', 'x', 'x', 'x', '57f914ac-3890-47c1-9d6d-1492782cf712', 'bf88f504-051f-4fdc-ab73-4fa12d715817')$$,
+  '%foreign key constraint%',
+  'distances: cannot insert own org_id paired with another org''s property_id'
 );
 
 -- photos.room_id: a photo with Saywa's own org_id/property_id but pointing
