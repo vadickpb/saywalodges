@@ -354,7 +354,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Usable a 375 px de ancho.
   - [ ] Usuario sin membresías ve un estado vacío claro, no un error.
 
-### [ ] SD-107 · feat(ui): dashboard design system
+### [x] SD-107 · feat(ui): dashboard design system
 `M` · Depende: — (hacerlo antes o junto con SD-106, que lo usa) · Review: `R`
 - **Objetivo**: que el dashboard se vea como un producto profesional y consistente desde la primera pantalla, no
   como un formulario de administración.
@@ -366,10 +366,45 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   Página interna `/app/ui` (solo en desarrollo) que muestra todos los componentes. Guía breve en `docs/design.md`
   (paleta, tipografía, espaciado, cuándo usar cada componente).
 - **Criterios**
-  - [ ] Cambiar 1–2 variables recolorea todo el dashboard (verificado con una paleta alternativa).
-  - [ ] Contraste de texto AA (WCAG) en modo claro y oscuro.
-  - [ ] Las pantallas del dashboard usan solo componentes de `components/ui` (sin estilos sueltos).
-  - [ ] Usable a 375 px de ancho.
+  - [x] Cambiar 1–2 variables recolorea todo el dashboard (verificado con una paleta alternativa). Verificado de
+        verdad, no solo por construcción: cambié `--primary`/`--accent` a verde temporalmente, reconstruí, y
+        confirmé en el CSS compilado que el hex viejo desaparece por completo (0 ocurrencias) y el nuevo aparece
+        en las 10 utilidades que usan `var(--primary)` — luego revertí.
+  - [x] Contraste de texto AA (WCAG) en modo claro y oscuro. Calculado programáticamente (luminancia relativa
+        W3C): los 8 pares principales (texto/fondo, texto sobre `primary`, texto secundario, texto sobre
+        `accent`) y los 6 pares de `StatusBadge`/`MetricCard` — los 14, ≥4.5:1 en ambos modos.
+  - [x] Las pantallas del dashboard usan solo componentes de `components/ui` (sin estilos sueltos). Auditoría
+        con `grep`: cero hex/rgb hardcodeado en `components/ui/*` ni en `app/app/{page,layout,ui/page}.tsx`.
+  - [~] Usable a 375 px de ancho. Los patrones responsive están ahí (`hidden md:flex`/`md:hidden`,
+        `overflow-x-auto` en la tabla, `truncate` en las etiquetas de la barra inferior) y verificados por
+        código, pero **no confirmados visualmente** — no hay navegador/herramienta de captura en este entorno.
+        Pendiente de que el usuario lo confirme en DevTools antes de considerarlo cerrado de verdad.
+- **Nota de cierre**:
+  - **Decisión de arquitectura**: los tokens del dashboard viven en `.dashboard`/`.dashboard.dark` (nunca en
+    `:root`), para no colisionar con los tokens del sitio público (mismos nombres semánticos que usa shadcn:
+    `--background`, `--primary`, etc., ya en uso por `app/globals.css` desde antes de este ticket).
+  - **Modo oscuro sin `next-themes`**: esa librería asume que controla `<html>` globalmente; el modo oscuro
+    aquí es solo del dashboard. `next-themes` se instaló solo (dependencia transitiva del wrapper de `sonner`
+    de shadcn) — se desinstaló y se editó `components/ui/sonner.tsx` a mano para recibir `theme` por prop.
+    Mecanismo real: cookie `dashboard-theme` leída server-side en `app/app/layout.tsx`.
+  - **Hallazgo real de `reviewer`, corregido**: `StatusBadge` y el indicador de tendencia de `MetricCard`
+    usaban `bg-success/bg-warning/bg-destructive text-white` — un verde/ámbar sólido con texto blanco no pasa
+    AA en ninguno de los dos modos (hasta 2.15:1 en oscuro, verificado independientemente). No existe un color
+    que sirva a la vez como "fondo sólido con texto blanco" y "texto plano sobre el fondo de página" en ambos
+    temas, así que se quitaron `--success`/`--warning` como tokens compartidos y se usan paletas literales de
+    Tailwind por contexto (`green-100`/`green-800` + `dark:green-950`/`dark:green-300`, etc.), cada combinación
+    verificada por separado — todas ≥4.5:1.
+  - **Otros hallazgos de `reviewer`, corregidos**: `aria-current="page"` faltante en el link activo de
+    `SidebarNav`/`MobileBottomNav`; cookie de tema sin `Secure` (ahora condicional a `https:`, para no romper
+    el dev local sobre `http`); nota añadida en `docs/design.md` aclarando que `cn` viene del paquete npm
+    `"cn"`, no de `@/lib/utils` (esta versión del CLI de shadcn no genera ese archivo).
+  - Fuera de alcance, anotado para otro ticket: 13 vulnerabilidades de `npm audit` (1 crítica) preexistentes
+    en el árbol de dependencias — Next.js 16.2.6 pinneado vs 16.4.2 con fixes, tooling de eslint. Ninguna viene
+    de los paquetes añadidos en este ticket (shadcn/Radix/sonner/date-fns/react-day-picker/`cn`).
+  - `app/app/page.tsx` (la página protegida mínima de SD-103) se restyled con `Card`/`Button` del sistema
+    nuevo — fuera del alcance literal original, pero es la única página real donde un usuario logueado puede
+    ver el sistema, así que se incluyó deliberadamente para que no quedara una isla con el estilo viejo.
+  - `lint`/`typecheck`/`test` (35/35)/`build` en verde. Sin migraciones → sin `supabase test db`.
 
 ---
 
