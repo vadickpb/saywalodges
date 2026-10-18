@@ -7,6 +7,11 @@ import { z } from "zod";
 const envSchema = z.object({
   SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL (e.g. https://xxxx.supabase.co)"),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
+  // Public by design (the anon key is meant to be exposed to the browser —
+  // RLS, not secrecy, is what protects data behind it). Needed by both
+  // lib/supabase/server.ts and lib/supabase/browser.ts (SD-103).
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL"),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required"),
 });
 
 function loadEnv() {

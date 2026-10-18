@@ -18,6 +18,10 @@ Roadmap y tickets: `docs/roadmap.md`. Decisiones de arquitectura: `docs/adr/`.
 - Tenant = `organization`. Toda tabla de negocio tiene `org_id` y RLS habilitado.
 - Sitios públicos en `app/sites/[host]/[lang]`; dashboard en `app/app/(dashboard)`.
   `proxy.ts` solo reescribe por host e idioma: nunca consulta la BD ni autoriza.
+  Única excepción (SD-103): puede llamar a `supabase.auth.getClaims()` para refrescar y persistir
+  la cookie de sesión (requisito de `@supabase/ssr`), pero esa llamada nunca decide nada —
+  ningún redirect ni bloqueo de ruta depende de su resultado; la autorización real sigue
+  viviendo solo en `lib/dal`.
 - Todo acceso a datos pasa por `lib/dal/*` (`import "server-only"`), que verifica sesión y membresía.
 - La service-role key (`lib/supabase/admin.ts`) solo se usa en webhooks, cron y RPCs.
   Nunca en páginas ni en server actions de usuario.
