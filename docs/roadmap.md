@@ -245,15 +245,84 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   tests de introspección de privilegios (`table_privs_are`/`column_privs_are`) que quedaron fuera
   por ser más pulido que hallazgo real.
 
-### [ ] SD-103 · feat(auth): Supabase Auth and data access layer
+### [x] SD-103 · feat(auth): Supabase Auth and data access layer
 `M` · Depende: SD-101 · Review: `R+S`
 - **Alcance**: `@supabase/ssr`; `lib/supabase/{server,browser,admin}.ts`; `lib/dal/session.ts` con
   `verifySession()` y `requireMembership(orgId)` usando `cache()`; página `/login` (email + contraseña, recuperación
   de contraseña), logout. `admin.ts` marcado `server-only`.
 - **Criterios**
-  - [ ] Ruta del dashboard sin sesión redirige a `/login`.
-  - [ ] Llamar una server action sin sesión devuelve error de autorización (test).
-  - [ ] `lib/supabase/admin.ts` no se importa desde ningún componente ni página (regla ESLint `no-restricted-imports`).
+  - [x] Ruta del dashboard sin sesión redirige a `/login`. Verificado contra Supabase local con una sesión
+        real (login vía GoTrue con `owner@saywalodges.com`, sembrado en SD-101): `/app` sin cookie → 307 a
+        `/login`; con cookie → renderiza; logout limpia la cookie y vuelve a redirigir.
+  - [x] Llamar una server action sin sesión devuelve error de autorización (test). `lib/dal/session.test.ts`
+        testea `requireSession`/`requireMembership` directamente (mock de `lib/supabase/server.ts`): sin
+        sesión, sin membresía, y el caso feliz, los tres lanzan/devuelven lo esperado. (La primera versión
+        de este ticket dejaba `requireSession`/`requireMembership` sin ningún caller real ni test propio —
+        hallazgo de `reviewer`, corregido.)
+  - [x] `lib/supabase/admin.ts` no se importa desde ningún componente ni página (regla ESLint
+        `no-restricted-imports`). Amplida para cubrir también `lib/supabase.ts` (el shim de compatibilidad
+        hacia `admin.ts`), con excepción para `app/api/admin/**` (deuda de SD-104) — la versión inicial solo
+        bloqueaba la ruta nueva, dejando el shim como escape sin aviso (hallazgo de `security-reviewer`).
+- **Nota de cierre**:
+  - **Excepción puntual a la regla "no negociable" de `proxy.ts`** (aprobada explícitamente antes de
+    implementarse): `@supabase/ssr` documenta el patrón de middleware como "mandatory" — sin él, un refresh
+    de token que ocurre renderizando un Server Component no se puede escribir de vuelta a las cookies (son
+    de solo lectura ahí), causando pérdida silenciosa de sesión. `proxy.ts` ahora llama a
+    `supabase.auth.getClaims()` en cada request (menos rutas admin) solo para refrescar/persistir la cookie
+    — nunca decide nada con el resultado. `CLAUDE.md` documenta la excepción explícitamente, acotada a ese
+    uso exacto.
+  - **`proxy.ts` tenía un bug real de enrutamiento**, encontrado verificando a mano: `/app` (fuera de
+    `app/[lang]`) se reescribía a `/en/app` por la lógica de locale antes de que `verifySession()` pudiera
+    redirigir a `/login`. Arreglado con una lista explícita de rutas sin locale (`/app`, `/login`,
+    `/forgot-password`, `/update-password`, `/auth`).
+  - **`proxy.ts` tenía un segundo bug, encontrado por `reviewer`**: la rama sin locale usaba
+    `NextResponse.next()` sin `{ request }`, así que la mutación de cookies que `refreshSession()` ya había
+    hecho sobre `request.cookies` nunca llegaba al render de la misma request — el propio patrón que el
+    comentario del archivo dice estar evitando. Arreglado pasando `{ request }`, igual que ya hacía la rama
+    de locale.
+  - **`lib/supabase/browser.ts` no podía funcionar para su propio caso de uso** (hallazgo de ambos
+    revisores): importaba `lib/env.ts`, cuyo schema también valida `SUPABASE_SERVICE_ROLE_KEY` (secreto de
+    servidor). Next.js no inyecta esa variable al bundle del navegador, así que el primer Client Component
+    que importara `createClient()` de ahí habría reventado al evaluar el módulo. Arreglado leyendo
+    `process.env.NEXT_PUBLIC_*` como acceso literal (lo que sí inyecta Next.js), sin pasar por `lib/env.ts`.
+    Sigue sin usarse en ningún Client Component todavía — el primer caso real llega con el dashboard.
+  - **`supabase/config.toml` tenía self-signup habilitado**, contradiciendo "no self-signup en el MVP"
+    (hallazgo de `security-reviewer`): con la `anon key` pública, cualquiera podía crear una cuenta propia
+    vía `/auth/v1/signup` y entrar a `/app` (sin membresía, así que sin acceso a datos de ninguna org, pero
+    sí abría superficie de ataque y enumeración de emails). Al corregirlo casi se rompe el login: poner
+    `enable_signup = false` bajo `[auth.email]` deshabilita el proveedor de email **completo** en esta
+    versión del CLI de Supabase (confirmado golpeando `/auth/v1/token` directo: `email_provider_disabled`),
+    no solo el signup. La bandera correcta es la de nivel `[auth]` (`enable_signup = false`); `[auth.email]`
+    se dejó en `true`. **Pendiente en el proyecto remoto**: este archivo solo controla el stack local;
+    verificar/replicar en el Dashboard de Supabase (Auth → Providers) antes de ir a producción — Claude no
+    puede tocar el proyecto remoto.
+  - **`secure_password_change = true`** (estaba en `false`): sin esto, con solo la cookie de sesión (las de
+    `@supabase/ssr` no son `httpOnly` por diseño) alguien podía cambiar la contraseña vía `/update-password`
+    sin reautenticarse, convirtiendo un robo temporal de cookie en una toma de cuenta permanente. Verificado
+    de punta a punta contra Supabase local (con el cambio activo) que el flujo real de recuperación —
+    `/forgot-password` → email real vía Mailpit → `/auth/callback` (PKCE) → `/update-password` — sigue
+    funcionando: una sesión de recuperación cuenta como suficientemente "fresca". Se agregó además
+    `supabase.auth.signOut({ scope: "others" })` tras un cambio de contraseña exitoso, para que también
+    cierre cualquier otra sesión activa (hallazgo de `security-reviewer`).
+  - **Hallazgo preexistente, no de este diff**: `npm run dev` da 500 en `/[lang]` (sitio público) porque
+    `.env.local` tiene `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` apuntando al proyecto remoto desactualizado
+    (`gqqjaoarvpkiisikcopq.supabase.co`, el mencionado como `INACTIVE` en SD-001) mientras que las nuevas
+    `NEXT_PUBLIC_SUPABASE_*` de este ticket apuntan correctamente al stack local — confirmado por `reviewer`
+    leyendo el env real del proceso. El cliente admin (usado por `lib/property.ts` vía el shim) y los
+    clientes de sesión nuevos están hablando con dos bases de datos distintas. Acción pendiente del usuario:
+    alinear las 4 variables en `.env.local` al mismo proyecto.
+  - **Gap conocido, fuera de alcance de este ticket**: no hay rate limiting ni captcha propio en
+    `signIn`/`requestPasswordReset` — GoTrue limita por IP de **servidor** (no del atacante), así que el
+    límite se comparte entre todos los usuarios reales que salen por la misma IP de Vercel (fuerza bruta
+    diluida entre todos, y un atacante con ~30 intentos agota el cupo de *todos* por 5 minutos; con SMTP
+    gestionado, 2 emails/hora agota el cupo de reset para todo el proyecto). Mitigación real (captcha
+    Turnstile vía `options.captchaToken`, o rate limit propio por IP+email) queda para un ticket dedicado
+    cuando el flujo de pagos/CRM esté más cerca y haya tráfico real que justifique la complejidad.
+  - Verificación manual completa contra Supabase local con sesiones reales (no solo pgTAP, que no aplica —
+    este ticket no toca migraciones): login correcto/incorrecto, logout, `/app` protegido, y el flujo
+    completo de recuperación de contraseña (reset → email real vía Mailpit → exchange PKCE → nueva
+    contraseña → sesión activa en `/app`). `lint`/`typecheck`/`test` (35/35)/`build` en verde;
+    `supabase db reset` + `supabase test db` (37/37, sin cambios de esquema en este diff) en verde.
 
 ### [ ] SD-104 · refactor: move data reads into the DAL
 `M` · Depende: SD-102, SD-103 · Review: `R+S`
