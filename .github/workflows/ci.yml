@@ -46,6 +46,8 @@ jobs:
         env:
           SUPABASE_URL: "https://placeholder.supabase.co"
           SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key"
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key"
         run: npm run build
 
   db:
