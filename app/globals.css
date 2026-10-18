@@ -16,6 +16,88 @@
   --color-charcoal: #1a1a1a;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Dashboard design system (SD-107) — the values live in .dashboard/
+     .dashboard.dark below, never in :root, so the public tenant site above
+     (which never has that class) is unaffected. These mappings just make
+     the Tailwind utilities (bg-primary, text-muted-foreground, …) exist;
+     they resolve to nothing outside .dashboard. */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* No --color-success/--color-warning here on purpose: a single shared
+     green/amber can't pass WCAG AA both as solid-chip-background-with-
+     white-text AND as plain text on the page/card background in both
+     themes at once (verified — it doesn't). StatusBadge and MetricCard
+     use literal, per-context-verified Tailwind palette colors instead. */
+}
+
+/* Manual dark-mode toggle for Tailwind v4 (no tailwind.config.js in this
+   project). `&:where(.dark, .dark *)` makes `dark:` respond to the nearest
+   `.dark` ancestor instead of requiring it on <html> — needed because dark
+   mode is dashboard-only; the public site never uses it. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Saywa Direct dashboard palette (SD-107) — indigo/accent violet. Change
+   --primary/--accent here (both modes) to recolor the whole dashboard. */
+.dashboard {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  --primary: #4F46E5;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #475569;
+  --accent: #EEF2FF;
+  --accent-foreground: #4338CA;
+  --destructive: #DC2626;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #6366F1;
+  --radius: 0.5rem;
+
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.dashboard.dark {
+  --background: #0F172A;
+  --foreground: #F1F5F9;
+  --card: #1E293B;
+  --card-foreground: #F1F5F9;
+  --popover: #1E293B;
+  --popover-foreground: #F1F5F9;
+  --primary: #818CF8;
+  --primary-foreground: #0F172A;
+  --secondary: #1E293B;
+  --secondary-foreground: #F1F5F9;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --accent: #312E81;
+  --accent-foreground: #C7D2FE;
+  --destructive: #EF4444;
+  --border: #334155;
+  --input: #334155;
+  --ring: #818CF8;
 }
 
 html {
