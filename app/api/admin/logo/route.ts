@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabase, getPublicPhotoUrl, PHOTOS_BUCKET } from "@/lib/supabase";
-import { getProperty } from "@/lib/property";
+import { getProperty } from "@/lib/dal/public/property";
+import { PROPERTY_SLUG } from "@/config/site";
 import { validateImageFile } from "@/lib/validation/admin";
 import { serverError } from "@/lib/api-error";
 
@@ -8,7 +9,12 @@ import { serverError } from "@/lib/api-error";
 // no role/order, just one path stored directly on the property row.
 
 export async function POST(request: Request) {
-  const property = await getProperty();
+  let property;
+  try {
+    property = await getProperty(PROPERTY_SLUG);
+  } catch (error) {
+    return serverError("admin/logo POST getProperty", error);
+  }
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
@@ -35,7 +41,12 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
-  const property = await getProperty();
+  let property;
+  try {
+    property = await getProperty(PROPERTY_SLUG);
+  } catch (error) {
+    return serverError("admin/logo DELETE getProperty", error);
+  }
   const { error } = await getSupabase()
     .from("properties")
     .update({ logo_path: null })

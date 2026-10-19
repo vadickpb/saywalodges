@@ -1,5 +1,5 @@
 import type { Dict } from "@/dictionaries/en";
-import { getRateTiers, resolveRateTier } from "@/lib/property";
+import { getRateTiers, resolveRateTier } from "@/lib/dal/public/property";
 
 type Props = { dict: Dict["rates"]; lang: string; propertyId: string; waUrl: string };
 

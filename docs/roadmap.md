@@ -324,14 +324,50 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     contraseña → sesión activa en `/app`). `lint`/`typecheck`/`test` (35/35)/`build` en verde;
     `supabase db reset` + `supabase test db` (37/37, sin cambios de esquema en este diff) en verde.
 
-### [ ] SD-104 · refactor: move data reads into the DAL
+### [x] SD-104 · refactor: move data reads into the DAL
 `M` · Depende: SD-102, SD-103 · Review: `R+S`
 - **Alcance**: `lib/property.ts`, `lib/spaces.ts`, `lib/photos.ts` → `lib/dal/public/*` (cliente anon, propiedad
   explícita) con `cache()` para deduplicar por request. Eliminar la constante `PROPERTY_SLUG`.
 - **Criterios**
-  - [ ] El sitio de Saywa renderiza idéntico.
-  - [ ] Cada request hace una sola consulta de propiedad (verificado con logs).
-  - [ ] Ningún archivo fuera de `lib/dal` importa clientes Supabase.
+  - [x] El sitio de Saywa renderiza idéntico. Verificado contra Supabase local en modo producción
+        (`npm run build && npm start`): `/es`/`/en` dan 200, mismo `<title>`, mismas fotos (`property-photos`
+        presente en el HTML).
+  - [x] Cada request hace una sola consulta de propiedad (verificado con logs). Confirmado con un
+        `console.log` temporal (ya removido): **1** consulta real en modo producción. En `npm run dev` salían
+        2 — es el doble-render conocido de Turbopack dev mode, no un fallo de `cache()` (que solo dedupe
+        dentro de una misma request/render, y en dev cada render-pass es técnicamente una request nueva para
+        ese propósito); `reviewer` confirmó esta lectura contra la documentación de Next.js sobre `cache()`.
+  - [x] Ningún archivo fuera de `lib/dal` importa clientes Supabase. Verificado con `grep`: solo
+        `lib/dal/**`, `lib/supabase/**` y `proxy.ts` (excepción ya aprobada de SD-103, documentada en
+        `CLAUDE.md`) importan `@supabase/supabase-js`/`@supabase/ssr` directamente.
+- **Nota de cierre**:
+  - **Dos desviaciones del texto literal del criterio, intencionales**, señaladas por `reviewer`:
+    1. "Eliminar la constante `PROPERTY_SLUG`" — no se eliminó, se **trasladó** a `config/site.ts`,
+       documentada como temporal hasta SD-105 (que la sustituye por resolución real desde el host). El
+       espíritu del criterio sí se cumple: `getProperty()` ya no la lee internamente, la recibe como
+       parámetro explícito — los callers son quienes la importan ahora.
+    2. Los 3 route handlers de `app/api/admin/{content,logo,photos}/route.ts` siguen importando el shim de
+       service-role (`@/lib/supabase`) para sus propias mutaciones — solo cambió de dónde obtienen
+       `property.id`/`org_id` (ahora vía el DAL público, antes vía el mismo `getProperty()` pero con
+       service-role). Un DAL propio para el dashboard/admin no existe todavía (Fase 2, SD-201/202); hacerlo
+       aquí habría sido alcance fuera de este ticket.
+  - **Hallazgo real de `reviewer`, corregido**: como consecuencia del punto 2, las 7 llamadas a
+    `getProperty(PROPERTY_SLUG)` en esas 3 rutas quedaron sin `try/catch` — antes usaban service-role
+    (ignora RLS, nunca falla por `published`), ahora usan el cliente anon (sujeto a `is_member(org_id) OR
+    published`). Si la propiedad alguna vez tuviera `published = false` (mantenimiento, o antes del primer
+    publish), estas rutas habrían devuelto un error no controlado en vez del JSON genérico que define
+    `lib/api-error.ts`. Se envolvieron las 7 llamadas en `try/catch` + `serverError(...)`, consistente con
+    el resto de cada handler.
+  - **Hallazgo real de `security-reviewer`, corregido**: `lib/dal/public/*` (pensado como 100% cliente
+    `anon`) dependía de `lib/supabase/admin.ts` solo para `getPublicPhotoUrl`/`PHOTOS_BUCKET` — ninguna
+    fuga real (es construcción pura de URL, sin llamada de red), pero contradecía el objetivo del ticket.
+    Se movieron a `lib/storage.ts`, sin ningún cliente Supabase (verificado que `encodeURI(...)` sobre la
+    URL completa replica exactamente lo que hace `@supabase/storage-js` internamente).
+  - **Segundo hallazgo de `security-reviewer`, corregido**: la regla ESLint `no-restricted-imports` solo
+    comparaba el specifier exacto (`paths`), así que un import relativo (`../lib/supabase/admin`) la
+    esquivaba. Se añadieron `patterns` (`**/lib/supabase/admin`, `**/lib/supabase/anon`) para cerrarlo —
+    verificado que ahora sí dispara contra un import relativo de prueba.
+  - `lint`/`typecheck`/`test` (35/35)/`build` en verde. Sin migraciones → sin `supabase test db`.
 
 ### [ ] SD-105 · feat(routing): host-based tenant resolution
 `L` · Depende: SD-104 · Review: `R+S`

@@ -1,8 +1,7 @@
-import { getSupabase, getPublicPhotoUrl } from "./supabase";
-
-// Single-tenant for now — Phase 1 (multi-tenant) resolves this from the request's
-// domain/subdomain instead of a constant.
-const PROPERTY_SLUG = "saywa-lodges";
+import "server-only";
+import { cache } from "react";
+import { getSupabaseAnon } from "@/lib/supabase/anon";
+import { getPublicPhotoUrl } from "@/lib/storage";
 
 export type Property = {
   id: string;
@@ -33,13 +32,15 @@ export type Property = {
   logoUrl: string;
 };
 
-export async function getProperty(): Promise<Property> {
-  const { data, error } = await getSupabase()
+// cache() dedupes identical calls within one request — generateMetadata,
+// the layout and the page each call this with the same slug today.
+export const getProperty = cache(async (slug: string): Promise<Property> => {
+  const { data, error } = await getSupabaseAnon()
     .from("properties")
     .select(
       "id, org_id, slug, name, whatsapp_number, whatsapp_message_en, whatsapp_message_es, email, maps_url, airbnb_url, site_url, address_locality, address_region, address_country, latitude, longitude, meta_title_en, meta_title_es, meta_description_en, meta_description_es, meta_keywords_en, meta_keywords_es, price_range, star_rating, pets_allowed, logo_path"
     )
-    .eq("slug", PROPERTY_SLUG)
+    .eq("slug", slug)
     .single();
 
   if (error || !data) throw new Error(`Property not found: ${error?.message ?? "no rows"}`);
@@ -72,7 +73,7 @@ export async function getProperty(): Promise<Property> {
     petsAllowed: data.pets_allowed,
     logoUrl: data.logo_path ? getPublicPhotoUrl(data.logo_path) : "",
   };
-}
+});
 
 export function whatsappUrl(property: Property, lang: string): string {
   const message = lang === "es" ? property.whatsappMessageEs : property.whatsappMessageEn;
@@ -94,15 +95,15 @@ export type RateTierRow = {
   sort_order: number;
 };
 
-export async function getRateTiers(propertyId: string): Promise<RateTierRow[]> {
-  const { data, error } = await getSupabase()
+export const getRateTiers = cache(async (propertyId: string): Promise<RateTierRow[]> => {
+  const { data, error } = await getSupabaseAnon()
     .from("rate_tiers")
     .select("*")
     .eq("property_id", propertyId)
     .order("sort_order");
   if (error) throw new Error(error.message);
   return data ?? [];
-}
+});
 
 export function resolveRateTier(row: RateTierRow, lang: string) {
   const isEs = lang === "es";
@@ -126,15 +127,15 @@ export type AmenityRow = {
   sort_order: number;
 };
 
-export async function getAmenities(propertyId: string): Promise<AmenityRow[]> {
-  const { data, error } = await getSupabase()
+export const getAmenities = cache(async (propertyId: string): Promise<AmenityRow[]> => {
+  const { data, error } = await getSupabaseAnon()
     .from("amenities")
     .select("*")
     .eq("property_id", propertyId)
     .order("sort_order");
   if (error) throw new Error(error.message);
   return data ?? [];
-}
+});
 
 export function resolveAmenity(row: AmenityRow, lang: string) {
   const isEs = lang === "es";
@@ -157,15 +158,15 @@ export type DistanceRow = {
   sort_order: number;
 };
 
-export async function getDistances(propertyId: string): Promise<DistanceRow[]> {
-  const { data, error } = await getSupabase()
+export const getDistances = cache(async (propertyId: string): Promise<DistanceRow[]> => {
+  const { data, error } = await getSupabaseAnon()
     .from("distances")
     .select("*")
     .eq("property_id", propertyId)
     .order("sort_order");
   if (error) throw new Error(error.message);
   return data ?? [];
-}
+});
 
 export function resolveDistance(row: DistanceRow, lang: string) {
   const isEs = lang === "es";

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Dict } from "@/dictionaries";
-import { getPhotosConfig } from "@/lib/photos";
+import { getPhotosConfig } from "@/lib/dal/public/photos";
 
 type Props = { dict: Dict["hero"]; lang: string; propertyId: string; waUrl: string; name: string };
 

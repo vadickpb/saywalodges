@@ -1,5 +1,5 @@
 import type { Dict } from "@/dictionaries";
-import { getAmenities, resolveAmenity } from "@/lib/property";
+import { getAmenities, resolveAmenity } from "@/lib/dal/public/property";
 
 type Props = { dict: Dict["amenities"]; lang: string; propertyId: string };
 

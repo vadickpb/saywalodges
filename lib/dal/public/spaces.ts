@@ -1,4 +1,7 @@
-import { getSupabase, getPublicPhotoUrl } from "./supabase";
+import "server-only";
+import { cache } from "react";
+import { getSupabaseAnon } from "@/lib/supabase/anon";
+import { getPublicPhotoUrl } from "@/lib/storage";
 
 // ─── Static UI chrome — category taxonomy, not property content ─────────────
 
@@ -24,8 +27,8 @@ export type SpaceWithPhotos = SpaceMeta & { photos: string[] };
 
 // ─── Runtime: rooms + their photos from Supabase ─────────────────────────────
 
-export async function getSpaces(propertyId: string): Promise<SpaceWithPhotos[]> {
-  const supabase = getSupabase();
+export const getSpaces = cache(async (propertyId: string): Promise<SpaceWithPhotos[]> => {
+  const supabase = getSupabaseAnon();
 
   const [{ data: rooms, error: roomsError }, { data: photos, error: photosError }] =
     await Promise.all([
@@ -63,4 +66,4 @@ export async function getSpaces(propertyId: string): Promise<SpaceWithPhotos[]> 
     badge: r.badge_en && r.badge_es ? { en: r.badge_en, es: r.badge_es } : undefined,
     photos: photosByRoom.get(r.id) ?? [],
   }));
-}
+});

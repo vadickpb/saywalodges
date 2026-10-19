@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { Dict } from "@/dictionaries";
-import { getPhotosConfig } from "@/lib/photos";
+import { getPhotosConfig } from "@/lib/dal/public/photos";
 
 const ALT_TAGS: Record<string, string> = {
   "foto1.jpeg": "Lodge exterior with garden and Andean landscape",

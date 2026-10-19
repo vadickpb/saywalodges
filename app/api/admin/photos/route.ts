@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabase, getPublicPhotoUrl, PHOTOS_BUCKET } from "@/lib/supabase";
-import { getProperty } from "@/lib/property";
+import { getProperty } from "@/lib/dal/public/property";
+import { PROPERTY_SLUG } from "@/config/site";
 import {
   photosOrderPayloadSchema,
   photoDeletePayloadSchema,
@@ -13,7 +14,12 @@ import { serverError, validationError } from "@/lib/api-error";
 // Fase 0 plan for why that's deliberately out of scope for now.
 
 export async function GET() {
-  const property = await getProperty();
+  let property;
+  try {
+    property = await getProperty(PROPERTY_SLUG);
+  } catch (error) {
+    return serverError("admin/photos GET getProperty", error);
+  }
   const { data, error } = await getSupabase()
     .from("photos")
     .select("id, storage_path, role, sort_order")
@@ -35,7 +41,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const property = await getProperty();
+  let property;
+  try {
+    property = await getProperty(PROPERTY_SLUG);
+  } catch (error) {
+    return serverError("admin/photos POST getProperty", error);
+  }
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
@@ -86,10 +97,10 @@ export async function PUT(request: Request) {
   if (!parsed.success) return validationError("admin/photos PUT", parsed.error);
   const { heroId, order } = parsed.data;
 
-  const property = await getProperty();
   const supabase = getSupabase();
 
   try {
+    const property = await getProperty(PROPERTY_SLUG);
     if (heroId) {
       const { error } = await supabase
         .from("photos")
@@ -120,7 +131,12 @@ export async function DELETE(request: Request) {
   if (!parsed.success) return validationError("admin/photos DELETE", parsed.error);
   const { id } = parsed.data;
 
-  const property = await getProperty();
+  let property;
+  try {
+    property = await getProperty(PROPERTY_SLUG);
+  } catch (error) {
+    return serverError("admin/photos DELETE getProperty", error);
+  }
   const supabase = getSupabase();
   const { data: photo, error: readError } = await supabase
     .from("photos")

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
-import { getProperty } from "@/lib/property";
+import { getProperty } from "@/lib/dal/public/property";
+import { PROPERTY_SLUG } from "@/config/site";
 import { contentPayloadSchema } from "@/lib/validation/admin";
 import { serverError, validationError } from "@/lib/api-error";
 
@@ -71,7 +72,12 @@ async function syncTable(
 
 export async function GET() {
   const supabase = getSupabase();
-  const property = await getProperty();
+  let property;
+  try {
+    property = await getProperty(PROPERTY_SLUG);
+  } catch (error) {
+    return serverError("admin/content GET getProperty", error);
+  }
 
   const [rooms, rateTiers, amenities, distances] = await Promise.all([
     supabase.from("rooms").select("*").eq("property_id", property.id).order("sort_order"),
@@ -139,10 +145,10 @@ export async function PUT(request: Request) {
   if (!parsed.success) return validationError("admin/content PUT", parsed.error);
   const body = parsed.data;
 
-  const property = await getProperty();
   const supabase = getSupabase();
 
   try {
+    const property = await getProperty(PROPERTY_SLUG);
     const { error: propertyError } = await supabase
       .from("properties")
       .update({
