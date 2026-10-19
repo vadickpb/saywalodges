@@ -1,5 +1,5 @@
 import type { Dict } from "@/dictionaries";
-import { getDistances, resolveDistance } from "@/lib/property";
+import { getDistances, resolveDistance } from "@/lib/dal/public/property";
 
 type Props = {
   dict: Dict["location"];

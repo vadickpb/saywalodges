@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getDictionary, hasLocale } from "@/dictionaries";
-import { getProperty, whatsappUrl } from "@/lib/property";
+import { PROPERTY_SLUG } from "@/config/site";
+import { getProperty, whatsappUrl } from "@/lib/dal/public/property";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Amenities from "@/components/Amenities";
@@ -22,7 +23,7 @@ export default async function Home({
   if (!hasLocale(lang)) notFound();
 
   const dict = await getDictionary(lang);
-  const property = await getProperty();
+  const property = await getProperty(PROPERTY_SLUG);
   const waUrl = whatsappUrl(property, lang);
 
   return (

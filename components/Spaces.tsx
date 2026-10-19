@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { SpaceWithPhotos, SPACE_CATEGORIES } from "@/lib/spaces";
+import type { SpaceWithPhotos, SPACE_CATEGORIES } from "@/lib/dal/public/spaces";
 
 type Category = (typeof SPACE_CATEGORIES)[number]["id"];
 

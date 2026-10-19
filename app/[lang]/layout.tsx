@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale, locales } from "@/dictionaries";
-import { SITE_URL } from "@/config/site";
-import { getProperty, getAmenities, resolveAmenity } from "@/lib/property";
-import { getSpaces } from "@/lib/spaces";
-import { getPhotosConfig } from "@/lib/photos";
+import { SITE_URL, PROPERTY_SLUG } from "@/config/site";
+import { getProperty, getAmenities, resolveAmenity } from "@/lib/dal/public/property";
+import { getSpaces } from "@/lib/dal/public/spaces";
+import { getPhotosConfig } from "@/lib/dal/public/photos";
 import { toJsonLd } from "@/lib/json-ld";
 
 export async function generateStaticParams() {
@@ -20,7 +20,7 @@ export async function generateMetadata({
   if (!hasLocale(lang)) return {};
 
   const isEs = lang === "es";
-  const property = await getProperty();
+  const property = await getProperty(PROPERTY_SLUG);
   const { hero } = await getPhotosConfig(property.id);
   const title = isEs ? property.metaTitleEs : property.metaTitleEn;
   const description = isEs ? property.metaDescriptionEs : property.metaDescriptionEn;
@@ -74,7 +74,7 @@ export default async function LangLayout({
   if (!hasLocale(lang)) notFound();
 
   const isEs = lang === "es";
-  const property = await getProperty();
+  const property = await getProperty(PROPERTY_SLUG);
   const { hero } = await getPhotosConfig(property.id);
   const [spaces, amenityRows] = await Promise.all([
     getSpaces(property.id),

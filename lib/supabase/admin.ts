@@ -14,8 +14,8 @@ export function getSupabaseAdmin() {
   });
 }
 
-export const PHOTOS_BUCKET = "property-photos";
-
-export function getPublicPhotoUrl(storagePath: string): string {
-  return getSupabaseAdmin().storage.from(PHOTOS_BUCKET).getPublicUrl(storagePath).data.publicUrl;
-}
+// PHOTOS_BUCKET/getPublicPhotoUrl moved to lib/storage.ts (SD-104): they
+// need no Supabase client at all, so they shouldn't force anything that
+// only needs a public photo URL — like the public site's DAL — to pull in
+// this service-role module.
+export { PHOTOS_BUCKET, getPublicPhotoUrl } from "@/lib/storage";

@@ -1,4 +1,4 @@
-import { getSpaces, SPACE_CATEGORIES } from "@/lib/spaces";
+import { getSpaces, SPACE_CATEGORIES } from "@/lib/dal/public/spaces";
 import Spaces from "@/components/Spaces";
 import type { Dict } from "@/dictionaries";
 
