@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getDictionary, hasLocale } from "@/dictionaries";
-import { PROPERTY_SLUG } from "@/config/site";
+import { getSiteByHost } from "@/lib/dal/public/site";
 import { getProperty, whatsappUrl } from "@/lib/dal/public/property";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
@@ -14,16 +14,29 @@ import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 
-export default async function Home({
+export default async function SitePage({
   params,
 }: {
-  params: Promise<{ lang: string }>;
+  params: Promise<{ host: string; lang: string }>;
 }) {
-  const { lang } = await params;
+  const { host, lang } = await params;
   if (!hasLocale(lang)) notFound();
 
+  const site = await getSiteByHost(host);
+  if (!site) notFound();
+
+  let property;
+  try {
+    property = await getProperty(site.slug);
+  } catch (error) {
+    // Same reasoning as app/sites/[host]/[lang]/layout.tsx's resolveSite:
+    // a real DB failure would otherwise 404 silently, indistinguishable
+    // from an unpublished/unknown property.
+    console.error(`SitePage: getProperty(${site.slug}) failed:`, error);
+    notFound();
+  }
+
   const dict = await getDictionary(lang);
-  const property = await getProperty(PROPERTY_SLUG);
   const waUrl = whatsappUrl(property, lang);
 
   return (

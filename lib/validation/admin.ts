@@ -5,8 +5,8 @@ import { z } from "zod";
 //
 // Note on scope: this only guards against malformed/oversized/wrong-shaped
 // input at the API boundary. The actual XSS fix for editable content rendered
-// into JSON-LD is escaping at the render site (app/[lang]/layout.tsx), since
-// output encoding is what makes that sink safe regardless of what's stored.
+// into JSON-LD is escaping at the render site (app/sites/[host]/[lang]/layout.tsx),
+// since output encoding is what makes that sink safe regardless of what's stored.
 // mapsUrl/airbnbUrl are restricted here because they're used directly as
 // `href`/iframe `src` on the public site.
 

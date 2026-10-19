@@ -1,32 +1,69 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Geist } from "next/font/google";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { hasLocale, locales } from "@/dictionaries";
-import { SITE_URL, PROPERTY_SLUG } from "@/config/site";
+import { hasLocale } from "@/dictionaries";
+import { getSiteByHost, getSiteUrl } from "@/lib/dal/public/site";
 import { getProperty, getAmenities, resolveAmenity } from "@/lib/dal/public/property";
 import { getSpaces } from "@/lib/dal/public/spaces";
 import { getPhotosConfig } from "@/lib/dal/public/photos";
 import { toJsonLd } from "@/lib/json-ld";
+import "@/app/globals.css";
 
-export async function generateStaticParams() {
-  return locales.map((lang) => ({ lang }));
+const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+
+// This is its own root layout (no app/layout.tsx above it — see Next.js's
+// "multiple root layouts" pattern) specifically so <html lang> can come
+// directly from the [lang] route param instead of a headers()-injected
+// value, per ADR-0001.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#2D4A3E",
+};
+
+// Resolves [host] to a property, 404ing for an unknown host or an
+// unpublished one — RLS already hides unpublished properties from the
+// anon client, so getProperty() throws for both cases identically.
+async function resolveSite(host: string) {
+  const site = await getSiteByHost(host);
+  if (!site) return null;
+  try {
+    return await getProperty(site.slug);
+  } catch (error) {
+    // Catches both "doesn't exist" and "not published" (RLS makes them
+    // identical from here), but also any real failure — a DB outage would
+    // otherwise look exactly like an unknown host, with nothing in the
+    // logs to tell them apart.
+    console.error(`resolveSite: getProperty(${site.slug}) failed:`, error);
+    return null;
+  }
 }
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ lang: string }>;
+  params: Promise<{ host: string; lang: string }>;
 }): Promise<Metadata> {
-  const { lang } = await params;
+  const { host, lang } = await params;
   if (!hasLocale(lang)) return {};
 
+  const property = await resolveSite(host);
+  if (!property) return {};
+
+  // [host] is the stripped siteIdentifier (e.g. "saywa-lodges", not
+  // "saywa-lodges.localhost:3000") — only right for the DB lookup above.
+  // Metadata URLs need the real external host, from the request itself.
+  const realHost = (await headers()).get("host") ?? host;
+  const siteUrl = getSiteUrl(realHost);
   const isEs = lang === "es";
-  const property = await getProperty(PROPERTY_SLUG);
   const { hero } = await getPhotosConfig(property.id);
   const title = isEs ? property.metaTitleEs : property.metaTitleEn;
   const description = isEs ? property.metaDescriptionEs : property.metaDescriptionEn;
   const keywords = isEs ? property.metaKeywordsEs : property.metaKeywordsEn;
 
   return {
+    metadataBase: new URL(siteUrl),
     title: { default: title, template: `%s | ${property.name}` },
     description,
     keywords,
@@ -34,7 +71,7 @@ export async function generateMetadata({
       type: "website",
       locale: isEs ? "es_PE" : "en_US",
       alternateLocale: isEs ? "en_US" : "es_PE",
-      url: `${SITE_URL}/${lang}`,
+      url: `${siteUrl}/${lang}`,
       siteName: property.name,
       title,
       description,
@@ -54,27 +91,33 @@ export async function generateMetadata({
       images: [hero],
     },
     alternates: {
-      canonical: `${SITE_URL}/${lang}`,
+      canonical: `${siteUrl}/${lang}`,
       languages: {
-        en: `${SITE_URL}/en`,
-        es: `${SITE_URL}/es`,
+        en: `${siteUrl}/en`,
+        es: `${siteUrl}/es`,
       },
     },
   };
 }
 
-export default async function LangLayout({
+export default async function SiteLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ lang: string }>;
+  params: Promise<{ host: string; lang: string }>;
 }) {
-  const { lang } = await params;
+  const { host, lang } = await params;
   if (!hasLocale(lang)) notFound();
 
+  const property = await resolveSite(host);
+  if (!property) notFound();
+
+  // Same reasoning as generateMetadata above: [host] is just the DB lookup
+  // key, not a usable URL host.
+  const realHost = (await headers()).get("host") ?? host;
+  const siteUrl = getSiteUrl(realHost);
   const isEs = lang === "es";
-  const property = await getProperty(PROPERTY_SLUG);
   const { hero } = await getPhotosConfig(property.id);
   const [spaces, amenityRows] = await Promise.all([
     getSpaces(property.id),
@@ -87,7 +130,7 @@ export default async function LangLayout({
     "@type": "LodgingBusiness",
     name: property.name,
     description: isEs ? property.metaDescriptionEs : property.metaDescriptionEn,
-    url: `${SITE_URL}/${lang}`,
+    url: `${siteUrl}/${lang}`,
     telephone: `+${property.whatsappNumber}`,
     email: property.email,
     address: {
@@ -121,12 +164,14 @@ export default async function LangLayout({
   };
 
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
-      />
-      {children}
-    </>
+    <html lang={lang} className={`${geist.variable} h-full antialiased`}>
+      <body className="min-h-full bg-cream text-charcoal">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
+        />
+        {children}
+      </body>
+    </html>
   );
 }

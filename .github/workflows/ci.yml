@@ -37,9 +37,9 @@ jobs:
 
       # The build never connects to Supabase (every route that reads
       # property content is server-rendered on demand, not statically
-      # generated — see app/[lang] in the build output). It only needs
-      # lib/env.ts's validation (a well-formed URL + non-empty key) and
-      # next.config.ts's `new URL(...).hostname` to succeed, so a
+      # generated — see app/sites/[host]/[lang] in the build output). It
+      # only needs lib/env.ts's validation (well-formed URLs + non-empty
+      # keys) and next.config.ts's `new URL(...).hostname` to succeed, so a
       # placeholder is enough and keeps this job independent of the `db`
       # job below (no Docker, no waiting on the Supabase stack).
       - name: Build
@@ -48,6 +48,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key"
           NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key"
+          ROOT_DOMAIN: "localhost:3000"
         run: npm run build
 
   db:
