@@ -428,14 +428,66 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - `lint`/`typecheck`/`test` (38/38)/`build` en verde. Sin migraciones → `supabase test db` (37/37) sin
     cambios, solo para confirmar que nada se rompió.
 
-### [ ] SD-106 · feat(dashboard): authenticated dashboard shell
-`M` · Depende: SD-103, SD-105 · Review: `R`
+### [x] SD-106 · feat(dashboard): authenticated dashboard shell
+`M` · Depende: SD-103, SD-105 · Review: `R+S`
 - **Alcance**: shadcn/ui inicializado; layout del dashboard mobile-first (navegación: Reservas, Calendario, Cotizar,
   Huéspedes, Sitio, Tarifas, Ajustes, con secciones vacías); selector de org si el usuario tiene más de una; enlace
   "Ver mi sitio".
 - **Criterios**
-  - [ ] Usable a 375 px de ancho.
-  - [ ] Usuario sin membresías ve un estado vacío claro, no un error.
+  - [x] Usable a 375 px de ancho. Verificado con capturas reales (Chrome headless), logueado: sidebar en
+        desktop, barra inferior en móvil, selector de org y tarjetas de página, todo legible a 375px.
+  - [x] Usuario sin membresías ve un estado vacío claro, no un error. Verificado creando un usuario de
+        prueba local sin `memberships` (borrado después): mensaje centrado + botón de cerrar sesión, sin
+        sidebar ni nav.
+- **Nota de cierre**:
+  - El chequeo de sesión real y autoritativo sigue en cada página (`verifySession()`, como ya documentaba
+    `lib/dal/session.ts`) — el layout también lo llama, pero solo para construir el shell visual (nombre de
+    org, nav, enlace al sitio), consistente con que las layouts no se re-ejecutan en navegación parcial.
+  - `lib/dal/organizations.ts` (nuevo): `getUserOrganizations`, `getOrgProperty` — mismo patrón que
+    `session.ts` (funciones puras que reciben el cliente Supabase, testeables con un stub). Sin migración
+    nueva: las políticas RLS existentes (`private.is_member`) ya permiten estas lecturas.
+  - `lib/domain/org-selection.ts` (nuevo): `resolveActiveOrgId` pura, probada por separado del I/O de la
+    cookie (`active-org-id`, mismo mecanismo que `dashboard-theme` de SD-107).
+  - `lib/dal/organizations.ts#requireActiveOrg` (nuevo): única forma sancionada de obtener "la org activa de
+    este request" — sesión + membresías + cookie, todo verificado contra la BD. `app/app/layout.tsx` y
+    `app/app/page.tsx` lo usan en vez de repetir la lógica a mano, para que ningún ticket futuro (SD-406,
+    SD-303, …) acabe leyendo `cookies().get("active-org-id")` directo y confiando en un valor que el cliente
+    puede manipular.
+  - **Decisión de arquitectura real, no anticipada en el plan**: los 7 `NavItem` (con sus iconos de
+    `lucide-react`) viven dentro de `components/dashboard/dashboard-nav.tsx` ("use client"), no en
+    `app/app/layout.tsx` (servidor). Un componente de ícono es una referencia a función; pasarlo como prop
+    de servidor a cliente rompe el build ("Only plain objects can be passed to Client Components...").
+    Se detectó probando el login real, no solo por tipos — `tsc`/build no lo marcan porque `NavItem` tipa
+    `icon` como `LucideIcon`, válido en ambos lados.
+  - `components/dashboard/` usa solo `components/ui/*`, igual que el resto del dashboard (sin estilos
+    sueltos). `components/dashboard/org-switcher.tsx` valida el `orgId` en el servidor antes de guardar la
+    cookie — nunca confía en el valor del cliente.
+  - **Hallazgos de `security-reviewer`, corregidos**: `setActiveOrg` no validaba su entrada con zod (el
+    tipo `orgId: string` solo existía en TypeScript) y reimplementaba a mano la comprobación de membresía
+    que ya existe en `lib/dal/session.ts#requireMembership` — se cambió a
+    `z.object({ orgId: z.uuid() }).parse(...)` + `requireMembership(orgId)`, y se quitó `isOrgMember`
+    (duplicaba `getMembership`). Además, el riesgo señalado de que un ticket futuro confiara en la cookie
+    sin pasar por una comprobación de membresía real quedó resuelto con `requireActiveOrg` (arriba).
+  - **Hallazgos de `reviewer`, corregidos**:
+    - `<html lang="en">` con todo el contenido en español (copiado del placeholder de SD-103). Se cambió a
+      `lang="es"` en las dos ramas del layout. Decisión explícita, no un olvido: el dashboard queda en
+      español fijo en este ticket (sin `dictionaries/`) — confirmado con el usuario antes de implementar;
+      localizarlo es un ticket aparte, para cuando haya páginas con contenido real que lo justifique.
+    - `getUserOrganizations` convertía un error de BD en lista vacía, indistinguible de "el usuario
+      legítimamente no tiene organizaciones" — con un blip transitorio de Supabase, un miembro real vería
+      "pídele a alguien que te invite" en vez de un error genérico. Ahora `getUserOrganizations` lanza en
+      ese caso (documentado como excepción deliberada al patrón de `lib/dal/*`); `app/app/layout.tsx`
+      atrapa el error con `unstable_rethrow()` primero (para no interceptar el redirect a `/login` de
+      `verifySession()`) y muestra un mensaje distinto ("no pudimos cargar tu organización, intenta de
+      nuevo") en vez de la copy de "sin organización".
+    - Sin `order by` en `getUserOrganizations`, el fallback "primera org" de `resolveActiveOrgId` (sin
+      cookie, primer login) no era estable entre cargas. Se ordena por antigüedad de la membresía.
+    - `OrgProperty.subdomain` tipado `string | null` cuando la columna es `not null` — ajustado a `string`.
+    - Enlace "Ver mi sitio" (`target="_blank"`) sin indicación para lectores de pantalla — se agregó texto
+      `sr-only` ("se abre en una pestaña nueva").
+    - No corregido, anotado para cuando `/app/bookings` y el resto tengan contenido real: cambiar de
+      org desde una sección que no sea el home redirige a `/app` en vez de quedarse en esa sección.
+  - `lint`/`typecheck`/`test` (64/64)/`build` en verde. Sin migraciones → sin `supabase test db`.
 
 ### [x] SD-107 · feat(ui): dashboard design system
 `M` · Depende: — (hacerlo antes o junto con SD-106, que lo usa) · Review: `R`

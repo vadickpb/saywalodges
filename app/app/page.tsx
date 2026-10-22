@@ -1,32 +1,26 @@
-import { verifySession } from "@/lib/dal/session";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { signOut } from "./actions";
+import { requireActiveOrg } from "@/lib/dal/organizations";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-// Minimal placeholder for the authenticated area — the real dashboard shell
-// (navigation, org selector) is SD-106. This page exists to prove the
-// session-check pattern: the check runs here, in the page itself, not in a
-// shared layout — layouts don't re-run on client-side navigation (Partial
-// Rendering), so a layout-level check wouldn't re-verify the session on
-// every route change.
+// Dashboard landing (app.<ROOT_DOMAIN>/, which proxy.ts rewrites "/" to).
+// "Signed in as X" / sign out moved into the shell's header (app/app/
+// layout.tsx) — this page is just a welcome. Real KPIs arrive with the
+// Phase 4 tickets (bookings/quotes), not invented ahead of real data.
 export default async function AppPage() {
-  const user = await verifySession();
+  // requireActiveOrg() calls verifySession() itself — same authoritative
+  // check every protected page makes on its own (see lib/dal/session.ts).
+  const { activeOrg } = await requireActiveOrg();
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
-      <Card className="w-full max-w-sm text-center">
-        <CardHeader>
-          <p className="text-sm text-muted-foreground">Signed in as</p>
-          <p className="text-lg text-foreground">{user.email}</p>
-        </CardHeader>
-        <CardContent>
-          <form action={signOut}>
-            <Button type="submit" variant="outline">
-              Sign out
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>{activeOrg ? `Bienvenido a ${activeOrg.name}` : "Bienvenido a Saywa Direct"}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Usa el menú para ver tus reservas, calendario, cotizaciones, huéspedes, el sitio público y las
+          tarifas.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
