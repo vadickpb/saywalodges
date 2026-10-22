@@ -18,15 +18,17 @@ de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura
 
 ## Arquitectura (resumen)
 
-- Hoy: single-tenant. `lib/property.ts` resuelve siempre la propiedad `saywa-lodges` (constante).
-- `lib/supabase.ts` expone un cliente server-only con la service-role key, tipado contra
-  `lib/database.types.ts` (generado desde el esquema — ver abajo). Este cliente es temporal: a
-  partir de Fase 1 las lecturas públicas migran a un cliente `anon` dentro de `lib/dal/`, y la
-  service-role queda solo para webhooks/cron/RPCs (ver [ADR 0002](docs/adr/0002-rls-and-dal.md)).
-- `/admin` + `/api/admin/*`: panel de edición de contenido actual (Basic Auth). Es temporal —
-  Fase 2 lo reemplaza por un dashboard real (SD-203 lo elimina).
-- Multi-tenant por host, RLS, el constraint que impide doble reserva, y el modelo de pagos están
-  decididos en los ADRs 0001–0004.
+- Multi-tenant por host: los sitios públicos se sirven en `app/sites/[host]/[lang]`.
+  `proxy.ts` resuelve host e idioma y refresca cookies de sesión; la autorización vive en `lib/dal/`.
+- Lecturas públicas con cliente `anon` en `lib/dal/public/`; el dashboard usa el cliente de sesión
+  y comprueba membresía. RLS aísla los datos por organización.
+- La service-role queda restringida a webhooks/cron/RPCs en `lib/supabase/admin.ts`.
+- El contenido, espacios, servicios, distancias, fotos y logo se editan en `/app/site/*` con login.
+  El panel antiguo y sus APIs se retiraron en SD-203.
+- Las tarifas publicadas siguen visibles, pero su edición desde la aplicación queda temporalmente
+  pendiente hasta SD-207. El nuevo modelo y motor de precios se implementan en SD-205/206.
+- Las decisiones sobre dominios, RLS, prevención de dobles reservas y pagos están en los ADRs 0001–0004;
+  consulta el roadmap para distinguir lo implementado de lo previsto.
 
 ## Desarrollo local
 
@@ -44,21 +46,24 @@ de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura
 
 ```bash
 npm install
-cp .env.example .env.local   # completar NEXT_PUBLIC_SITE_URL, ADMIN_USER/PASSWORD
+cp .env.example .env.local   # completar con las credenciales locales de Supabase
 npx supabase start            # levanta Postgres + Storage + Studio en Docker
 ```
 
 `supabase start` imprime las credenciales locales (`API_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY`, …).
-Para desarrollar **contra el Postgres local** (recomendado — no toca producción), usa esas
-credenciales locales como `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` en `.env.local`. Para
-desarrollar contra el proyecto real, usa las credenciales de Supabase → Project Settings → API Keys
-(pide acceso al dueño del proyecto).
+Para desarrollar **contra Supabase local**, usa `API_URL` como `SUPABASE_URL` y
+`NEXT_PUBLIC_SUPABASE_URL`, `ANON_KEY` como `NEXT_PUBLIC_SUPABASE_ANON_KEY` y
+`SERVICE_ROLE_KEY` como `SUPABASE_SERVICE_ROLE_KEY` en `.env.local`.
+No apuntes el entorno de desarrollo a producción.
 
 ```bash
 npm run dev
 ```
 
-Abre `http://localhost:3000/es` (o `/en`).
+Abre `http://saywa-lodges.localhost:3000/es` (o `/en`) para el sitio público,
+`http://demo.localhost:3000/es` para el segundo tenant y
+`http://app.localhost:3000/login` para acceder al dashboard.
+La raíz `http://localhost:3000` corresponde a la plataforma.
 
 ### Base de datos
 
@@ -69,11 +74,15 @@ cambio es un archivo de migración nuevo; ver `supabase/CLAUDE.md` y la skill `.
 npx supabase db reset   # recrea la BD local desde las migraciones + supabase/seed.sql
 ```
 
-`supabase/seed.sql` carga el contenido real de Saywa Lodges (propiedad, habitaciones, tarifas,
-amenities, distancias, 27 fotos), así el entorno local tiene los mismos datos que producción. Las
-filas de `photos` apuntan a rutas reales del bucket `property-photos`; los *archivos* de imagen
-solo existen en el Storage remoto por ahora, así que localmente las fotos no cargan (SD-202
-resuelve esto).
+`supabase/seed.sql` carga organizaciones de Saywa y demo, usuarios de desarrollo, espacios,
+tarifas, servicios, distancias y referencias a fotos con prefijo `{org_id}/...`.
+Para cargar los archivos de imagen en Storage local desde el historial de Git:
+
+```bash
+npm run db:seed-storage
+```
+
+Este script obtiene credenciales del stack local y rechaza destinos remotos.
 
 Tras cualquier cambio de esquema, regenerar los tipos de TypeScript:
 
@@ -90,6 +99,7 @@ npx supabase gen types typescript --local > lib/database.types.ts
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run test` | Tests unitarios (Vitest) |
+| `npm run db:seed-storage` | Cargar imágenes en Storage local |
 
 ## Estado del proyecto
 

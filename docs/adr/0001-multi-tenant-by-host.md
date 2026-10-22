@@ -33,7 +33,7 @@ cacheada y responde 404 si no existe o no está publicada.
   su propio `<html>/<body>`: `app/sites/[host]/[lang]/layout.tsx` (lee `<html lang>` directo del
   route param, nunca de `headers()`), `app/app/layout.tsx` (dashboard) y
   `app/(platform)/layout.tsx` (route group: landing placeholder, login, recuperación de
-  contraseña, callback de auth, `/admin` legacy — todo lo que es igual para cualquier tenant).
+  contraseña y callback de auth — las rutas de la plataforma).
   Efecto secundario real: al dejar de depender de `headers()`, varias de esas páginas pasaron de
   `ƒ` (dinámica forzada) a `○` (estática) en el build.
 - `app/sitemap.ts`/`app/robots.ts` leen el host vía `headers()` (son archivos de nivel raíz, sin

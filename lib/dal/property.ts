@@ -59,8 +59,7 @@ export async function getPropertySettings(
 // The caller (app/app/site/actions.ts) must have already validated `data`
 // against propertySettingsSchema and resolved orgId via requireActiveOrg() —
 // never from a client-supplied value. `.eq("org_id", orgId)` is defense in
-// depth on top of RLS, same reasoning as app/api/admin/content/route.ts's
-// equivalent redundant .eq.
+// depth on top of RLS: every write is explicitly scoped to the active org.
 export async function updatePropertySettings(
   supabase: SupabaseClient<Database>,
   orgId: string,

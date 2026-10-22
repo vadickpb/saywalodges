@@ -6,8 +6,8 @@ import "@/app/globals.css";
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
 // Its own root layout (route group, no app/layout.tsx above it) — groups
-// everything shared across every tenant (landing placeholder, auth, legacy
-// admin): one login, one dashboard, not a tenant's own content. Not
+// platform pages (landing placeholder and auth): one login shared by all
+// tenants. Not
 // localized yet (SD-106+), so a fixed English <html lang>.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

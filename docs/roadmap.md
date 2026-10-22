@@ -620,7 +620,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - `lint`/`typecheck`/`test` (78/78)/`build` en verde. `npx supabase db reset && npx supabase test db`
     en verde (47/47, incluye `0005_property_settings_isolation.test.sql`).
 
-### [~] SD-202 · feat(dashboard): site content and photo manager
+### [x] SD-202 · feat(dashboard): site content and photo manager
 `L` · Depende: SD-201 · Review: `R+S`
 - **Alcance**: migración `rooms` → `spaces`; CRUD de spaces, amenities y distances con reordenamiento; gestor de fotos
   (hero, galería, por espacio) con validación de tipo/tamaño, rutas nuevas con prefijo `{org_id}/...`, borrado de
@@ -634,9 +634,8 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [x] Reordenar y guardar persiste el orden en el sitio (RPCs atómicas `reorder_*`; el sitio público es dinámico).
   - [x] Borrar un espacio borra sus fotos de BD y Storage (objetos primero, luego la fila; verificado contra Supabase local).
   - [x] Las fotos de espacios ya son editables (antes no lo eran).
-  - [ ] Las 27 fotos reales siguen cargando tras la migración de rutas; ninguna URL rota — **pendiente en producción**:
-        `scripts/migrate-photo-paths.mjs` (dry-run → `--apply` → revisar el sitio → `--prune`) lo corre el usuario;
-        verificado solo en local (seed con prefijo de org y una fila legacy simulada).
+  - [x] Las 27 fotos reales migradas a `{org_id}/...` en producción, según confirmación del usuario
+        al iniciar SD-203 (main `6f2e772`). No se repitió la verificación remota en SD-203.
   - [x] Un usuario de otra org no puede subir/borrar en el prefijo de otra (pgTAP `0006` + prueba real con sesiones).
 - **Entrega**: dos PRs. PR A (#9): rename `rooms`→`spaces`, bucket y políticas de `storage.objects`, rutas con prefijo
   de org, script de migración de producción, pgTAP `0006`. PR B: RPCs de orden/hero (`0007`), dominio
@@ -651,15 +650,33 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     flujo del DAL contra Supabase local.
   - Fuera de alcance / pendiente: dos pestañas moviendo a la vez pueden perder un movimiento (read-modify-write sin
     versión); dos primeras subidas simultáneas podrían dejar dos `hero` (un índice único parcial lo evitaría).
-    `scripts/seed-content.mjs` sigue con rutas legacy (script de un solo uso, a borrar).
-  - Pasos manuales de producción: revisar políticas manuales en `storage.objects`, `supabase db push` justo antes del
-    deploy, correr el script de rutas, `get_advisors`.
+    El script inicial de carga con rutas legacy se retiró en SD-203; el seed vigente es `supabase/seed.sql`.
+  - Migraciones y rutas de fotos aplicadas en producción según confirmación del usuario al iniciar SD-203.
+    Esta confirmación no sustituye la revisión remota de `get_advisors` pendiente en SD-102.
 
-### [ ] SD-203 · chore: remove legacy admin
+### [x] SD-203 · chore: remove legacy admin
 `S` · Depende: SD-202 · Review: `R+S`
 - **Alcance**: eliminar `app/admin`, `app/api/admin/*`, Basic Auth de `proxy.ts`, variables `ADMIN_*`.
 - **Criterios**
-  - [ ] `/admin` → 404; no quedan referencias a `ADMIN_USER`/`ADMIN_PASSWORD`.
+  - [x] `/admin` → 404; sin referencias a las variables de credenciales de Basic Auth en archivos versionados.
+- **Nota de cierre**:
+  - Eliminados el panel antiguo, sus tres APIs, validaciones, alias de service-role, helper de errores sin
+    consumidores y script inicial de carga. Retirada Basic Auth de `proxy.ts` y su excepción de ESLint;
+    se conservan las restricciones de importación del cliente service-role.
+  - Los hosts de plataforma usan rutas nativas (incluido 404 para rutas inexistentes); los tenants conservan
+    enrutamiento por idioma y host, bloqueo de `/sites/*` directo y aislamiento de rutas de sesión/dashboard.
+  - El usuario aceptó retirar temporalmente la edición de `rate_tiers`: los valores publicados siguen
+    visibles; el modelo nuevo llega en SD-205/206 y la pantalla de edición en SD-207.
+  - `lint`, `typecheck`, 99 tests y `build` en verde. Se regeneraron tipos de rutas con `next typegen`
+    para eliminar referencias locales obsoletas; el build necesitó acceso de red para descargar Google Fonts.
+  - HTTP contra el servidor de desarrollo local: `/admin` y las tres APIs devuelven 404 en hosts de plataforma,
+    incluidas mutaciones; Saywa es/en y demo devuelven 200. Sin sesión, `/app/site` redirige al login;
+    con el usuario owner local, las cinco pantallas de `/app/site/*` devuelven 200 con contenido esperado.
+    Rutas de dashboard/login en tenant y acceso directo a `/sites/*` devuelven 404.
+  - Revisiones `reviewer` y `security-reviewer` aprobadas; corregido un comentario obsoleto en el layout de plataforma.
+    Sin cambios de esquema, migraciones ni BD remota; `.env.local` sin modificar.
+  - Despliegue: el usuario retira las dos credenciales antiguas de Vercel después de desplegar este PR.
+    Push y apertura del PR pendientes de confirmación; el cierre documental no implica merge ni despliegue.
 
 ### [ ] SD-204 · feat: bookable units
 `M` · Depende: SD-106 · Review: `R+S`
