@@ -1,11 +1,8 @@
 import { z } from "zod";
 
 // Validation for the dashboard's "Sitio → Información" form (SD-201).
-// Own schema, not a re-import from lib/validation/admin.ts — that file
-// belongs to the legacy single-tenant admin API, removed in SD-203; the
-// field limits below are the same ones already proven there, just owned by
-// this ticket instead. logo_path and theme/content are deliberately not
-// here: see docs/roadmap.md's SD-201 closing note for why.
+// Field limits are owned by this domain schema. Logo uploads and theme/content
+// use their own schemas; see docs/roadmap.md for their respective editors.
 
 const MAX_SHORT = 200;
 const MAX_LONG = 2000;

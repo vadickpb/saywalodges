@@ -75,7 +75,6 @@ inputs y botones.
 ## No usar aquí
 
 - Nada de `components/site/` (sitio público) — otra marca, otro propósito. Ver la sección siguiente.
-- `app/admin/page.tsx` — panel legado, se elimina en SD-203, no se migra a este sistema.
 
 # Sitio público del alojamiento (SD-209)
 

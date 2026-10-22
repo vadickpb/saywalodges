@@ -2,8 +2,8 @@ import { z } from "zod";
 
 // Pure rules for the dashboard's content manager (spaces, amenities,
 // distances, photos). No I/O: lib/dal/content.ts and lib/dal/photos.ts apply
-// them, app/app/site/*/actions.ts calls both. Limits mirror the legacy
-// lib/validation/admin.ts, which SD-203 deletes.
+// them, app/app/site/*/actions.ts calls both. Text and upload limits are
+// owned by this domain schema.
 
 const MAX_SHORT = 200;
 const MAX_LONG = 2000;

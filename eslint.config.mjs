@@ -16,10 +16,7 @@ const eslintConfig = defineConfig([
   ]),
   {
     // CLAUDE.md: the service-role client bypasses RLS and is restricted to
-    // webhooks, cron and RPCs — never pages or components. Blocks both the
-    // real module and lib/supabase.ts's backward-compat shim (same client,
-    // re-exported under the old name) — otherwise the shim path would be
-    // an unflagged escape hatch to the same service-role access.
+    // webhooks, cron and RPCs — never pages or components.
     files: ["app/**", "components/**"],
     rules: {
       "no-restricted-imports": [
@@ -29,10 +26,6 @@ const eslintConfig = defineConfig([
             {
               name: "@/lib/supabase/admin",
               message: "lib/supabase/admin.ts is service-role only (webhooks/cron/RPCs). Use lib/supabase/server.ts or lib/dal/* instead.",
-            },
-            {
-              name: "@/lib/supabase",
-              message: "lib/supabase.ts is a service-role shim. Use lib/supabase/server.ts or lib/dal/* instead.",
             },
             {
               name: "@/lib/supabase/anon",
@@ -55,17 +48,6 @@ const eslintConfig = defineConfig([
           ],
         },
       ],
-    },
-  },
-  {
-    // Pre-existing debt: these routes use the service-role shim directly
-    // for admin mutations. SD-104 only moved the *public* site's reads
-    // into lib/dal/public/*; an admin-scoped DAL doesn't exist yet (Fase 2,
-    // SD-201/202). A later config object wins over the one above for the
-    // files it matches.
-    files: ["app/api/admin/**"],
-    rules: {
-      "no-restricted-imports": "off",
     },
   },
 ]);
