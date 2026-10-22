@@ -19,6 +19,7 @@ describe("env", () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+    process.env.ROOT_DOMAIN = "localhost:3000";
   }
 
   it("throws a clear error when SUPABASE_URL is missing", async () => {
@@ -51,6 +52,29 @@ describe("env", () => {
     await expect(import("./env")).rejects.toThrow(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
   });
 
+  it("defaults ROOT_DOMAIN to localhost:3000 when missing", async () => {
+    setValidEnv();
+    delete process.env.ROOT_DOMAIN;
+    const { env } = await import("./env");
+    expect(env.ROOT_DOMAIN).toBe("localhost:3000");
+  });
+
+  it("throws when ROOT_DOMAIN is missing in production (no silent default)", async () => {
+    setValidEnv();
+    delete process.env.ROOT_DOMAIN;
+    vi.stubEnv("NODE_ENV", "production");
+    await expect(import("./env")).rejects.toThrow(/ROOT_DOMAIN/);
+    vi.unstubAllEnvs();
+  });
+
+  it("loads successfully in production when ROOT_DOMAIN is set explicitly", async () => {
+    setValidEnv();
+    vi.stubEnv("NODE_ENV", "production");
+    const { env } = await import("./env");
+    expect(env.ROOT_DOMAIN).toBe("localhost:3000");
+    vi.unstubAllEnvs();
+  });
+
   it("loads successfully with valid vars", async () => {
     setValidEnv();
     const { env } = await import("./env");
@@ -58,5 +82,6 @@ describe("env", () => {
     expect(env.SUPABASE_SERVICE_ROLE_KEY).toBe("test-key");
     expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("https://example.supabase.co");
     expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("test-anon-key");
+    expect(env.ROOT_DOMAIN).toBe("localhost:3000");
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { requestPasswordReset } from "@/app/login/actions";
+import { requestPasswordReset } from "@/app/(platform)/login/actions";
 
 const inputCls =
   "px-3 py-2 rounded-lg border border-stone/20 bg-white text-sm text-charcoal focus:outline-none focus:border-[#2D4A3E] transition-colors w-full";

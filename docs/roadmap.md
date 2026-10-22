@@ -369,17 +369,64 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     verificado que ahora sí dispara contra un import relativo de prueba.
   - `lint`/`typecheck`/`test` (35/35)/`build` en verde. Sin migraciones → sin `supabase test db`.
 
-### [ ] SD-105 · feat(routing): host-based tenant resolution
+### [x] SD-105 · feat(routing): host-based tenant resolution
 `L` · Depende: SD-104 · Review: `R+S`
 - **Alcance**: `proxy.ts` reescribe `{sub}.<root>` y dominios propios a `/sites/[host]/[lang]/...`,
   `app.<root>` a `/app/...`; mover `app/[lang]` a `app/sites/[host]/[lang]`; `<html lang>` en el layout del sitio
   (sin `headers()` en el root); `getSiteByHost()` cacheado; metadata, `sitemap.ts`, `robots.ts` y JSON-LD por host;
   `ROOT_DOMAIN` en `lib/env.ts`.
 - **Criterios**
-  - [ ] `saywa-lodges.localhost:3000/es` y `demo.localhost:3000/es` muestran contenido distinto.
-  - [ ] Host desconocido → 404; propiedad no publicada → 404.
-  - [ ] `sitemap.xml` y canonical usan el host del tenant.
-  - [ ] ADR 0001 actualizado si cambia algo del diseño.
+  - [x] `saywa-lodges.localhost:3000/es` y `demo.localhost:3000/es` muestran contenido distinto. Verificado
+        con `curl -H "Host: ..."` contra Supabase local: nombres/fotos/rooms de cada property seminada aparecen
+        correctamente (p. ej. "Demo Lodge"/"Demo Room" solo en el segundo).
+  - [x] Host desconocido → 404; propiedad no publicada → 404. Verificado: host inexistente → 404; se
+        despublicó `saywa-lodges` directo en la BD → 404, se revirtió → 200 de nuevo.
+  - [x] `sitemap.xml` y canonical usan el host del tenant. Verificado con curl para ambos subdominios
+        (hosts distintos en las URLs devueltas); el canonical/og:url tenían un bug real (ver nota de cierre,
+        hallazgo F1) ya corregido y reverificado.
+  - [x] ADR 0001 actualizado si cambia algo del diseño. Se añadió la mecánica concreta (`ROOT_DOMAIN`,
+        `getSiteByHost`, root layouts múltiples, el hallazgo de seguridad sobre rutas compartidas).
+- **Nota de cierre**:
+  - **`ROOT_DOMAIN` con default en local**: inicialmente obligatorio, bloqueaba al usuario sin poder editar
+    `.env.local` él mismo en el momento. Se le dio un default (`localhost:3000`, ya documentado en
+    `CLAUDE.md`) para que el dev local funcione sin configuración — en producción, si falta de verdad
+    (`NODE_ENV === "production"` sin la variable), `lib/env.ts` lanza en vez de degradar en silencio a
+    "todo host real se trata como dominio propio desconocido" (hallazgo de `security-reviewer`, H5).
+  - **Tres hallazgos reales de `security-reviewer`, corregidos antes de cerrar**:
+    1. El header `Host` es controlable por quien hace la request (no solo por navegadores normales) y el
+       parser HTTP de Node acepta ahí caracteres que no son válidos en un hostname real. Sin validarlo,
+       un `Host` como `x/../../app` podía, en teoría, hacer que el rewrite a `/sites/${siteIdentifier}...`
+       se saliera de ese árbol. Se añadió una validación estricta de formato hostname antes de usar el
+       valor para cualquier cosa, con `encodeURIComponent` también al construir el path del rewrite.
+    2. `/sites/*` era alcanzable como ruta literal en el dominio raíz (la rama "landing" no filtraba el
+       path) — cualquiera podía abrir `<ROOT_DOMAIN>/sites/<tenant>/es` y ver el sitio de un tenant bajo el
+       dominio de la plataforma. No expone datos ocultos (RLS solo deja ver propiedades publicadas), pero
+       permite contenido duplicado y suplantación visual. Ahora `/sites/*` siempre da 404 como ruta de
+       entrada — solo es alcanzable internamente, vía `NextResponse.rewrite`.
+    3. **El más serio de los tres**: las rutas compartidas (`/login`, `/app`, `/admin`, etc.) se servían en
+       cualquier host, incluido un futuro dominio propio de un tenant (SD-604). Una vez exista esa
+       posibilidad, un tenant podría mandar a alguien a `https://su-dominio.com/login` (página legítima,
+       TLS válido) y quedarse con las cookies de sesión (`sb-*`) o las credenciales Basic Auth de `/admin`
+       asociadas a su propio dominio. Hoy no es explotable (nadie puede escribir `custom_domain` todavía),
+       pero el arreglo es gratis ahora y evita tener que tocar `proxy.ts` otra vez cuando SD-604 exista:
+       estas rutas ahora solo responden en `app.<ROOT_DOMAIN>` (o la raíz, para `/admin`); en cualquier
+       otro host, 404.
+  - **Hallazgo real de `reviewer`, corregido**: `app/sites/[host]/[lang]/layout.tsx` usaba el route param
+    `[host]` (que es solo el `siteIdentifier` sin el sufijo, p. ej. `"saywa-lodges"`) para construir
+    `canonical`/`og:url`/JSON-LD `url` — producía URLs rotas como `https://saywa-lodges/es` (sin el dominio
+    completo). Se corrigió leyendo el host real vía `headers()` solo para esto (no para `<html lang>`, que
+    sigue viniendo del route param como pide el ADR) — reverificado con curl que el canonical ahora es
+    `http://saywa-lodges.localhost:3000/es`, correcto.
+  - **Otros hallazgos menores de ambos revisores, corregidos**: errores de BD en `getSiteByHost` y en los
+    `catch` de `resolveSite`/`SitePage` se tragaban sin loguear (un fallo real de Supabase se habría visto
+    igual que "host desconocido", sin rastro en logs) — ahora todos logean con `console.error` antes de
+    devolver `null`/`notFound()`; `app/sitemap.ts`/`app/robots.ts` duplicaban la lógica de extraer el
+    `siteIdentifier` del host — se extrajo a `siteIdentifierFromHost()` en `lib/dal/public/site.ts`,
+    compartida entre los dos (no con `proxy.ts`, que se mantiene deliberadamente sin importar `lib/dal`,
+    autocontenido y sin tocar la BD, por diseño del ADR); comentario desactualizado en
+    `lib/validation/admin.ts` que referenciaba la ruta vieja `app/[lang]/layout.tsx`.
+  - `lint`/`typecheck`/`test` (38/38)/`build` en verde. Sin migraciones → `supabase test db` (37/37) sin
+    cambios, solo para confirmar que nada se rompió.
 
 ### [ ] SD-106 · feat(dashboard): authenticated dashboard shell
 `M` · Depende: SD-103, SD-105 · Review: `R`
