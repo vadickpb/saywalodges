@@ -33,13 +33,13 @@ export const getSpaces = cache(async (propertyId: string): Promise<SpaceWithPhot
   const [{ data: rooms, error: roomsError }, { data: photos, error: photosError }] =
     await Promise.all([
       supabase
-        .from("rooms")
+        .from("spaces")
         .select("*")
         .eq("property_id", propertyId)
         .order("sort_order"),
       supabase
         .from("photos")
-        .select("room_id, storage_path, sort_order")
+        .select("space_id, storage_path, sort_order")
         .eq("property_id", propertyId)
         .eq("role", "room")
         .order("sort_order"),
@@ -50,10 +50,10 @@ export const getSpaces = cache(async (propertyId: string): Promise<SpaceWithPhot
 
   const photosByRoom = new Map<string, string[]>();
   for (const p of photos ?? []) {
-    if (!p.room_id) continue;
-    const list = photosByRoom.get(p.room_id) ?? [];
+    if (!p.space_id) continue;
+    const list = photosByRoom.get(p.space_id) ?? [];
     list.push(getPublicPhotoUrl(p.storage_path));
-    photosByRoom.set(p.room_id, list);
+    photosByRoom.set(p.space_id, list);
   }
 
   return (rooms ?? []).map((r) => ({

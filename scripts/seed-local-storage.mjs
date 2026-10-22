@@ -22,18 +22,18 @@ function localStackEnv() {
   return { url: read("API_URL"), serviceKey: read("SERVICE_ROLE_KEY") };
 }
 
-// "site/foto3.jpeg" → "public/images/foto3.jpeg"
-// "rooms/pool/pool-01.jpeg" → "public/images/pool/pool-01.jpeg"
-// "demo/<same as above>" → same source file (the demo tenant reuses photos)
+// "<org>/site/foto3.jpeg" → "public/images/foto3.jpeg"
+// "<org>/spaces/pool/pool-01.jpeg" → "public/images/pool/pool-01.jpeg"
+// (the demo org reuses the same source files)
 // Paths come from the (local) DB, which any signed-in dev user can write to:
 // only plain image paths pass, so nothing odd reaches git or the upload URL.
-const SAFE_PATH = /^(demo\/)?(site|rooms)\/[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*\.jpe?g$/;
+const SAFE_PATH = /^[0-9a-f-]{36}\/(site|spaces)\/[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*\.jpe?g$/;
 
 function sourcePathFor(storagePath) {
   if (!SAFE_PATH.test(storagePath)) return null;
-  const path = storagePath.replace(/^demo\//, "");
+  const path = storagePath.slice(storagePath.indexOf("/") + 1);
   if (path.startsWith("site/")) return `public/images/${path.slice("site/".length)}`;
-  if (path.startsWith("rooms/")) return `public/images/${path.slice("rooms/".length)}`;
+  if (path.startsWith("spaces/")) return `public/images/${path.slice("spaces/".length)}`;
   return null;
 }
 

@@ -405,7 +405,7 @@ async function main() {
   console.log(`  property_id = ${propertyId}`);
 
   console.log("Replacing rooms, rate_tiers, amenities, distances...");
-  const insertedRooms = await replaceChildRows("rooms", propertyId, rooms);
+  const insertedRooms = await replaceChildRows("spaces", propertyId, rooms);
   await replaceChildRows("rate_tiers", propertyId, rateTiers);
   await replaceChildRows("amenities", propertyId, amenities);
   await replaceChildRows("distances", propertyId, distances);
@@ -426,7 +426,7 @@ async function main() {
     await must(
       await supabase.from("photos").insert({
         property_id: propertyId,
-        room_id: null,
+        space_id: null,
         storage_path: storagePath,
         role,
         sort_order: role === "gallery" ? sortOrder++ : 0,
@@ -445,7 +445,7 @@ async function main() {
       await must(
         await supabase.from("photos").insert({
           property_id: propertyId,
-          room_id: roomId,
+          space_id: roomId,
           storage_path: storagePath,
           role: "room",
           sort_order: i,

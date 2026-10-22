@@ -620,7 +620,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - `lint`/`typecheck`/`test` (78/78)/`build` en verde. `npx supabase db reset && npx supabase test db`
     en verde (47/47, incluye `0005_property_settings_isolation.test.sql`).
 
-### [ ] SD-202 · feat(dashboard): site content and photo manager
+### [~] SD-202 · feat(dashboard): site content and photo manager
 `L` · Depende: SD-201 · Review: `R+S`
 - **Alcance**: migración `rooms` → `spaces`; CRUD de spaces, amenities y distances con reordenamiento; gestor de fotos
   (hero, galería, por espacio) con validación de tipo/tamaño, rutas nuevas con prefijo `{org_id}/...`, borrado de
@@ -631,11 +631,29 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   `properties.logo_path` en una sola operación verificada (mismo patrón de script + verificación que
   `scripts/seed-content.mjs` en SD-001), confirmando que cada foto sigue cargando en el sitio después del move.
 - **Criterios**
-  - [ ] Reordenar y guardar persiste el orden en el sitio.
-  - [ ] Borrar un espacio borra sus fotos de BD y Storage.
-  - [ ] Las fotos de espacios ya son editables (antes no lo eran).
-  - [ ] Las 27 fotos reales siguen cargando tras la migración de rutas; ninguna URL rota.
-  - [ ] Un usuario de otra org no puede subir/borrar en el prefijo de otra (verificado, no solo política escrita).
+  - [x] Reordenar y guardar persiste el orden en el sitio (RPCs atómicas `reorder_*`; el sitio público es dinámico).
+  - [x] Borrar un espacio borra sus fotos de BD y Storage (objetos primero, luego la fila; verificado contra Supabase local).
+  - [x] Las fotos de espacios ya son editables (antes no lo eran).
+  - [ ] Las 27 fotos reales siguen cargando tras la migración de rutas; ninguna URL rota — **pendiente en producción**:
+        `scripts/migrate-photo-paths.mjs` (dry-run → `--apply` → revisar el sitio → `--prune`) lo corre el usuario;
+        verificado solo en local (seed con prefijo de org y una fila legacy simulada).
+  - [x] Un usuario de otra org no puede subir/borrar en el prefijo de otra (pgTAP `0006` + prueba real con sesiones).
+- **Entrega**: dos PRs. PR A (#9): rename `rooms`→`spaces`, bucket y políticas de `storage.objects`, rutas con prefijo
+  de org, script de migración de producción, pgTAP `0006`. PR B: RPCs de orden/hero (`0007`), dominio
+  `lib/domain/content-manager.ts`, DAL `lib/dal/content.ts` y `lib/dal/photos.ts`, y `/app/site/{spaces,amenities,distances,photos}`
+  con logo, foto principal, reorden y borrado confirmado.
+- **Nota de cierre**:
+  - El borrado de Storage va por compensación en el DAL (sin service-role): subir = objeto y luego fila (si la fila
+    falla se borra el objeto); borrar = objeto y luego fila (un fallo se puede reintentar). `storage.remove` devuelve
+    éxito aunque RLS omita el objeto, así que se compara cuántos se borraron (hallazgo de review).
+  - Borrar la foto principal promueve la siguiente del sitio.
+  - Los formularios no se probaron en un navegador (no hay Playwright en el repo); sí las páginas con sesión real y el
+    flujo del DAL contra Supabase local.
+  - Fuera de alcance / pendiente: dos pestañas moviendo a la vez pueden perder un movimiento (read-modify-write sin
+    versión); dos primeras subidas simultáneas podrían dejar dos `hero` (un índice único parcial lo evitaría).
+    `scripts/seed-content.mjs` sigue con rutas legacy (script de un solo uso, a borrar).
+  - Pasos manuales de producción: revisar políticas manuales en `storage.objects`, `supabase db push` justo antes del
+    deploy, correr el script de rutas, `get_advisors`.
 
 ### [ ] SD-203 · chore: remove legacy admin
 `S` · Depende: SD-202 · Review: `R+S`
