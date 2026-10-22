@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Toaster } from "@/components/ui/sonner";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { MetricCard } from "@/components/ui/metric-card";
 import { StatusBadge, type BookingStatus } from "@/components/ui/status-badge";
@@ -163,7 +162,6 @@ export default async function UiShowcasePage() {
         </section>
       </main>
       <MobileBottomNav items={NAV_ITEMS} activeHref="/app/bookings" />
-      <Toaster theme={isDark ? "dark" : "light"} />
     </div>
   );
 }

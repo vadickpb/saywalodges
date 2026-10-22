@@ -545,14 +545,80 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 ## Fase 2 — Contenido, unidades y tarifas (M2)
 
-### [ ] SD-201 · feat(dashboard): property settings
+### [x] SD-201 · feat(dashboard): property settings
 `M` · Depende: SD-106 · Review: `R+S`
 - **Alcance**: formulario de información, contacto/WhatsApp, dirección y coordenadas, SEO es/en, logo, tema
   (color primario/acento); server actions + zod; `revalidateTag('property:<id>')` al guardar.
 - **Criterios**
-  - [ ] Cambios visibles en el sitio público tras guardar, sin redeploy.
-  - [ ] Validación de errores por campo en la UI.
-  - [ ] Staff puede editar; un usuario de otra org no (test).
+  - [x] Cambios visibles en el sitio público tras guardar, sin redeploy. Verificado de verdad: guardé un
+        meta title nuevo desde el dashboard y `saywa-lodges.localhost:3000/es` lo mostró en el `<title>`
+        al instante, sin reiniciar el servidor — la ruta pública ya es 100% dinámica, no hay nada que
+        invalidar (ver nota de `revalidateTag` abajo).
+  - [x] Validación de errores por campo en la UI. Probado con un `mapsUrl` inválido (`javascript:...`):
+        error inline en rojo bajo el campo, sin guardar, sin toast.
+  - [x] Staff puede editar; un usuario de otra org no. Lo primero, probado en el navegador con
+        `owner@saywalodges.com`. Lo segundo lo garantiza RLS (`properties_update using
+        is_member(org_id)`), con test pgTAP real: `supabase/tests/0005_property_settings_isolation.test.sql`
+        (ver nota de cierre — `0003_org_isolation.test.sql` no probaba UPDATE sobre `properties`, solo
+        sobre `rooms`; corregido tras el hallazgo de `security-reviewer`).
+- **Recortes de alcance frente al texto de arriba, documentados antes de implementar (ver también el plan
+  aprobado de este ticket)**:
+  - **Sin logo todavía.** `storage.objects` no tiene ninguna policy de RLS para `authenticated` — es
+    trabajo explícito de SD-202 ("movido desde SD-102"), que además define el prefijo `{org_id}/...` que
+    esas policies van a exigir. La única alternativa sería la service-role key en una server action de
+    usuario, prohibido por `CLAUDE.md`. `logo_path` ya tiene grant de `update` desde antes de este ticket
+    (`20261016230028_row_level_security_policies.sql`), así que el selector de logo se puede sumar a esta
+    misma página cuando SD-202 agregue esas policies, sin tocar el resto del formulario.
+  - **Sin color primario/acento.** SD-210 es el ticket dedicado a todo el tema (presets, colores,
+    tipografía, radio, aviso de contraste) — duplicarlo aquí con una versión reducida no tenía sentido.
+    `theme`/`content` siguen sin grant de escritura hasta SD-210.
+  - **Sin `revalidateTag`.** `app/sites/[host]/[lang]/page.tsx` ya es 100% dinámico (`ƒ`, sin ninguna
+    directiva de cache) — no hay nada que invalidar hoy, confirmado arriba con la prueba real. Se agrega
+    el día que el sitio público tenga una capa de cache de verdad.
+- **Nota de cierre**:
+  - **Bug real encontrado probando el flujo en el navegador, no por tipos/build**: al fallar la
+    validación de un campo, el formulario perdía los cambios sin guardar de *todos* los demás campos
+    también, no solo el inválido — `app/app/site/page.tsx` recarga `initial` fresco de la BD en cada
+    render, y Next vuelve a renderizar ese segmento después de que corre la server action, lo que
+    reaplica el `defaultValue` original a cada `<input>` no controlado. Arreglado haciendo que
+    `updateSettings` devuelva los valores exactamente como se enviaron (`UpdateSettingsState.values`) y
+    que `SettingsForm` los prefiera sobre `initial` una vez que hubo al menos un intento de guardado.
+    Verificado con eventos de teclado reales (no solo asignar `.value` por JS) antes y después del fix.
+  - `lib/dal/property.ts` (nuevo, autenticado) es deliberadamente distinto de `lib/dal/public/property.ts`
+    (anon) — mismo patrón de separación ya usado para `lib/dal/organizations.ts`.
+  - `components/ui/sonner.tsx#Toaster` se monta ahora en `app/app/layout.tsx` (antes solo se usaba en la
+    página de muestra `/app/ui`) — este es el primer ticket del dashboard real que necesita confirmar un
+    guardado; queda disponible para cualquier página futura.
+  - **Hallazgos de `security-reviewer`, corregidos**:
+    - El criterio "un usuario de otra org no puede editar" se daba por cubierto por un test que en
+      realidad solo probaba `rooms`, no `properties` (que es justo la tabla que escribe este ticket).
+      Migración nueva `20261022060256_property_org_id_unique.sql` (`unique(org_id)` en `properties` — ver
+      punto siguiente) + test nuevo `0005_property_settings_isolation.test.sql`, con la aserción real:
+      un UPDATE de otra org sobre `properties.name` afecta 0 filas.
+    - `updatePropertySettings` reportaba éxito aunque el UPDATE afectara 0 filas (RLS filtrando una
+      escritura entre orgs, o una org sin propiedad) — se le agregó `.select("id")` y se verifica
+      `data.length === 1`.
+    - `properties.org_id` no tenía `unique` — el código de este ticket escribe `where org_id = $1`
+      asumiendo una propiedad por org, invariante real hoy pero nunca forzado en la BD. Se agregó el
+      constraint (migración de arriba): si alguna vez una org tuviera dos propiedades, este UPDATE
+      sobrescribiría ambas con los mismos datos sin avisar.
+    - El `refine` de `httpsUrlOrEmpty` (`lib/domain/property-settings.ts`) aceptaba variantes
+      (`HTTPS://…`, con espacio inicial) que el parser WHATWG normaliza pero que la CHECK de BD
+      (`~ '^https://'`, sensible a mayúsculas) rechaza — guardar fallaría con un error genérico de BD en
+      vez de un error de campo. Se agregó `startsWith("https://")` explícito, igual que la CHECK.
+  - **Hallazgo crítico de `reviewer`, corregido**: al agregar el chequeo de filas afectadas de arriba, el
+    parámetro de `updatePropertySettings` se llamaba `data` igual que la respuesta de Supabase — al
+    destructurar solo `{ error }` (sin capturar `data` de la respuesta), `data.length` dentro del `if`
+    resolvía al parámetro (sin `.length`), así que en runtime la función devolvía `{ ok: false }`
+    *siempre*, aunque el guardado funcionara. `tsc` lo marcaba, pero valía confirmarlo con el flujo real:
+    renombrado el parámetro a `settings` y la respuesta a `{ data: updated, error }`, y reverificado
+    guardando un cambio real en el navegador antes de cerrar el ticket.
+  - **Hallazgos menores de `reviewer`, corregidos**: `role="alert"` en los errores de campo (antes solo se
+    anunciaban al tabular hasta el campo); label de `mapsUrl` sin "(opcional)" aunque el esquema sí lo
+    permite vacío, igual que `airbnbUrl`; `<Toaster>` duplicado en `/app/ui` (ya lo provee
+    `app/app/layout.tsx` para todo el dashboard).
+  - `lint`/`typecheck`/`test` (78/78)/`build` en verde. `npx supabase db reset && npx supabase test db`
+    en verde (47/47, incluye `0005_property_settings_isolation.test.sql`).
 
 ### [ ] SD-202 · feat(dashboard): site content and photo manager
 `L` · Depende: SD-201 · Review: `R+S`
