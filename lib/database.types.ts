@@ -193,8 +193,8 @@ export type Database = {
           org_id: string;
           property_id: string;
           role: Database["public"]["Enums"]["photo_role"];
-          room_id: string | null;
           sort_order: number;
+          space_id: string | null;
           storage_path: string;
         };
         ComputedFields: never;
@@ -203,8 +203,8 @@ export type Database = {
           org_id: string;
           property_id: string;
           role: Database["public"]["Enums"]["photo_role"];
-          room_id?: string | null;
           sort_order?: number;
+          space_id?: string | null;
           storage_path: string;
         };
         Update: {
@@ -212,8 +212,8 @@ export type Database = {
           org_id?: string;
           property_id?: string;
           role?: Database["public"]["Enums"]["photo_role"];
-          room_id?: string | null;
           sort_order?: number;
+          space_id?: string | null;
           storage_path?: string;
         };
         Relationships: [
@@ -232,10 +232,10 @@ export type Database = {
             referencedColumns: ["id", "org_id"];
           },
           {
-            foreignKeyName: "photos_room_id_property_id_fkey";
-            columns: ["room_id", "property_id"];
+            foreignKeyName: "photos_space_id_property_id_fkey";
+            columns: ["space_id", "property_id"];
             isOneToOne: false;
-            referencedRelation: "rooms";
+            referencedRelation: "spaces";
             referencedColumns: ["id", "property_id"];
           },
         ];
@@ -415,12 +415,12 @@ export type Database = {
           },
         ];
       };
-      rooms: {
+      spaces: {
         Row: {
           badge_en: string | null;
           badge_es: string | null;
           capacity: string | null;
-          category: Database["public"]["Enums"]["room_category"];
+          category: Database["public"]["Enums"]["space_category"];
           desc_en: string;
           desc_es: string;
           icon: string;
@@ -437,7 +437,7 @@ export type Database = {
           badge_en?: string | null;
           badge_es?: string | null;
           capacity?: string | null;
-          category: Database["public"]["Enums"]["room_category"];
+          category: Database["public"]["Enums"]["space_category"];
           desc_en?: string;
           desc_es?: string;
           icon?: string;
@@ -453,7 +453,7 @@ export type Database = {
           badge_en?: string | null;
           badge_es?: string | null;
           capacity?: string | null;
-          category?: Database["public"]["Enums"]["room_category"];
+          category?: Database["public"]["Enums"]["space_category"];
           desc_en?: string;
           desc_es?: string;
           icon?: string;
@@ -467,14 +467,14 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "rooms_org_id_fkey";
+            foreignKeyName: "spaces_org_id_fkey";
             columns: ["org_id"];
             isOneToOne: false;
             referencedRelation: "organizations";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "rooms_property_id_org_id_fkey";
+            foreignKeyName: "spaces_property_id_org_id_fkey";
             columns: ["property_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "properties";
@@ -492,7 +492,7 @@ export type Database = {
     Enums: {
       membership_role: "owner" | "staff";
       photo_role: "hero" | "gallery" | "room";
-      room_category: "pool" | "rooms" | "common" | "outdoor";
+      space_category: "pool" | "rooms" | "common" | "outdoor";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -625,7 +625,7 @@ export const Constants = {
     Enums: {
       membership_role: ["owner", "staff"],
       photo_role: ["hero", "gallery", "room"],
-      room_category: ["pool", "rooms", "common", "outdoor"],
+      space_category: ["pool", "rooms", "common", "outdoor"],
     },
   },
 } as const;

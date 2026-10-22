@@ -56,47 +56,47 @@ select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be62566
 set local role authenticated;
 
 select ok(
-  exists(select 1 from public.rooms where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a'),
-  'Non-member CAN see another org''s room while its property is published (intended: public content)'
+  exists(select 1 from public.spaces where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a'),
+  'Non-member CAN see another org''s space while its property is published (intended: public content)'
 );
 
-update public.rooms set label_en = 'HACKED' where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a';
+update public.spaces set label_en = 'HACKED' where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a';
 select is(
-  (select label_en from public.rooms where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a'),
+  (select label_en from public.spaces where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a'),
   'Demo Room',
-  'Non-member UPDATE on another org''s room affects 0 rows'
+  'Non-member UPDATE on another org''s space affects 0 rows'
 );
 
-delete from public.rooms where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a';
+delete from public.spaces where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a';
 select ok(
-  exists(select 1 from public.rooms where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a'),
-  'Non-member DELETE on another org''s room affects 0 rows (room still exists)'
+  exists(select 1 from public.spaces where id = 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a'),
+  'Non-member DELETE on another org''s space affects 0 rows (room still exists)'
 );
 
 -- The actual SD-101 pattern: own org_id (passes RLS's with check) paired
 -- with ANOTHER org's property_id. RLS alone wouldn't catch this — it's the
 -- composite (property_id, org_id) FK that has to reject it.
 select throws_like(
-  $$insert into public.rooms (key, category, property_id, org_id, label_en, label_es)
+  $$insert into public.spaces (key, category, property_id, org_id, label_en, label_es)
     values ('sneaky', 'rooms', '57f914ac-3890-47c1-9d6d-1492782cf712',
             'bf88f504-051f-4fdc-ab73-4fa12d715817', 'x', 'x')$$,
   '%foreign key constraint%',
   'Cannot insert own org_id paired with another org''s property_id (composite FK)'
 );
 
--- Same pattern via UPDATE: move one of Saywa's own rooms onto Demo's
+-- Same pattern via UPDATE: move one of Saywa's own spaces onto Demo's
 -- property while keeping org_id = Saywa. Must fail the same way.
 select throws_like(
-  $$update public.rooms set property_id = '57f914ac-3890-47c1-9d6d-1492782cf712'
+  $$update public.spaces set property_id = '57f914ac-3890-47c1-9d6d-1492782cf712'
     where property_id = '131583b5-785e-4127-81f0-e097163c5654' and org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817'$$,
   '%foreign key constraint%',
   'Cannot move an own-org room onto another org''s property (composite FK)'
 );
 
 -- Found by reviewer: the same composite (property_id, org_id) FK exists on
--- rate_tiers/amenities/distances (identical pattern to rooms/photos above),
--- but only rooms/photos had a test exercising it. One INSERT-direction
--- assertion per remaining table, same shape as the rooms case.
+-- rate_tiers/amenities/distances (identical pattern to spaces/photos above),
+-- but only spaces/photos had a test exercising it. One INSERT-direction
+-- assertion per remaining table, same shape as the spaces case.
 select throws_like(
   $$insert into public.rate_tiers (season_en, season_es, from_en, from_es, property_id, org_id)
     values ('x', 'x', 'x', 'x', '57f914ac-3890-47c1-9d6d-1492782cf712', 'bf88f504-051f-4fdc-ab73-4fa12d715817')$$,
@@ -116,24 +116,24 @@ select throws_like(
   'distances: cannot insert own org_id paired with another org''s property_id'
 );
 
--- photos.room_id: a photo with Saywa's own org_id/property_id but pointing
--- room_id at a room that belongs to Demo's property.
+-- photos.space_id: a photo with Saywa's own org_id/property_id but pointing
+-- space_id at a space that belongs to Demo's property.
 select throws_like(
-  $$insert into public.photos (property_id, org_id, room_id, storage_path, role, sort_order)
+  $$insert into public.photos (property_id, org_id, space_id, storage_path, role, sort_order)
     values ('131583b5-785e-4127-81f0-e097163c5654', 'bf88f504-051f-4fdc-ab73-4fa12d715817',
-            (select id from public.rooms where key = 'demo-room' limit 1), 'x.jpg', 'room', 0)$$,
+            (select id from public.spaces where key = 'demo-room' limit 1), 'x.jpg', 'room', 0)$$,
   '%foreign key constraint%',
-  'Cannot insert a photo whose room_id belongs to a different org''s property'
+  'Cannot insert a photo whose space_id belongs to a different org''s property'
 );
 
 -- Same pattern via UPDATE: take one of Saywa's own hero/gallery photos
--- (room_id null) and try to point it at Demo's room.
+-- (space_id null) and try to point it at Demo's space.
 select throws_like(
-  $$update public.photos set room_id = (select id from public.rooms where key = 'demo-room' limit 1)
+  $$update public.photos set space_id = (select id from public.spaces where key = 'demo-room' limit 1)
     where id = (select id from public.photos
-                where property_id = '131583b5-785e-4127-81f0-e097163c5654' and room_id is null limit 1)$$,
+                where property_id = '131583b5-785e-4127-81f0-e097163c5654' and space_id is null limit 1)$$,
   '%foreign key constraint%',
-  'Cannot update a photo''s room_id to point at a different org''s room'
+  'Cannot update a photo''s space_id to point at a different org''s room'
 );
 
 -- Toggle Demo's property to unpublished (rolled back with the transaction).
@@ -146,8 +146,8 @@ select ok(
   'Non-member cannot see another org''s property once unpublished'
 );
 select ok(
-  not exists(select 1 from public.rooms where property_id = '57f914ac-3890-47c1-9d6d-1492782cf712'),
-  'Non-member cannot see another org''s rooms once the property is unpublished'
+  not exists(select 1 from public.spaces where property_id = '57f914ac-3890-47c1-9d6d-1492782cf712'),
+  'Non-member cannot see another org''s spaces once the property is unpublished'
 );
 
 -- Cannot grab a not-yet-taken subdomain for a brand-new property, or move
@@ -173,12 +173,12 @@ select ok(
   'Member can still see their own property even when unpublished'
 );
 select ok(
-  exists(select 1 from public.rooms where property_id = '57f914ac-3890-47c1-9d6d-1492782cf712'),
-  'Member can still see their own rooms even when the property is unpublished'
+  exists(select 1 from public.spaces where property_id = '57f914ac-3890-47c1-9d6d-1492782cf712'),
+  'Member can still see their own spaces even when the property is unpublished'
 );
 
 select lives_ok(
-  $$insert into public.rooms (key, category, property_id, org_id, label_en, label_es)
+  $$insert into public.spaces (key, category, property_id, org_id, label_en, label_es)
     values ('legit', 'rooms', '57f914ac-3890-47c1-9d6d-1492782cf712',
             'ff24bacc-47d2-40bc-9210-f860e98892fd', 'x', 'x')$$,
   'Member can insert a room for their own property'

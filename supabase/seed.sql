@@ -13,7 +13,7 @@ VALUES ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'Saywa Lodges')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE "public"."properties" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
-ALTER TABLE "public"."rooms" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+ALTER TABLE "public"."spaces" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
 ALTER TABLE "public"."photos" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
 ALTER TABLE "public"."rate_tiers" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
 ALTER TABLE "public"."amenities" ALTER COLUMN "org_id" SET DEFAULT 'bf88f504-051f-4fdc-ab73-4fa12d715817';
@@ -39,7 +39,7 @@ VALUES
    '{"lodge valle sagrado","alquiler vacacional cusco","urubamba hospedaje","piscina privada peru","cerca machu picchu","saywa lodges"}',
    '$$', 4, false, NULL);
 
-INSERT INTO "public"."rooms"
+INSERT INTO "public"."spaces"
   ("id", "property_id", "key", "category", "icon", "capacity", "badge_en", "badge_es",
    "label_en", "label_es", "desc_en", "desc_es", "sort_order")
 VALUES
@@ -122,35 +122,35 @@ VALUES
 -- `db reset`: run `npm run db:seed-storage` afterwards to upload them to the
 -- local bucket (scripts/seed-local-storage.mjs, local stack only).
 INSERT INTO "public"."photos"
-  ("id", "property_id", "room_id", "storage_path", "role", "sort_order")
+  ("id", "property_id", "space_id", "storage_path", "role", "sort_order")
 VALUES
-  ('83505eca-dc0a-4fc1-b4b1-93896ead2530', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'site/foto3.jpeg', 'hero', 0),
-  ('9d60fcef-9d35-4011-80e0-8ea95e1102ee', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'site/foto1.jpeg', 'gallery', 0),
-  ('4ea98a66-fedb-452e-9316-23d41f0cd33a', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'site/foto4.jpeg', 'gallery', 1),
-  ('6dac8776-d935-4df4-9ddc-b26fbf6b46b8', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'site/foto5.jpeg', 'gallery', 2),
-  ('6500b521-7536-493e-a90e-f717cd7a8fed', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'site/foto6.jpeg', 'gallery', 3),
-  ('19d00e03-c770-4ee9-af8e-be846ced7fc9', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'site/foto7.jpeg', 'gallery', 4),
-  ('0c2dd19e-c6f0-4f06-a634-bfe3146326f3', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'site/foto8.jpeg', 'gallery', 5),
-  ('f3840536-e702-4e33-bee1-fadbe6813fc8', '131583b5-785e-4127-81f0-e097163c5654', '72e893c1-2512-4360-9244-361f1bd50c3f', 'rooms/pool/pool-01.jpeg', 'room', 0),
-  ('9a0f5524-d681-482d-8a88-5e0a9f5735e7', '131583b5-785e-4127-81f0-e097163c5654', '72e893c1-2512-4360-9244-361f1bd50c3f', 'rooms/pool/pool-02.jpeg', 'room', 1),
-  ('4566e19e-3d7a-4b13-a442-ca4f7f1cce6d', '131583b5-785e-4127-81f0-e097163c5654', '72e893c1-2512-4360-9244-361f1bd50c3f', 'rooms/pool/pool-03.jpeg', 'room', 2),
-  ('a95bc068-1c17-4fb5-91c6-dfdfb63057a9', '131583b5-785e-4127-81f0-e097163c5654', 'cd8f632d-6c96-4315-b0ed-2650c3b33a83', 'rooms/suite/suite-01.jpeg', 'room', 0),
-  ('50b0f8a3-76a7-4afc-8a0a-af222f60531b', '131583b5-785e-4127-81f0-e097163c5654', '31543e30-a762-4c86-8594-16fc4fcf5491', 'rooms/queen-a/queen-a-01.jpeg', 'room', 0),
-  ('742c762f-ddf1-4e06-9b6a-a90b4aec7e8d', '131583b5-785e-4127-81f0-e097163c5654', '31543e30-a762-4c86-8594-16fc4fcf5491', 'rooms/queen-a/queen-a-02.jpeg', 'room', 1),
-  ('dcf05676-d8df-42fa-8bbe-9d5bb389360a', '131583b5-785e-4127-81f0-e097163c5654', '78c0de2a-5ec7-472c-81ba-07e2711fcc91', 'rooms/queen-b/queen-b-01.jpeg', 'room', 0),
-  ('cffcc44a-6240-4e56-b8f5-09a3d744e772', '131583b5-785e-4127-81f0-e097163c5654', '78c0de2a-5ec7-472c-81ba-07e2711fcc91', 'rooms/queen-b/queen-b-02.jpeg', 'room', 1),
-  ('1d70e8ed-8192-481d-8298-d9724f9fdd9f', '131583b5-785e-4127-81f0-e097163c5654', 'cddc3758-65fb-4a7f-9a89-2505240f3aae', 'rooms/queen-c/queen-c-01.jpeg', 'room', 0),
-  ('c185604a-3a27-444a-adce-d0614c878f05', '131583b5-785e-4127-81f0-e097163c5654', 'cddc3758-65fb-4a7f-9a89-2505240f3aae', 'rooms/queen-c/queen-c-02.jpeg', 'room', 1),
-  ('5620f759-0fce-43e4-b42c-0f81fdd49db9', '131583b5-785e-4127-81f0-e097163c5654', 'aee44930-98b2-4709-8993-0a7b3085b9c3', 'rooms/bunks/bunks-01.jpeg', 'room', 0),
-  ('e4b2b866-3eae-4b89-b87d-9c8e513f4c6d', '131583b5-785e-4127-81f0-e097163c5654', 'aee44930-98b2-4709-8993-0a7b3085b9c3', 'rooms/bunks/bunks-02.jpeg', 'room', 1),
-  ('0bcf73ac-1c1d-4418-9982-2edde9a3e50c', '131583b5-785e-4127-81f0-e097163c5654', '7a0d6543-3cb4-4cd3-a602-8d586e104484', 'rooms/living/living-01.jpeg', 'room', 0),
-  ('fbf9b207-dfea-440d-a2bd-76712c8997c6', '131583b5-785e-4127-81f0-e097163c5654', '7a0d6543-3cb4-4cd3-a602-8d586e104484', 'rooms/living/living-02.jpeg', 'room', 1),
-  ('b8e9304c-cba9-4a7a-ac5e-209069c319b1', '131583b5-785e-4127-81f0-e097163c5654', '7a0d6543-3cb4-4cd3-a602-8d586e104484', 'rooms/living/living-03.jpeg', 'room', 2),
-  ('a406ca1a-6ae1-4f17-8b53-dd0340e61bf3', '131583b5-785e-4127-81f0-e097163c5654', 'a4a71c65-7b77-48ae-8803-94f4f728342c', 'rooms/garden/garden-01.jpeg', 'room', 0),
-  ('e93e93c3-a683-4626-8539-f9a270792eb6', '131583b5-785e-4127-81f0-e097163c5654', 'a4a71c65-7b77-48ae-8803-94f4f728342c', 'rooms/garden/garden-02.jpeg', 'room', 1),
-  ('5d6e2721-da43-4b4e-9201-ca769efa0939', '131583b5-785e-4127-81f0-e097163c5654', 'a4a71c65-7b77-48ae-8803-94f4f728342c', 'rooms/garden/garden-03.jpeg', 'room', 2),
-  ('1c503188-12bd-41e6-b642-2769fc6d1e68', '131583b5-785e-4127-81f0-e097163c5654', '37ec69d5-035e-4d80-b5ce-4018ca08b29d', 'rooms/bbq/bbq-01.jpeg', 'room', 0),
-  ('eb2da880-0545-4ecb-9c7c-16e2f38ac06a', '131583b5-785e-4127-81f0-e097163c5654', '616122c6-9370-4065-9c8e-9a7b251a45de', 'rooms/exterior/exterior-01.jpeg', 'room', 0);
+  ('83505eca-dc0a-4fc1-b4b1-93896ead2530', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/foto3.jpeg', 'hero', 0),
+  ('9d60fcef-9d35-4011-80e0-8ea95e1102ee', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/foto1.jpeg', 'gallery', 0),
+  ('4ea98a66-fedb-452e-9316-23d41f0cd33a', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/foto4.jpeg', 'gallery', 1),
+  ('6dac8776-d935-4df4-9ddc-b26fbf6b46b8', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/foto5.jpeg', 'gallery', 2),
+  ('6500b521-7536-493e-a90e-f717cd7a8fed', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/foto6.jpeg', 'gallery', 3),
+  ('19d00e03-c770-4ee9-af8e-be846ced7fc9', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/foto7.jpeg', 'gallery', 4),
+  ('0c2dd19e-c6f0-4f06-a634-bfe3146326f3', '131583b5-785e-4127-81f0-e097163c5654', NULL, 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/foto8.jpeg', 'gallery', 5),
+  ('f3840536-e702-4e33-bee1-fadbe6813fc8', '131583b5-785e-4127-81f0-e097163c5654', '72e893c1-2512-4360-9244-361f1bd50c3f', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/pool/pool-01.jpeg', 'room', 0),
+  ('9a0f5524-d681-482d-8a88-5e0a9f5735e7', '131583b5-785e-4127-81f0-e097163c5654', '72e893c1-2512-4360-9244-361f1bd50c3f', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/pool/pool-02.jpeg', 'room', 1),
+  ('4566e19e-3d7a-4b13-a442-ca4f7f1cce6d', '131583b5-785e-4127-81f0-e097163c5654', '72e893c1-2512-4360-9244-361f1bd50c3f', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/pool/pool-03.jpeg', 'room', 2),
+  ('a95bc068-1c17-4fb5-91c6-dfdfb63057a9', '131583b5-785e-4127-81f0-e097163c5654', 'cd8f632d-6c96-4315-b0ed-2650c3b33a83', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/suite/suite-01.jpeg', 'room', 0),
+  ('50b0f8a3-76a7-4afc-8a0a-af222f60531b', '131583b5-785e-4127-81f0-e097163c5654', '31543e30-a762-4c86-8594-16fc4fcf5491', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/queen-a/queen-a-01.jpeg', 'room', 0),
+  ('742c762f-ddf1-4e06-9b6a-a90b4aec7e8d', '131583b5-785e-4127-81f0-e097163c5654', '31543e30-a762-4c86-8594-16fc4fcf5491', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/queen-a/queen-a-02.jpeg', 'room', 1),
+  ('dcf05676-d8df-42fa-8bbe-9d5bb389360a', '131583b5-785e-4127-81f0-e097163c5654', '78c0de2a-5ec7-472c-81ba-07e2711fcc91', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/queen-b/queen-b-01.jpeg', 'room', 0),
+  ('cffcc44a-6240-4e56-b8f5-09a3d744e772', '131583b5-785e-4127-81f0-e097163c5654', '78c0de2a-5ec7-472c-81ba-07e2711fcc91', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/queen-b/queen-b-02.jpeg', 'room', 1),
+  ('1d70e8ed-8192-481d-8298-d9724f9fdd9f', '131583b5-785e-4127-81f0-e097163c5654', 'cddc3758-65fb-4a7f-9a89-2505240f3aae', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/queen-c/queen-c-01.jpeg', 'room', 0),
+  ('c185604a-3a27-444a-adce-d0614c878f05', '131583b5-785e-4127-81f0-e097163c5654', 'cddc3758-65fb-4a7f-9a89-2505240f3aae', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/queen-c/queen-c-02.jpeg', 'room', 1),
+  ('5620f759-0fce-43e4-b42c-0f81fdd49db9', '131583b5-785e-4127-81f0-e097163c5654', 'aee44930-98b2-4709-8993-0a7b3085b9c3', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/bunks/bunks-01.jpeg', 'room', 0),
+  ('e4b2b866-3eae-4b89-b87d-9c8e513f4c6d', '131583b5-785e-4127-81f0-e097163c5654', 'aee44930-98b2-4709-8993-0a7b3085b9c3', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/bunks/bunks-02.jpeg', 'room', 1),
+  ('0bcf73ac-1c1d-4418-9982-2edde9a3e50c', '131583b5-785e-4127-81f0-e097163c5654', '7a0d6543-3cb4-4cd3-a602-8d586e104484', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/living/living-01.jpeg', 'room', 0),
+  ('fbf9b207-dfea-440d-a2bd-76712c8997c6', '131583b5-785e-4127-81f0-e097163c5654', '7a0d6543-3cb4-4cd3-a602-8d586e104484', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/living/living-02.jpeg', 'room', 1),
+  ('b8e9304c-cba9-4a7a-ac5e-209069c319b1', '131583b5-785e-4127-81f0-e097163c5654', '7a0d6543-3cb4-4cd3-a602-8d586e104484', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/living/living-03.jpeg', 'room', 2),
+  ('a406ca1a-6ae1-4f17-8b53-dd0340e61bf3', '131583b5-785e-4127-81f0-e097163c5654', 'a4a71c65-7b77-48ae-8803-94f4f728342c', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/garden/garden-01.jpeg', 'room', 0),
+  ('e93e93c3-a683-4626-8539-f9a270792eb6', '131583b5-785e-4127-81f0-e097163c5654', 'a4a71c65-7b77-48ae-8803-94f4f728342c', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/garden/garden-02.jpeg', 'room', 1),
+  ('5d6e2721-da43-4b4e-9201-ca769efa0939', '131583b5-785e-4127-81f0-e097163c5654', 'a4a71c65-7b77-48ae-8803-94f4f728342c', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/garden/garden-03.jpeg', 'room', 2),
+  ('1c503188-12bd-41e6-b642-2769fc6d1e68', '131583b5-785e-4127-81f0-e097163c5654', '37ec69d5-035e-4d80-b5ce-4018ca08b29d', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/bbq/bbq-01.jpeg', 'room', 0),
+  ('eb2da880-0545-4ecb-9c7c-16e2f38ac06a', '131583b5-785e-4127-81f0-e097163c5654', '616122c6-9370-4065-9c8e-9a7b251a45de', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/exterior/exterior-01.jpeg', 'room', 0);
 
 -- Storage bucket, so local Storage emulation matches production.
 INSERT INTO "storage"."buckets" ("id", "name", "public")
@@ -206,7 +206,7 @@ UPDATE "public"."properties" SET
 WHERE "slug" = 'saywa-lodges';
 
 ALTER TABLE "public"."properties" ALTER COLUMN "org_id" DROP DEFAULT;
-ALTER TABLE "public"."rooms" ALTER COLUMN "org_id" DROP DEFAULT;
+ALTER TABLE "public"."spaces" ALTER COLUMN "org_id" DROP DEFAULT;
 ALTER TABLE "public"."photos" ALTER COLUMN "org_id" DROP DEFAULT;
 ALTER TABLE "public"."rate_tiers" ALTER COLUMN "org_id" DROP DEFAULT;
 ALTER TABLE "public"."amenities" ALTER COLUMN "org_id" DROP DEFAULT;
@@ -228,7 +228,7 @@ VALUES
   ('57f914ac-3890-47c1-9d6d-1492782cf712', 'ff24bacc-47d2-40bc-9210-f860e98892fd', 'demo', 'Demo Lodge',
    '51900000000', 'demo@example.com', 'demo', true, 'Lima', 'Lima', 'PE', '$');
 
-INSERT INTO "public"."rooms"
+INSERT INTO "public"."spaces"
   ("id", "org_id", "property_id", "key", "category", "icon", "label_en", "label_es", "desc_en", "desc_es", "sort_order")
 VALUES
   ('b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712',
@@ -241,8 +241,8 @@ VALUES
    '📶', 'Wi-Fi', 'Wi-Fi', 'Placeholder amenity.', 'Amenity de ejemplo.', 0);
 
 -- SD-209: a different preset than Saywa, so the two tenants visibly prove the
--- theme comes from the database. Photos reuse Saywa's files under demo/
--- paths (seed-local-storage.mjs strips the prefix to find the source).
+-- theme comes from the database. Photos reuse Saywa's files under the demo org prefix
+-- paths (seed-local-storage.mjs strips the org prefix to find the source).
 UPDATE "public"."properties" SET
   "theme" = $j${"preset": "costa"}$j$::jsonb,
   "content" = $j${
@@ -266,14 +266,14 @@ UPDATE "public"."properties" SET
 WHERE "id" = '57f914ac-3890-47c1-9d6d-1492782cf712';
 
 INSERT INTO "public"."photos"
-  ("id", "org_id", "property_id", "room_id", "storage_path", "role", "sort_order")
+  ("id", "org_id", "property_id", "space_id", "storage_path", "role", "sort_order")
 VALUES
-  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e01', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto1.jpeg', 'hero', 0),
-  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e02', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto5.jpeg', 'gallery', 0),
-  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e03', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto6.jpeg', 'gallery', 1),
-  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e04', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto7.jpeg', 'gallery', 2),
-  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e05', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto8.jpeg', 'gallery', 3),
-  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e06', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a', 'demo/rooms/suite/suite-01.jpeg', 'room', 0);
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e01', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'ff24bacc-47d2-40bc-9210-f860e98892fd/site/foto1.jpeg', 'hero', 0),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e02', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'ff24bacc-47d2-40bc-9210-f860e98892fd/site/foto5.jpeg', 'gallery', 0),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e03', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'ff24bacc-47d2-40bc-9210-f860e98892fd/site/foto6.jpeg', 'gallery', 1),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e04', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'ff24bacc-47d2-40bc-9210-f860e98892fd/site/foto7.jpeg', 'gallery', 2),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e05', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'ff24bacc-47d2-40bc-9210-f860e98892fd/site/foto8.jpeg', 'gallery', 3),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e06', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a', 'ff24bacc-47d2-40bc-9210-f860e98892fd/spaces/suite/suite-01.jpeg', 'room', 0);
 
 -- ─── Local-only auth users + memberships (SD-101) ───────────────────────────
 -- Passwords are fixed, publicly-known dev credentials — fine today because

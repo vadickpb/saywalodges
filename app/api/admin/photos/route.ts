@@ -9,7 +9,7 @@ import {
 } from "@/lib/validation/admin";
 import { serverError, validationError } from "@/lib/api-error";
 
-// Manages the top-level hero + gallery photos (room_id null). Room photos are
+// Manages the top-level hero + gallery photos (space_id null). Room photos are
 // seeded once by the migration script and not yet editable here — see the
 // Fase 0 plan for why that's deliberately out of scope for now.
 
@@ -24,7 +24,7 @@ export async function GET() {
     .from("photos")
     .select("id, storage_path, role, sort_order")
     .eq("property_id", property.id)
-    .is("room_id", null)
+    .is("space_id", null)
     .in("role", ["hero", "gallery"])
     .order("role")
     .order("sort_order");
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     .insert({
       property_id: property.id,
       org_id: property.orgId,
-      room_id: null,
+      space_id: null,
       storage_path: storagePath,
       role: "gallery",
       sort_order: nextOrder,

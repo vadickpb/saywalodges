@@ -11,7 +11,7 @@ import { serverError, validationError } from "@/lib/api-error";
 
 // The four child tables this handler syncs — kept as a literal union (not
 // `string`) so a typo here is a compile error against the generated schema.
-type ChildTable = "rooms" | "rate_tiers" | "amenities" | "distances";
+type ChildTable = "spaces" | "rate_tiers" | "amenities" | "distances";
 
 // Replaces the set of rows for `table` scoped to `propertyId`: updates rows
 // whose id already exists, inserts new ones, deletes rows no longer present.
@@ -80,7 +80,7 @@ export async function GET() {
   }
 
   const [rooms, rateTiers, amenities, distances] = await Promise.all([
-    supabase.from("rooms").select("*").eq("property_id", property.id).order("sort_order"),
+    supabase.from("spaces").select("*").eq("property_id", property.id).order("sort_order"),
     supabase.from("rate_tiers").select("*").eq("property_id", property.id).order("sort_order"),
     supabase.from("amenities").select("*").eq("property_id", property.id).order("sort_order"),
     supabase.from("distances").select("*").eq("property_id", property.id).order("sort_order"),
@@ -178,7 +178,7 @@ export async function PUT(request: Request) {
     if (propertyError) throw new Error(propertyError.message);
 
     await syncTable(
-      "rooms",
+      "spaces",
       property.id,
       property.orgId,
       body.rooms.map((r) => ({

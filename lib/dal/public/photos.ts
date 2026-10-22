@@ -8,14 +8,14 @@ export interface PhotosConfig {
   gallery: string[];
 }
 
-// Hero + top-level gallery photos (role in ('hero','gallery'), room_id null).
+// Hero + top-level gallery photos (role in ('hero','gallery'), space_id null).
 // Room-specific photos are handled separately by lib/dal/public/spaces.ts.
 export const getPhotosConfig = cache(async (propertyId: string): Promise<PhotosConfig> => {
   const { data, error } = await getSupabaseAnon()
     .from("photos")
     .select("storage_path, role, sort_order")
     .eq("property_id", propertyId)
-    .is("room_id", null)
+    .is("space_id", null)
     .in("role", ["hero", "gallery"])
     .order("sort_order");
 

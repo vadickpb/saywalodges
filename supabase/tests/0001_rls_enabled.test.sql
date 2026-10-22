@@ -10,8 +10,8 @@ select ok(
   'RLS enabled on public.properties'
 );
 select ok(
-  (select relrowsecurity from pg_class where relname = 'rooms' and relnamespace = 'public'::regnamespace),
-  'RLS enabled on public.rooms'
+  (select relrowsecurity from pg_class where relname = 'spaces' and relnamespace = 'public'::regnamespace),
+  'RLS enabled on public.spaces'
 );
 select ok(
   (select relrowsecurity from pg_class where relname = 'photos' and relnamespace = 'public'::regnamespace),
