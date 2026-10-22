@@ -487,7 +487,26 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      reorder_amenities: {
+        Args: { p_ids: string[]; p_property_id: string };
+        Returns: number;
+      };
+      reorder_distances: {
+        Args: { p_ids: string[]; p_property_id: string };
+        Returns: number;
+      };
+      reorder_photos: {
+        Args: { p_ids: string[]; p_property_id: string; p_space_id?: string };
+        Returns: number;
+      };
+      reorder_spaces: {
+        Args: { p_ids: string[]; p_property_id: string };
+        Returns: number;
+      };
+      set_hero_photo: {
+        Args: { p_photo_id: string; p_property_id: string };
+        Returns: number;
+      };
     };
     Enums: {
       membership_role: "owner" | "staff";

@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.18.12"],
   compress: true,
 
+  // Photo uploads go through server actions. 4.5 MB matches Vercel's request
+  // body cap; the app itself accepts images up to 4 MB (MAX_UPLOAD_BYTES).
+  experimental: {
+    serverActions: { bodySizeLimit: "4.5mb" },
+  },
+
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
