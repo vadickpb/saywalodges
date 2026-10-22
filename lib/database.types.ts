@@ -348,7 +348,7 @@ export type Database = {
           {
             foreignKeyName: "properties_org_id_fkey";
             columns: ["org_id"];
-            isOneToOne: false;
+            isOneToOne: true;
             referencedRelation: "organizations";
             referencedColumns: ["id"];
           },

@@ -14,6 +14,7 @@ import { signOut } from "@/app/app/actions";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { OrgSwitcher } from "@/components/dashboard/org-switcher";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
 import "@/app/globals.css";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -132,6 +133,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <main className="flex-1 p-4 md:p-6">{children}</main>
           </div>
         </div>
+        <Toaster theme={isDark ? "dark" : "light"} />
       </body>
     </html>
   );
