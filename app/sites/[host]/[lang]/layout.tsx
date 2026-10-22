@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { hasLocale } from "@/dictionaries";
@@ -8,19 +7,27 @@ import { getProperty, getAmenities, resolveAmenity } from "@/lib/dal/public/prop
 import { getSpaces } from "@/lib/dal/public/spaces";
 import { getPhotosConfig } from "@/lib/dal/public/photos";
 import { toJsonLd } from "@/lib/json-ld";
+import { themeToCssVars } from "@/lib/domain/site-theme";
+import { fontVariables } from "./fonts";
 import "@/app/globals.css";
-
-const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
 // This is its own root layout (no app/layout.tsx above it — see Next.js's
 // "multiple root layouts" pattern) specifically so <html lang> can come
 // directly from the [lang] route param instead of a headers()-injected
 // value, per ADR-0001.
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#2D4A3E",
-};
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ host: string; lang: string }>;
+}): Promise<Viewport> {
+  const { host } = await params;
+  const property = await resolveSite(host);
+  return {
+    width: "device-width",
+    initialScale: 1,
+    themeColor: property?.theme.primary,
+  };
+}
 
 // Resolves [host] to a property, 404ing for an unknown host or an
 // unpublished one — RLS already hides unpublished properties from the
@@ -164,8 +171,10 @@ export default async function SiteLayout({
   };
 
   return (
-    <html lang={lang} className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full bg-cream text-charcoal">
+    <html lang={lang} className={`${fontVariables} h-full antialiased`}>
+      {/* Tenant theme as CSS variables: themeToCssVars only ever emits
+          validated hex colors or fixed strings, never raw DB text. */}
+      <body className="site min-h-full" style={themeToCssVars(property.theme)}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}

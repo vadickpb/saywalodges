@@ -74,5 +74,31 @@ inputs y botones.
 
 ## No usar aquí
 
-- Nada de `components/` (sitio público: `Hero`, `Gallery`, …) — otra marca, otro propósito.
+- Nada de `components/site/` (sitio público) — otra marca, otro propósito. Ver la sección siguiente.
 - `app/admin/page.tsx` — panel legado, se elimina en SD-203, no se migra a este sistema.
+
+# Sitio público del alojamiento (SD-209)
+
+Plantilla única para todos los tenants, en `components/site/*`, montada en
+`app/sites/[host]/[lang]/page.tsx`. Cada tenant cambia su marca con datos, nunca con código.
+
+## Tema por tenant
+
+- `properties.theme` (jsonb) → `resolveTheme()` (`lib/domain/site-theme.ts`) → `themeToCssVars()` → `style`
+  del `<body class="site">`. Solo salen valores hex validados o strings fijos: no hay CSS del usuario.
+- Presets: `andino` (Saywa), `costa` (demo), `selva`, `colonial`, `noche` (oscuro). Todos pasan AA (test).
+- Tokens Tailwind: `bg-site-primary`, `text-site-primary-fg`, `bg-site-accent`, `text-site-accent-fg`,
+  `bg-site-bg`, `text-site-fg`, `text-site-muted`, `bg-site-surface`, `border-site-line`, `rounded-site`,
+  `font-site-heading`, `font-site-body`. `muted`/`surface`/`line` se derivan con `color-mix` en `.site`.
+- Texto sobre un color del tenant: siempre su `*-fg` (`foregroundFor` elige blanco o negro por contraste).
+  Sobre fotos: blanco, con degradado oscuro (`buttonStyles.light`/`glass`).
+- Fuentes: pares `editorial` (Playfair + Inter), `modern` (Plus Jakarta + Inter), `classic` (Lora + Source
+  Sans 3), en `app/sites/[host]/[lang]/fonts.ts`. Solo `editorial` hace preload.
+
+## Contenido
+
+- Copy específico del alojamiento: `properties.content` (`lib/domain/site-content.ts`), `{ en, es }` por campo.
+  `dictionaries/` solo tiene etiquetas genéricas de UI, con `{placeholders}` que rellena `format()`.
+- Las secciones sin datos no se renderizan, y el menú solo enlaza a las que existen.
+- Íconos: las filas guardan un emoji; `SiteIcon` lo traduce a un ícono lucide (fallback: `Sparkles`).
+- Sin foto: `Photo` muestra un placeholder del tema, nunca una imagen rota.

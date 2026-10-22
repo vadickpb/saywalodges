@@ -1,18 +1,30 @@
 import { notFound } from "next/navigation";
 import { getDictionary, hasLocale } from "@/dictionaries";
 import { getSiteByHost } from "@/lib/dal/public/site";
-import { getProperty, whatsappUrl } from "@/lib/dal/public/property";
-import Navbar from "@/components/Navbar";
-import Hero from "@/components/Hero";
-import Amenities from "@/components/Amenities";
-import Gallery from "@/components/Gallery";
-import SpacesSection from "@/components/SpacesSection";
-import Rates from "@/components/Rates";
-import Location from "@/components/Location";
-import Availability from "@/components/Availability";
-import ContactSection from "@/components/ContactSection";
-import Footer from "@/components/Footer";
-import WhatsAppFloat from "@/components/WhatsAppFloat";
+import {
+  getAmenities,
+  getDistances,
+  getProperty,
+  getRateTiers,
+  resolveAmenity,
+  resolveDistance,
+  resolveRateTier,
+  whatsappUrl,
+} from "@/lib/dal/public/property";
+import { getPhotosConfig } from "@/lib/dal/public/photos";
+import { getSpaces } from "@/lib/dal/public/spaces";
+import { pick } from "@/lib/domain/site-content";
+import { SiteHeader } from "@/components/site/site-header";
+import { Hero } from "@/components/site/hero";
+import { Intro } from "@/components/site/intro";
+import { Gallery } from "@/components/site/gallery";
+import { Spaces } from "@/components/site/spaces";
+import { Rates } from "@/components/site/rates";
+import { Location } from "@/components/site/location";
+import { Faq } from "@/components/site/faq";
+import { Contact } from "@/components/site/contact";
+import { SiteFooter } from "@/components/site/site-footer";
+import { MobileCta } from "@/components/site/mobile-cta";
 
 export default async function SitePage({
   params,
@@ -25,48 +37,112 @@ export default async function SitePage({
   const site = await getSiteByHost(host);
   if (!site) notFound();
 
-  let property;
+  let data;
   try {
-    property = await getProperty(site.slug);
+    const property = await getProperty(site.slug);
+    const [photos, spaces, amenities, distances, tiers] = await Promise.all([
+      getPhotosConfig(property.id),
+      getSpaces(property.id),
+      getAmenities(property.id),
+      getDistances(property.id),
+      getRateTiers(property.id),
+    ]);
+    data = { property, photos, spaces, amenities, distances, tiers };
   } catch (error) {
     // Same reasoning as app/sites/[host]/[lang]/layout.tsx's resolveSite:
     // a real DB failure would otherwise 404 silently, indistinguishable
     // from an unpublished/unknown property.
-    console.error(`SitePage: getProperty(${site.slug}) failed:`, error);
+    console.error(`SitePage: loading ${site.slug} failed:`, error);
     notFound();
   }
 
+  const { property, photos, spaces, amenities, distances, tiers } = data;
+  const { content } = property;
   const dict = await getDictionary(lang);
   const waUrl = whatsappUrl(property, lang);
+  const rateTiers = tiers.map((row) => resolveRateTier(row, lang));
+  const faq = (content.faq ?? []).map((item) => ({
+    question: pick(item.question, lang),
+    answer: pick(item.answer, lang),
+  }));
+  const address = [property.addressLocality, property.addressRegion].filter(Boolean).join(", ");
+
+  // Only link to sections that will actually render for this tenant.
+  const links = [
+    photos.gallery.length > 0 && { href: "#gallery", label: dict.nav.gallery },
+    spaces.length > 0 && { href: "#spaces", label: dict.nav.spaces },
+    rateTiers.length > 0 && { href: "#rates", label: dict.nav.rates },
+    { href: "#location", label: dict.nav.location },
+    faq.length > 0 && { href: "#faq", label: dict.nav.faq },
+    { href: "#contact", label: dict.nav.contact },
+  ].filter((link) => link !== false);
 
   return (
     <>
-      <Navbar dict={dict.nav} lang={lang} name={property.name} logoUrl={property.logoUrl} />
+      <SiteHeader
+        dict={dict.nav}
+        lang={lang}
+        name={property.name}
+        logoUrl={property.logoUrl}
+        links={links}
+        overImage={Boolean(photos.hero)}
+      />
       <main>
-        <Hero dict={dict.hero} lang={lang} propertyId={property.id} waUrl={waUrl} name={property.name} />
-        <Amenities dict={dict.amenities} lang={lang} propertyId={property.id} />
-        <Gallery dict={dict.gallery} lang={lang} propertyId={property.id} waUrl={waUrl} name={property.name} />
-        <SpacesSection dict={dict.spaces} lang={lang} propertyId={property.id} name={property.name} />
-        <Rates dict={dict.rates} lang={lang} propertyId={property.id} waUrl={waUrl} />
-        <Availability
-          dict={dict.availability}
-          lang={lang}
+        <Hero
+          dict={dict.hero}
+          name={property.name}
+          heroUrl={photos.hero}
+          region={pick(content.region, lang)}
+          headline={pick(content.headline, lang)}
+          tagline={pick(content.tagline, lang)}
+          capacity={content.capacity}
+          bedrooms={spaces.filter((s) => s.category === "rooms").length}
+          locality={address}
           waUrl={waUrl}
-          airbnbUrl={property.airbnbUrl}
         />
+        <Intro
+          dict={dict.intro}
+          title={property.name}
+          intro={pick(content.intro, lang)}
+          highlights={(content.highlights ?? []).map((h) => pick(h, lang))}
+          amenities={amenities.map((row) => resolveAmenity(row, lang))}
+        />
+        <Gallery dict={dict.gallery} name={property.name} photos={photos.gallery} />
+        <Spaces
+          dict={dict.spaces}
+          lightboxLabels={dict.gallery}
+          intro={pick(content.spacesIntro, lang)}
+          spaces={spaces.map((space) => ({
+            id: space.id,
+            icon: space.icon,
+            name: pick(space.label, lang),
+            description: pick(space.desc, lang),
+            capacity: space.capacity,
+            badge: space.badge ? pick(space.badge, lang) : undefined,
+            photos: space.photos,
+          }))}
+        />
+        <Rates dict={dict.rates} tiers={rateTiers} waUrl={waUrl} />
         <Location
           dict={dict.location}
-          lang={lang}
-          propertyId={property.id}
+          blurb={pick(content.locationBlurb, lang)}
+          address={address}
           mapsUrl={property.mapsUrl}
-          name={property.name}
-          addressLocality={property.addressLocality}
-          addressRegion={property.addressRegion}
+          distances={distances.map((row) => resolveDistance(row, lang))}
         />
-        <ContactSection dict={dict.contact} lang={lang} waUrl={waUrl} email={property.email} name={property.name} />
+        <Faq dict={dict.faq} items={faq} />
+        <Contact dict={dict.contact} waUrl={waUrl} email={property.email} />
       </main>
-      <Footer dict={dict.footer} lang={lang} waUrl={waUrl} email={property.email} airbnbUrl={property.airbnbUrl} name={property.name} />
-      <WhatsAppFloat waUrl={whatsappUrl(property, "en")} />
+      <SiteFooter
+        dict={dict.footer}
+        name={property.name}
+        region={pick(content.region, lang)}
+        links={links}
+        email={property.email}
+        whatsappNumber={property.whatsappNumber}
+        waUrl={waUrl}
+      />
+      <MobileCta label={dict.hero.whatsapp} detail={rateTiers[0]?.from ?? ""} waUrl={waUrl} />
     </>
   );
 }

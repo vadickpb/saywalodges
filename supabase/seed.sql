@@ -118,12 +118,9 @@ VALUES
   ('64794e5a-c12e-48ab-9585-b4c97f690787', '131583b5-785e-4127-81f0-e097163c5654', 'Holidays & special dates', 'Feriados y fechas especiales', 'On request', 'Consultar', '', '', 'Subject to availability', 'Según disponibilidad', 2),
   ('8b5a688a-af58-44dc-92ad-aae575e2e270', '131583b5-785e-4127-81f0-e097163c5654', '7 nights or more', 'Estadías de 7 noches o más', 'Special rate', 'Tarifa especial', '', '', 'Extended stay', 'Estadía prolongada', 3);
 
--- Photos reference real storage paths. They resolve locally too, since the
--- storage bucket below is public and local Storage proxies the same object
--- keys — but the actual files only exist in the remote bucket. Local dev
--- will see broken images for photos until SD-202 adds a way to seed Storage
--- objects locally; the rows themselves (counts, ordering, room linkage) are
--- what matters for working on everything other than the images.
+-- Photos reference real storage paths. The files themselves aren't seeded by
+-- `db reset`: run `npm run db:seed-storage` afterwards to upload them to the
+-- local bucket (scripts/seed-local-storage.mjs, local stack only).
 INSERT INTO "public"."photos"
   ("id", "property_id", "room_id", "storage_path", "role", "sort_order")
 VALUES
@@ -164,6 +161,50 @@ ON CONFLICT (id) DO NOTHING;
 -- default now that the single-tenant rows above are seeded.
 UPDATE "public"."properties" SET "published" = true WHERE "slug" = 'saywa-lodges';
 
+-- SD-209: theme + site copy (shape owned by lib/domain/site-theme.ts and
+-- lib/domain/site-content.ts). Copy moved verbatim from the old
+-- dictionaries/; FAQ answers only state facts already in this file
+-- (capacity, pets_allowed = false, distances) or the previous site copy.
+UPDATE "public"."properties" SET
+  "theme" = $j${"preset": "andino"}$j$::jsonb,
+  "content" = $j${
+    "region": {"en": "Sacred Valley · Urubamba · Cusco · Peru", "es": "Valle Sagrado · Urubamba · Cusco · Perú"},
+    "headline": {"en": "Private country house in Urubamba", "es": "Casa de campo privada en Urubamba"},
+    "tagline": {"en": "with heated pool, hot tub & mountain views", "es": "con piscina temperada, hidromasaje y vistas a montañas"},
+    "intro": {
+      "en": "An exclusive stay in the Sacred Valley, ideal for families and groups of up to 13 guests. Saywa Lodges features a heated covered pool with hot tub, spacious gardens, terrace bedrooms, BBQ area, clay oven and a prime location to explore Urubamba, Ollantaytambo and Machu Picchu.",
+      "es": "Disfruta una estadía exclusiva en el Valle Sagrado, ideal para familias y grupos de hasta 13 personas. Saywa Lodges cuenta con piscina temperada/cubierta con hidromasaje, amplios jardines, habitaciones con terraza, zona de parrilla, horno de barro y una ubicación estratégica para visitar Urubamba, Ollantaytambo y Machu Picchu."
+    },
+    "highlights": [
+      {"en": "Heated pool · Hot tub", "es": "Piscina temperada · Hidromasaje"},
+      {"en": "Up to 13 guests", "es": "Hasta 13 personas"},
+      {"en": "Gardens · BBQ · Clay oven", "es": "Jardines · Parrilla · Horno de barro"},
+      {"en": "Sacred Valley", "es": "Valle Sagrado"}
+    ],
+    "capacity": 13,
+    "spacesIntro": {
+      "en": "The house has 5 rooms spread across different levels, designed for families and groups seeking comfort, privacy and Sacred Valley views. Most rooms have a private bathroom, terrace or mountain views.",
+      "es": "La casa cuenta con 5 habitaciones en diferentes niveles, pensadas para familias y grupos. La mayoría cuenta con baño privado, terraza o vista a las montañas."
+    },
+    "locationBlurb": {
+      "en": "Saywa Lodges is in Urubamba, at 2,800 m above sea level, surrounded by Andean mountains and along the sacred river — a privileged location connecting you to the main archaeological and historical sites of the Inca Sacred Valley.",
+      "es": "Saywa Lodges se encuentra en Urubamba, a 2,800 msnm, rodeado de montañas andinas y a orillas del río sagrado. Una ubicación privilegiada que te conecta con los principales destinos arqueológicos e históricos del Valle Sagrado de los Incas."
+    },
+    "faq": [
+      {"question": {"en": "How many guests can stay?", "es": "¿Cuántas personas pueden hospedarse?"},
+       "answer": {"en": "Up to 13 guests. The house is rented as a whole — completely private for you and your group.", "es": "Hasta 13 personas. La casa se alquila completa: es totalmente privada para ti y tu grupo."}},
+      {"question": {"en": "Is the pool heated?", "es": "¿La piscina es temperada?"},
+       "answer": {"en": "Yes — it's a covered, heated pool with a hot tub.", "es": "Sí, es una piscina cubierta y temperada, con hidromasaje."}},
+      {"question": {"en": "How far is Machu Picchu?", "es": "¿Qué tan lejos está Machu Picchu?"},
+       "answer": {"en": "Ollantaytambo, where the train to Machu Picchu departs, is 45 minutes away by car.", "es": "Ollantaytambo, de donde sale el tren a Machu Picchu, está a 45 minutos en auto."}},
+      {"question": {"en": "Are pets allowed?", "es": "¿Se aceptan mascotas?"},
+       "answer": {"en": "No, pets aren't allowed at the property.", "es": "No, no se aceptan mascotas en la propiedad."}},
+      {"question": {"en": "How do I book?", "es": "¿Cómo reservo?"},
+       "answer": {"en": "Write to us on WhatsApp with your dates and group size — we reply within 2 hours with availability and your rate.", "es": "Escríbenos por WhatsApp con tus fechas y el número de personas: respondemos en menos de 2 horas con disponibilidad y tu tarifa."}}
+    ]
+  }$j$::jsonb
+WHERE "slug" = 'saywa-lodges';
+
 ALTER TABLE "public"."properties" ALTER COLUMN "org_id" DROP DEFAULT;
 ALTER TABLE "public"."rooms" ALTER COLUMN "org_id" DROP DEFAULT;
 ALTER TABLE "public"."photos" ALTER COLUMN "org_id" DROP DEFAULT;
@@ -198,6 +239,41 @@ INSERT INTO "public"."amenities"
 VALUES
   ('c3f2b1c2-8b8f-4a3b-9d0b-1c2d3e4f5a6b', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712',
    '📶', 'Wi-Fi', 'Wi-Fi', 'Placeholder amenity.', 'Amenity de ejemplo.', 0);
+
+-- SD-209: a different preset than Saywa, so the two tenants visibly prove the
+-- theme comes from the database. Photos reuse Saywa's files under demo/
+-- paths (seed-local-storage.mjs strips the prefix to find the source).
+UPDATE "public"."properties" SET
+  "theme" = $j${"preset": "costa"}$j$::jsonb,
+  "content" = $j${
+    "region": {"en": "Demo · Lima · Peru", "es": "Demo · Lima · Perú"},
+    "headline": {"en": "A demo lodge for Saywa Direct", "es": "Un alojamiento demo de Saywa Direct"},
+    "tagline": {"en": "Sample content to preview the site template", "es": "Contenido de ejemplo para previsualizar la plantilla"},
+    "intro": {
+      "en": "This is placeholder copy for the demo tenant. Every lodge on Saywa Direct writes its own description, picks its colors and uploads its photos.",
+      "es": "Este es un texto de ejemplo del tenant demo. Cada alojamiento en Saywa Direct escribe su propia descripción, elige sus colores y sube sus fotos."
+    },
+    "highlights": [
+      {"en": "Sample highlight", "es": "Destacado de ejemplo"},
+      {"en": "Up to 4 guests", "es": "Hasta 4 personas"}
+    ],
+    "capacity": 4,
+    "faq": [
+      {"question": {"en": "Is this a real lodge?", "es": "¿Es un alojamiento real?"},
+       "answer": {"en": "No — it's demo data for local development.", "es": "No, son datos de ejemplo para desarrollo local."}}
+    ]
+  }$j$::jsonb
+WHERE "id" = '57f914ac-3890-47c1-9d6d-1492782cf712';
+
+INSERT INTO "public"."photos"
+  ("id", "org_id", "property_id", "room_id", "storage_path", "role", "sort_order")
+VALUES
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e01', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto1.jpeg', 'hero', 0),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e02', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto5.jpeg', 'gallery', 0),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e03', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto6.jpeg', 'gallery', 1),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e04', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto7.jpeg', 'gallery', 2),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e05', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', NULL, 'demo/site/foto8.jpeg', 'gallery', 3),
+  ('d1a0c3e2-5b6f-4c7d-8e9f-0a1b2c3d4e06', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'b2e1a0b1-7a7e-4f2a-8c9a-0b1c2d3e4f5a', 'demo/rooms/suite/suite-01.jpeg', 'room', 0);
 
 -- ─── Local-only auth users + memberships (SD-101) ───────────────────────────
 -- Passwords are fixed, publicly-known dev credentials — fine today because

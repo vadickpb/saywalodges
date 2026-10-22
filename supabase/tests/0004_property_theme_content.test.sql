@@ -1,0 +1,47 @@
+-- SD-209 (part 1): properties.theme / properties.content.
+-- Saywa property 131583b5-785e-4127-81f0-e097163c5654 · owner a3b45db1-7c15-4528-a4ba-be625665fb6d
+begin;
+select plan(7);
+
+select has_column('public', 'properties', 'theme', 'properties.theme exists');
+select has_column('public', 'properties', 'content', 'properties.content exists');
+
+-- Shape is zod's job; the DB only guarantees "a JSON object", so the parser
+-- never sees a string/array/null.
+select throws_like(
+  $$update public.properties set theme = '"red"'::jsonb where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
+  '%properties_theme_is_object%',
+  'theme rejects a non-object (string)'
+);
+select throws_like(
+  $$update public.properties set content = '[]'::jsonb where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
+  '%properties_content_is_object%',
+  'content rejects a non-object (array)'
+);
+
+-- No write path ships yet (SD-210 adds the editor and widens the grant then):
+-- even a member of the owning org can't write these columns directly.
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
+set local role authenticated;
+
+select throws_like(
+  $$update public.properties set theme = '{"preset":"noche"}'::jsonb where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
+  '%permission denied%',
+  'owner cannot write theme directly (no column grant yet)'
+);
+select throws_like(
+  $$update public.properties set content = '{}'::jsonb where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
+  '%permission denied%',
+  'owner cannot write content directly (no column grant yet)'
+);
+
+-- Reading is public for published properties, like every other column.
+reset role;
+set local role anon;
+select ok(
+  (select theme ? 'preset' from public.properties where id = '131583b5-785e-4127-81f0-e097163c5654'),
+  'anon can read the published property''s theme'
+);
+
+select * from finish();
+rollback;

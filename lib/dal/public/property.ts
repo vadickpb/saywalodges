@@ -2,6 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { getSupabaseAnon } from "@/lib/supabase/anon";
 import { getPublicPhotoUrl } from "@/lib/storage";
+import { resolveTheme, themeSchema, type ResolvedTheme } from "@/lib/domain/site-theme";
+import { contentSchema, resolveContent, type SiteContent } from "@/lib/domain/site-content";
 
 export type Property = {
   id: string;
@@ -30,6 +32,10 @@ export type Property = {
   starRating: number | null;
   petsAllowed: boolean;
   logoUrl: string;
+  // jsonb, validated here so a malformed row degrades to defaults instead
+  // of reaching the template (or CSS) unchecked.
+  theme: ResolvedTheme;
+  content: SiteContent;
 };
 
 // cache() dedupes identical calls within one request — generateMetadata,
@@ -38,12 +44,28 @@ export const getProperty = cache(async (slug: string): Promise<Property> => {
   const { data, error } = await getSupabaseAnon()
     .from("properties")
     .select(
-      "id, org_id, slug, name, whatsapp_number, whatsapp_message_en, whatsapp_message_es, email, maps_url, airbnb_url, site_url, address_locality, address_region, address_country, latitude, longitude, meta_title_en, meta_title_es, meta_description_en, meta_description_es, meta_keywords_en, meta_keywords_es, price_range, star_rating, pets_allowed, logo_path"
+      "id, org_id, slug, name, whatsapp_number, whatsapp_message_en, whatsapp_message_es, email, maps_url, airbnb_url, site_url, address_locality, address_region, address_country, latitude, longitude, meta_title_en, meta_title_es, meta_description_en, meta_description_es, meta_keywords_en, meta_keywords_es, price_range, star_rating, pets_allowed, logo_path, theme, content"
     )
     .eq("slug", slug)
     .single();
 
   if (error || !data) throw new Error(`Property not found: ${error?.message ?? "no rows"}`);
+
+  // resolveTheme/resolveContent silently fall back on invalid data; log why
+  // (zod issue paths only, never the tenant's text) so a corrupt row is
+  // visible instead of quietly rendering defaults.
+  for (const [field, schema, value] of [
+    ["theme", themeSchema, data.theme],
+    ["content", contentSchema, data.content],
+  ] as const) {
+    const parsed = schema.safeParse(value);
+    if (!parsed.success) {
+      console.error(
+        `getProperty(${slug}): invalid ${field}, using defaults:`,
+        parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.code}`)
+      );
+    }
+  }
 
   return {
     id: data.id,
@@ -72,6 +94,8 @@ export const getProperty = cache(async (slug: string): Promise<Property> => {
     starRating: data.star_rating,
     petsAllowed: data.pets_allowed,
     logoUrl: data.logo_path ? getPublicPhotoUrl(data.logo_path) : "",
+    theme: resolveTheme(data.theme),
+    content: resolveContent(data.content),
   };
 });
 
