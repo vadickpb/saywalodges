@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { MAX_UPLOAD_BYTES } from "@/lib/domain/content-manager";
 
 type Props = {
+  // Accessible name of the file input (include what it uploads to, e.g. the space).
+  inputLabel?: string;
   action: (formData: FormData) => Promise<{ ok: true } | { ok: false; error: string }>;
   fields?: Record<string, string>;
   label: string;
@@ -14,7 +16,7 @@ type Props = {
 
 // Image picker + upload. The size check here is only a convenience (it saves
 // a round trip); the server action re-validates type by magic bytes and size.
-export function UploadForm({ action, fields = {}, label }: Props) {
+export function UploadForm({ action, fields = {}, label, inputLabel }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +33,7 @@ export function UploadForm({ action, fields = {}, label }: Props) {
     startTransition(async () => {
       const result = await action(formData);
       if (!result.ok) {
-        setError(result.error);
-        toast.error(result.error);
+        setError(result.error); // announced once, by the role="alert" below
         return;
       }
       toast.success("Imagen subida");
@@ -42,7 +43,7 @@ export function UploadForm({ action, fields = {}, label }: Props) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <Input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label={label} className="sm:max-w-xs" />
+      <Input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label={inputLabel ?? label} className="sm:max-w-xs" />
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? "Subiendo…" : label}
       </Button>

@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import type { AmenityInput, DistanceInput, SpaceCategory, SpaceInput } from "@/lib/domain/content-manager";
+import { SPACE_CATEGORIES, type AmenityInput, type DistanceInput, type SpaceInput } from "@/lib/domain/content-manager";
 
 // Member-only reads/writes of a property's spaces, amenities and distances
 // (the session client + RLS `is_member(org_id)`; never service-role). Same
@@ -51,7 +51,8 @@ function toSpaceItem(r: Database["public"]["Tables"]["spaces"]["Row"]): SpaceIte
   return {
     id: r.id,
     key: r.key,
-    category: r.category as SpaceCategory,
+    // The DB enum and SPACE_CATEGORIES match; the fallback only guards drift.
+    category: SPACE_CATEGORIES.find((c) => c === r.category) ?? "rooms",
     icon: r.icon,
     capacity: r.capacity,
     badgeEn: r.badge_en,
@@ -282,10 +283,9 @@ export async function deleteDistance(supabase: Client, orgId: string, id: string
 
 // ─── Ordering (transactional RPCs, SECURITY INVOKER → RLS applies) ──────────
 
-// `ids` is the complete new order. The RPC returns how many rows it changed;
-// anything other than ids.length means an id was foreign/unknown, so the whole
-// call is reported as failed instead of half-applied (it ran in one statement,
-// but a wrong id means the caller's view of the list was stale or forged).
+// `ids` is the complete new order. The RPC is all-or-nothing: it raises (and
+// rolls back) when any id is foreign/unknown, which surfaces here as an error.
+// The count check below is belt-and-braces.
 export async function reorderItems(
   supabase: Client,
   kind: "spaces" | "amenities" | "distances",

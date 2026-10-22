@@ -9,26 +9,27 @@ import { RowAction } from "@/components/dashboard/row-action";
 import { UploadForm } from "@/components/dashboard/upload-form";
 import { deletePhotoAction, movePhotoAction, removeLogoAction, setHeroAction, uploadLogoAction, uploadPhotoAction } from "./actions";
 
-function PhotoGrid({ photos, isSite }: { photos: PhotoItem[]; isSite: boolean }) {
+function PhotoGrid({ photos, isSite, title }: { photos: PhotoItem[]; isSite: boolean; title: string }) {
   if (photos.length === 0) return <p className="text-sm text-muted-foreground">Sin fotos todavía.</p>;
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {photos.map((photo, index) => (
         <li key={photo.id} className="flex flex-col gap-2 rounded-md border border-border p-2">
           <div className="relative aspect-[4/3] overflow-hidden rounded bg-muted">
-            <Image src={photo.url} alt="" fill sizes="(min-width: 1024px) 20vw, 45vw" className="object-cover" />
+            <Image src={photo.url} alt={`Foto ${index + 1} de ${title}`} fill sizes="(min-width: 1024px) 20vw, 45vw" className="object-cover" />
             {photo.role === "hero" && <Badge className="absolute left-1 top-1">Principal</Badge>}
           </div>
           <div className="flex flex-wrap gap-1">
-            <RowAction action={movePhotoAction} fields={{ id: photo.id, direction: "up" }} label="←" ariaLabel="Mover antes" size="xs" disabled={index === 0} />
-            <RowAction action={movePhotoAction} fields={{ id: photo.id, direction: "down" }} label="→" ariaLabel="Mover después" size="xs" disabled={index === photos.length - 1} />
+            <RowAction action={movePhotoAction} fields={{ id: photo.id, direction: "up" }} label="←" ariaLabel={`Mover antes la foto ${index + 1} de ${title}`} size="xs" disabled={index === 0} />
+            <RowAction action={movePhotoAction} fields={{ id: photo.id, direction: "down" }} label="→" ariaLabel={`Mover después la foto ${index + 1} de ${title}`} size="xs" disabled={index === photos.length - 1} />
             {isSite && photo.role !== "hero" && (
-              <RowAction action={setHeroAction} fields={{ id: photo.id }} label="Principal" size="xs" successMessage="Foto principal actualizada" />
+              <RowAction action={setHeroAction} fields={{ id: photo.id }} label="Principal" ariaLabel={`Usar la foto ${index + 1} de ${title} como principal`} size="xs" successMessage="Foto principal actualizada" />
             )}
             <RowAction
               action={deletePhotoAction}
               fields={{ id: photo.id }}
               label="Eliminar"
+              ariaLabel={`Eliminar la foto ${index + 1} de ${title}`}
               variant="destructive"
               size="xs"
               confirm={{ title: "¿Eliminar esta foto?", description: "Se borra de la galería y del almacenamiento. No se puede deshacer." }}
@@ -67,6 +68,7 @@ export default async function PhotosPage() {
               <RowAction
                 action={removeLogoAction}
                 label="Quitar logo"
+                ariaLabel="Quitar el logo"
                 variant="destructive"
                 confirm={{ title: "¿Quitar el logo?", description: "El sitio dejará de mostrarlo.", confirmLabel: "Quitar" }}
                 successMessage="Logo eliminado"
@@ -75,7 +77,7 @@ export default async function PhotosPage() {
           ) : (
             <p className="text-sm text-muted-foreground">Sin logo.</p>
           )}
-          <UploadForm action={uploadLogoAction} label={logoUrl ? "Reemplazar logo" : "Subir logo"} />
+          <UploadForm action={uploadLogoAction} label={logoUrl ? "Reemplazar logo" : "Subir logo"} inputLabel="Archivo del logo" />
         </CardContent>
       </Card>
 
@@ -84,8 +86,8 @@ export default async function PhotosPage() {
           <CardTitle>Portada y galería</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <PhotoGrid photos={sitePhotos} isSite />
-          <UploadForm action={uploadPhotoAction} fields={{ scope: "site" }} label="Subir foto" />
+          <PhotoGrid photos={sitePhotos} isSite title="portada y galería" />
+          <UploadForm action={uploadPhotoAction} fields={{ scope: "site" }} label="Subir foto" inputLabel="Archivo de foto para portada y galería" />
         </CardContent>
       </Card>
 
@@ -95,8 +97,8 @@ export default async function PhotosPage() {
             <CardTitle>{space.labelEs}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <PhotoGrid photos={photos.filter((p) => p.spaceId === space.id)} isSite={false} />
-            <UploadForm action={uploadPhotoAction} fields={{ scope: space.id }} label="Subir foto" />
+            <PhotoGrid photos={photos.filter((p) => p.spaceId === space.id)} isSite={false} title={space.labelEs} />
+            <UploadForm action={uploadPhotoAction} fields={{ scope: space.id }} label="Subir foto" inputLabel={`Archivo de foto para ${space.labelEs}`} />
           </CardContent>
         </Card>
       ))}

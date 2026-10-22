@@ -30,7 +30,8 @@ export async function listPhotos(supabase: Client, orgId: string): Promise<Photo
     .from("photos")
     .select("id, space_id, role, storage_path, sort_order")
     .eq("org_id", orgId)
-    .order("sort_order");
+    .order("sort_order")
+    .order("id");
   if (error) {
     console.error("listPhotos failed:", error);
     return [];
@@ -47,9 +48,16 @@ export async function listPhotos(supabase: Client, orgId: string): Promise<Photo
 
 async function removeObjects(supabase: Client, paths: string[]): Promise<boolean> {
   if (paths.length === 0) return true;
-  const { error } = await supabase.storage.from(PHOTOS_BUCKET).remove(paths);
+  const { data, error } = await supabase.storage.from(PHOTOS_BUCKET).remove(paths);
   if (error) {
     console.error("storage remove failed:", error);
+    return false;
+  }
+  // `remove` succeeds with fewer entries when RLS hides an object (e.g. a
+  // legacy path that migrate-photo-paths.mjs has not moved yet). Treat that as
+  // a failure so the row is kept instead of orphaning a public object.
+  if (data.length < paths.length) {
+    console.error(`storage remove: requested ${paths.length}, removed ${data.length}`);
     return false;
   }
   return true;
@@ -126,7 +134,7 @@ export async function uploadPhoto(
 export async function deletePhoto(supabase: Client, orgId: string, photoId: string): Promise<Result> {
   const { data: photo, error } = await supabase
     .from("photos")
-    .select("storage_path")
+    .select("storage_path, role, space_id, property_id")
     .eq("org_id", orgId)
     .eq("id", photoId)
     .maybeSingle();
@@ -145,6 +153,21 @@ export async function deletePhoto(supabase: Client, orgId: string, photoId: stri
   if (deleteError || deleted.length !== 1) {
     console.error("deletePhoto row delete failed:", deleteError ?? `got ${deleted?.length} rows`);
     return { ok: false };
+  }
+
+  // Deleting the hero must not leave the public site without a cover: promote
+  // the next site photo. Best effort — the delete itself already succeeded.
+  if (photo.role === "hero" && photo.space_id === null) {
+    const { data: next } = await supabase
+      .from("photos")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("property_id", photo.property_id)
+      .is("space_id", null)
+      .order("sort_order")
+      .order("id")
+      .limit(1);
+    if (next?.[0]) await setHeroPhoto(supabase, photo.property_id, next[0].id);
   }
   return { ok: true };
 }

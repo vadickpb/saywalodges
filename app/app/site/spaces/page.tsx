@@ -41,12 +41,13 @@ export default async function SpacesPage() {
                     <RowAction action={moveSpaceAction} fields={{ id: space.id, direction: "up" }} label="↑" ariaLabel={`Subir ${space.labelEs}`} disabled={index === 0} />
                     <RowAction action={moveSpaceAction} fields={{ id: space.id, direction: "down" }} label="↓" ariaLabel={`Bajar ${space.labelEs}`} disabled={index === spaces.length - 1} />
                     <Button asChild variant="outline" size="sm">
-                      <Link href={`/app/site/spaces/${space.id}`}>Editar</Link>
+                      <Link href={`/app/site/spaces/${space.id}`} aria-label={`Editar ${space.labelEs}`}>Editar</Link>
                     </Button>
                     <RowAction
                       action={deleteSpaceAction}
                       fields={{ id: space.id }}
                       label="Eliminar"
+                      ariaLabel={`Eliminar ${space.labelEs}`}
                       variant="destructive"
                       confirm={{
                         title: `¿Eliminar "${space.labelEs}"?`,

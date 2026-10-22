@@ -30,12 +30,13 @@ export default async function DistancesPage() {
               <CardContent className="flex flex-col gap-4 pt-6">
                 <ContentForm fields={FIELDS} initial={toInitial(item)} action={saveDistance} id={item.id} submitLabel="Guardar" />
                 <div className="flex items-center gap-1 border-t border-border pt-3">
-                  <RowAction action={moveDistanceAction} fields={{ id: item.id, direction: "up" }} label="↑" ariaLabel="Subir" disabled={index === 0} />
-                  <RowAction action={moveDistanceAction} fields={{ id: item.id, direction: "down" }} label="↓" ariaLabel="Bajar" disabled={index === items.length - 1} />
+                  <RowAction action={moveDistanceAction} fields={{ id: item.id, direction: "up" }} label="↑" ariaLabel={`Subir ${item.placeEs}`} disabled={index === 0} />
+                  <RowAction action={moveDistanceAction} fields={{ id: item.id, direction: "down" }} label="↓" ariaLabel={`Bajar ${item.placeEs}`} disabled={index === items.length - 1} />
                   <RowAction
                     action={deleteDistanceAction}
                     fields={{ id: item.id }}
                     label="Eliminar"
+                    ariaLabel={`Eliminar ${item.placeEs}`}
                     variant="destructive"
                     confirm={{ title: "¿Eliminar este elemento?", description: "No se puede deshacer." }}
                     successMessage="Eliminado"

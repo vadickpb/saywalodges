@@ -17,7 +17,7 @@ export function SiteTabs() {
   return (
     <nav aria-label="Secciones del sitio" className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
       {TABS.map((tab) => {
-        const active = tab.href === "/app/site" ? pathname === tab.href : pathname.startsWith(tab.href);
+        const active = tab.href === "/app/site" ? pathname === tab.href : (pathname === tab.href || pathname.startsWith(`${tab.href}/`));
         return (
           <Link
             key={tab.href}

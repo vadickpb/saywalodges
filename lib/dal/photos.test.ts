@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
 vi.mock("server-only", () => ({}));
-import { deletePhoto, uploadPhoto, deleteSpaceWithPhotos } from "./photos";
+import { deletePhoto, uploadPhoto, deleteSpaceWithPhotos, setLogo, removeLogo, setHeroPhoto, reorderPhotos } from "./photos";
 import { reorderItems } from "./content";
 
 const ORG = "bf88f504-051f-4fdc-ab73-4fa12d715817";
@@ -24,11 +24,11 @@ function builder(result: { data: unknown; error: unknown }) {
 function fakeClient(opts: {
   tables?: Record<string, { data: unknown; error: unknown }[]>; // consumed in call order per table
   upload?: { error: unknown };
-  remove?: { error: unknown };
+  remove?: { data?: unknown[]; error: unknown };
   rpc?: { data: unknown; error: unknown };
 }) {
   const queues = Object.fromEntries(Object.entries(opts.tables ?? {}).map(([k, v]) => [k, [...v]]));
-  const remove = vi.fn(() => Promise.resolve(opts.remove ?? { error: null }));
+  const remove = vi.fn((paths: string[]) => Promise.resolve(opts.remove ?? { data: paths.map((name) => ({ name })), error: null }));
   const upload = vi.fn(() => Promise.resolve(opts.upload ?? { error: null }));
   const client = {
     from: vi.fn((table: string) => builder(queues[table]?.shift() ?? { data: [], error: null })),
@@ -100,9 +100,9 @@ describe("deleteSpaceWithPhotos", () => {
     const { client, remove } = fakeClient({
       tables: { photos: [{ data: [{ storage_path: "a.jpg" }, { storage_path: "b.jpg" }], error: null }] },
     });
-    remove.mockImplementation(() => {
+    remove.mockImplementation((paths: string[]) => {
       order.push("objects");
-      return Promise.resolve({ error: null });
+      return Promise.resolve({ data: paths.map((name) => ({ name })), error: null });
     });
     const deleteRow = vi.fn(async () => {
       order.push("row");
@@ -134,5 +134,98 @@ describe("reorderItems", () => {
   it("succeeds when every id was changed", async () => {
     const { client } = fakeClient({ rpc: { data: 2, error: null } });
     expect((await reorderItems(client, "spaces", PROP, ["a", "b"])).ok).toBe(true);
+  });
+});
+
+describe("storage remove that RLS silently skips", () => {
+  it("keeps the row when Storage removed fewer objects than requested", async () => {
+    const { client } = fakeClient({
+      tables: { photos: [{ data: { storage_path: "site/legacy.jpg", role: "gallery", space_id: null, property_id: PROP }, error: null }] },
+      remove: { data: [], error: null },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await deletePhoto(client, ORG, "photo-1")).ok).toBe(false);
+    expect((client.from as unknown as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1); // no row delete
+  });
+});
+
+describe("deletePhoto hero handling", () => {
+  it("promotes the next site photo when the hero is deleted", async () => {
+    const { client } = fakeClient({
+      tables: {
+        photos: [
+          { data: { storage_path: `${ORG}/site/a.jpg`, role: "hero", space_id: null, property_id: PROP }, error: null },
+          { data: [{ id: "photo-1" }], error: null }, // delete
+          { data: [{ id: "photo-2" }], error: null }, // next candidate
+        ],
+      },
+      rpc: { data: 1, error: null },
+    });
+    expect((await deletePhoto(client, ORG, "photo-1")).ok).toBe(true);
+    expect(client.rpc).toHaveBeenCalledWith("set_hero_photo", { p_property_id: PROP, p_photo_id: "photo-2" });
+  });
+
+  it("does not touch the hero when a gallery photo is deleted", async () => {
+    const { client } = fakeClient({
+      tables: {
+        photos: [
+          { data: { storage_path: `${ORG}/site/a.jpg`, role: "gallery", space_id: null, property_id: PROP }, error: null },
+          { data: [{ id: "photo-1" }], error: null },
+        ],
+      },
+    });
+    expect((await deletePhoto(client, ORG, "photo-1")).ok).toBe(true);
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("logo", () => {
+  it("removes the new object and keeps the old logo when the row update fails", async () => {
+    const { client, remove, upload } = fakeClient({
+      tables: { properties: [{ data: { logo_path: `${ORG}/branding/old.jpg` }, error: null }, { data: null, error: { message: "boom" } }] },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await setLogo(client, { orgId: ORG, bytes: new Uint8Array([1]), kind: JPEG })).ok).toBe(false);
+    expect(upload).toHaveBeenCalledOnce();
+    const removed = (remove.mock.calls[0] as unknown as string[][])[0];
+    expect(removed).toHaveLength(1);
+    expect(removed[0]).not.toContain("old.jpg");
+  });
+
+  it("deletes the previous logo object only after the row points at the new one", async () => {
+    const { client, remove } = fakeClient({
+      tables: { properties: [{ data: { logo_path: `${ORG}/branding/old.jpg` }, error: null }, { data: [{ id: PROP }], error: null }] },
+    });
+    expect((await setLogo(client, { orgId: ORG, bytes: new Uint8Array([1]), kind: JPEG })).ok).toBe(true);
+    expect(remove).toHaveBeenCalledWith([`${ORG}/branding/old.jpg`]);
+  });
+
+  it("removeLogo clears the row then deletes the object", async () => {
+    const { client, remove } = fakeClient({
+      tables: { properties: [{ data: { logo_path: `${ORG}/branding/old.jpg` }, error: null }, { data: [{ id: PROP }], error: null }] },
+    });
+    expect((await removeLogo(client, ORG)).ok).toBe(true);
+    expect(remove).toHaveBeenCalledWith([`${ORG}/branding/old.jpg`]);
+  });
+});
+
+describe("rpc wrappers", () => {
+  it("setHeroPhoto fails unless exactly one photo was promoted", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await setHeroPhoto(fakeClient({ rpc: { data: 0, error: null } }).client, PROP, "p")).ok).toBe(false);
+    expect((await setHeroPhoto(fakeClient({ rpc: { data: 1, error: null } }).client, PROP, "p")).ok).toBe(true);
+  });
+  it("reorderPhotos surfaces an RPC error", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await reorderPhotos(fakeClient({ rpc: { data: null, error: { message: "x" } } }).client, PROP, null, ["a"])).ok).toBe(false);
+  });
+});
+
+describe("uploadPhoto with a space of another org", () => {
+  it("fails before uploading anything", async () => {
+    const { client, upload } = fakeClient({ tables: { spaces: [{ data: null, error: null }] } });
+    const res = await uploadPhoto(client, { orgId: ORG, propertyId: PROP, scope: { kind: "space", spaceId: "0bcf73ac-1c1d-4418-9982-2edde9a3e50c" }, bytes: new Uint8Array([1]), kind: JPEG });
+    expect(res.ok).toBe(false);
+    expect(upload).not.toHaveBeenCalled();
   });
 });

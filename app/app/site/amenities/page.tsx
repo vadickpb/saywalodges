@@ -30,12 +30,13 @@ export default async function AmenitiesPage() {
               <CardContent className="flex flex-col gap-4 pt-6">
                 <ContentForm fields={FIELDS} initial={toInitial(item)} action={saveAmenity} id={item.id} submitLabel="Guardar" />
                 <div className="flex items-center gap-1 border-t border-border pt-3">
-                  <RowAction action={moveAmenityAction} fields={{ id: item.id, direction: "up" }} label="↑" ariaLabel="Subir" disabled={index === 0} />
-                  <RowAction action={moveAmenityAction} fields={{ id: item.id, direction: "down" }} label="↓" ariaLabel="Bajar" disabled={index === items.length - 1} />
+                  <RowAction action={moveAmenityAction} fields={{ id: item.id, direction: "up" }} label="↑" ariaLabel={`Subir ${item.titleEs}`} disabled={index === 0} />
+                  <RowAction action={moveAmenityAction} fields={{ id: item.id, direction: "down" }} label="↓" ariaLabel={`Bajar ${item.titleEs}`} disabled={index === items.length - 1} />
                   <RowAction
                     action={deleteAmenityAction}
                     fields={{ id: item.id }}
                     label="Eliminar"
+                    ariaLabel={`Eliminar ${item.titleEs}`}
                     variant="destructive"
                     confirm={{ title: "¿Eliminar este elemento?", description: "No se puede deshacer." }}
                     successMessage="Eliminado"
