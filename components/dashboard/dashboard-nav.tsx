@@ -27,10 +27,12 @@ const NAV_ITEMS: NavItem[] = [
 // usePathname() and feeds both of them the same activeHref.
 export function DashboardNav() {
   const pathname = usePathname();
+  // Nested routes (/app/site/spaces) keep their section highlighted.
+  const activeHref = NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.href ?? pathname;
   return (
     <>
-      <SidebarNav items={NAV_ITEMS} activeHref={pathname} />
-      <MobileBottomNav items={NAV_ITEMS} activeHref={pathname} />
+      <SidebarNav items={NAV_ITEMS} activeHref={activeHref} />
+      <MobileBottomNav items={NAV_ITEMS} activeHref={activeHref} />
     </>
   );
 }
