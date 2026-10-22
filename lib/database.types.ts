@@ -482,6 +482,61 @@ export type Database = {
           },
         ];
       };
+      units: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          id: string;
+          included_guests: number;
+          kind: Database["public"]["Enums"]["unit_kind"];
+          max_guests: number;
+          name: string;
+          org_id: string;
+          property_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          included_guests: number;
+          kind: Database["public"]["Enums"]["unit_kind"];
+          max_guests: number;
+          name: string;
+          org_id: string;
+          property_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          included_guests?: number;
+          kind?: Database["public"]["Enums"]["unit_kind"];
+          max_guests?: number;
+          name?: string;
+          org_id?: string;
+          property_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "units_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "units_property_org_fkey";
+            columns: ["property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -512,6 +567,7 @@ export type Database = {
       membership_role: "owner" | "staff";
       photo_role: "hero" | "gallery" | "room";
       space_category: "pool" | "rooms" | "common" | "outdoor";
+      unit_kind: "entire_place" | "room";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -645,6 +701,7 @@ export const Constants = {
       membership_role: ["owner", "staff"],
       photo_role: ["hero", "gallery", "room"],
       space_category: ["pool", "rooms", "common", "outdoor"],
+      unit_kind: ["entire_place", "room"],
     },
   },
 } as const;

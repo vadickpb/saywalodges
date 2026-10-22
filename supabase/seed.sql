@@ -315,3 +315,11 @@ INSERT INTO "public"."memberships" ("org_id", "user_id", "role")
 VALUES
   ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a3b45db1-7c15-4528-a4ba-be625665fb6d', 'owner'),
   ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', 'owner');
+
+-- SD-204: bookable inventory, not the spaces shown in the photo gallery.
+-- Local examples only. Included guests equals capacity until real rates are
+-- configured in SD-205/207; this is not a production pricing decision.
+INSERT INTO public.units (id, org_id, property_id, name, kind, max_guests, included_guests, active)
+VALUES
+  ('ee204001-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Saywa Lodges — Casa completa', 'entire_place', 13, 13, true),
+  ('ee204001-0000-4000-8000-000000000002', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'Demo — Habitación', 'room', 4, 2, true);

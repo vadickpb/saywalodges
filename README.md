@@ -25,6 +25,8 @@ de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura
 - La service-role queda restringida a webhooks/cron/RPCs en `lib/supabase/admin.ts`.
 - El contenido, espacios, servicios, distancias, fotos y logo se editan en `/app/site/*` con login.
   El panel antiguo y sus APIs se retiraron en SD-203.
+- Las unidades reservables (casa completa o habitación), capacidades y estado se gestionan en
+  `/app/site/units`; las inactivas se excluyen del inventario público para el futuro cotizador.
 - Las tarifas publicadas siguen visibles, pero su edición desde la aplicación queda temporalmente
   pendiente hasta SD-207. El nuevo modelo y motor de precios se implementan en SD-205/206.
 - Las decisiones sobre dominios, RLS, prevención de dobles reservas y pagos están en los ADRs 0001–0004;

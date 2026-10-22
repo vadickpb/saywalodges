@@ -19,7 +19,10 @@ type FormState = {
 export type ContentField = {
   name: string;
   label: string;
-  kind?: "text" | "textarea" | "select";
+  kind?: "text" | "textarea" | "select" | "number";
+  min?: number;
+  max?: number;
+  step?: number;
   options?: { value: string; label: string }[];
   // Grid span on sm+ screens: "half" (default) or "full".
   width?: "half" | "full";
@@ -99,7 +102,7 @@ export function ContentForm({ fields, initial, action, id, submitLabel, resetOnS
                   ))}
                 </select>
               ) : (
-                <Input key={inputKey} {...common} />
+                <Input key={inputKey} {...common} type={field.kind === "number" ? "number" : "text"} min={field.min} max={field.max} step={field.step} />
               )}
               {fieldErrors && (
                 <p id={`${fieldId}-error`} role="alert" className="text-sm text-destructive">
