@@ -35,18 +35,29 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 const apply = process.argv.includes("--apply");
 const prune = process.argv.includes("--prune");
+if (apply && prune) {
+  console.error("Run --apply and --prune as separate steps (check the site in between).");
+  process.exit(1);
+}
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const publicUrl = (p) => `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${p.split("/").map(encodeURIComponent).join("/")}`;
+
+// photos.storage_path is writable by any member of the org (RLS only checks
+// org_id), so legacy paths are treated as untrusted: strict allowlist, no "..",
+// and anything else is reported and skipped instead of copied with service-role
+// or aborting the run for every tenant.
+const LEGACY_RE = /^(site|rooms|gallery|branding)\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
 
 function newPathFor(orgId, oldPath) {
   const [first, ...rest] = oldPath.split("/");
   if (UUID_RE.test(first)) return oldPath; // already migrated
+  if (!LEGACY_RE.test(oldPath) || oldPath.split("/").includes("..")) return null;
   const tail = rest.join("/");
   if (first === "rooms") return `${orgId}/spaces/${tail}`;
   if (first === "site") return `${orgId}/site/${tail}`;
   if (first === "gallery") return `${orgId}/site/gallery/${tail}`;
   if (first === "branding") return `${orgId}/branding/${tail}`;
-  throw new Error(`Unrecognised legacy path: ${oldPath}`);
+  return null;
 }
 
 async function load() {
@@ -58,7 +69,11 @@ async function load() {
   const items = [];
   for (const p of photos) items.push({ table: "photos", id: p.id, column: "storage_path", orgId: p.org_id, oldPath: p.storage_path });
   for (const p of props) if (p.logo_path) items.push({ table: "properties", id: p.id, column: "logo_path", orgId: p.org_id, oldPath: p.logo_path });
-  return items.map((i) => ({ ...i, newPath: newPathFor(i.orgId, i.oldPath) }));
+  const mapped = items.map((i) => ({ ...i, newPath: newPathFor(i.orgId, i.oldPath) }));
+  for (const i of mapped) {
+    if (i.newPath === null) console.warn(`SKIPPED unrecognised path (${i.table}/${i.id}): ${JSON.stringify(i.oldPath)}`);
+  }
+  return mapped.filter((i) => i.newPath !== null);
 }
 
 async function verifyUrl(p) {

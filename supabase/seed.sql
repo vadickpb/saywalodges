@@ -152,10 +152,7 @@ VALUES
   ('1c503188-12bd-41e6-b642-2769fc6d1e68', '131583b5-785e-4127-81f0-e097163c5654', '37ec69d5-035e-4d80-b5ce-4018ca08b29d', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/bbq/bbq-01.jpeg', 'room', 0),
   ('eb2da880-0545-4ecb-9c7c-16e2f38ac06a', '131583b5-785e-4127-81f0-e097163c5654', '616122c6-9370-4065-9c8e-9a7b251a45de', 'bf88f504-051f-4fdc-ab73-4fa12d715817/spaces/exterior/exterior-01.jpeg', 'room', 0);
 
--- Storage bucket, so local Storage emulation matches production.
-INSERT INTO "storage"."buckets" ("id", "name", "public")
-VALUES ('property-photos', 'property-photos', true)
-ON CONFLICT (id) DO NOTHING;
+-- The property-photos bucket is created by migration 20261022203128.
 
 -- Real app code must always pass org_id explicitly — drop the convenience
 -- default now that the single-tenant rows above are seeded.

@@ -3,7 +3,7 @@
 -- Fixed ids from supabase/seed.sql: Saywa org bf88f504-..., Demo org
 -- ff24bacc-...; owners a3b45db1-... (Saywa) and bd6a1c86-... (Demo).
 begin;
-select plan(10);
+select plan(14);
 
 -- storage.protect_delete blocks raw DELETEs unless the Storage API flag is set;
 -- the API sets it, so set it here to exercise the delete policy itself.
@@ -28,6 +28,14 @@ select is(
   'bf88f504-051f-4fdc-ab73-4fa12d715817'::uuid,
   'org prefix is parsed from the first path segment'
 );
+
+select is(
+  private.storage_path_org('BF88F504-051F-4FDC-AB73-4FA12D715817/site/a.jpg'),
+  null::uuid,
+  'upper-case uuid prefix resolves to no org (fail closed)'
+);
+select is(private.storage_path_org('/bf88f504-051f-4fdc-ab73-4fa12d715817/a.jpg'), null::uuid, 'empty leading segment resolves to no org');
+select is(private.storage_path_org('bf88f504-051f-4fdc-ab73-4fa12d715817'), null::uuid, 'bare uuid with no folder resolves to no org');
 
 -- Fixture written as the table owner (bypasses RLS): one Demo-owned object.
 insert into storage.objects (bucket_id, name)
@@ -79,6 +87,18 @@ select ok(
   not exists(select 1 from storage.objects
              where name = 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/new.jpg'),
   'Member can delete an object under their own org prefix'
+);
+
+-- Cross-org UPDATE (what an upsert/rename would do): 0 rows, object unchanged.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
+update storage.objects set name = 'bf88f504-051f-4fdc-ab73-4fa12d715817/site/stolen.jpg'
+where name = 'ff24bacc-47d2-40bc-9210-f860e98892fd/site/demo-fixture.jpg';
+reset role;
+select ok(
+  exists(select 1 from storage.objects
+         where name = 'ff24bacc-47d2-40bc-9210-f860e98892fd/site/demo-fixture.jpg'),
+  'Member UPDATE on another org''s object affects 0 rows'
 );
 
 -- ─── anon ───────────────────────────────────────────────────────────────────

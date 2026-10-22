@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
   const supabase = getSupabase();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storagePath = `gallery/${Date.now()}-${safeName}`;
+  const storagePath = `${property.orgId}/site/gallery/${Date.now()}-${safeName}`;
 
   const { error: uploadError } = await supabase.storage
     .from(PHOTOS_BUCKET)
