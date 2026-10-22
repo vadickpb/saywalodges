@@ -36,11 +36,11 @@ function Field({
         aria-describedby={errors ? `${id}-error` : undefined}
         {...props}
       />
-      {errors?.map((message) => (
-        <p key={message} id={`${id}-error`} role="alert" className="text-sm text-destructive">
-          {message}
+      {errors && (
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
+          {errors.join(" ")}
         </p>
-      ))}
+      )}
     </div>
   );
 }

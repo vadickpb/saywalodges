@@ -26,9 +26,10 @@ select is(
 -- Sanity: the member themself can still update their own property's name
 -- through the same grant/policy pair, so the test above is proving
 -- isolation, not that writes are broken entirely.
-select lives_ok(
-  $$update public.properties set name = 'Saywa Lodges' where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
-  'Member can update their own property''s name (same column grant, own org)'
+select results_eq(
+  $$update public.properties set name = 'Saywa Lodges X' where id = '131583b5-785e-4127-81f0-e097163c5654' returning name$$,
+  $$values ('Saywa Lodges X'::text)$$,
+  'Member can update their own property''s name (same column grant, own org) — exactly 1 row changed'
 );
 
 select * from finish();

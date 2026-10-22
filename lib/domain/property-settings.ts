@@ -40,7 +40,7 @@ const httpsUrlOrEmpty = z.string().max(500).refine((value) => {
 
 export const propertySettingsSchema = z.object({
   name: shortText.min(1, "Obligatorio"),
-  whatsappNumber: z.string().max(20),
+  whatsappNumber: z.string().regex(/^\d{0,20}$/, "Solo números, sin + ni espacios"),
   whatsappMessageEn: longText,
   whatsappMessageEs: longText,
   email: z.string().max(MAX_SHORT).email("Email inválido").or(z.literal("")),

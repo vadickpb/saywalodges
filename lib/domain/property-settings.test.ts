@@ -69,3 +69,9 @@ describe("propertySettingsSchema", () => {
     expect(propertySettingsSchema.safeParse({ ...valid, starRating: 6 }).success).toBe(false);
   });
 });
+
+describe("whatsappNumber format", () => {
+  it("rejects non-digit characters", () => {
+    expect(propertySettingsSchema.safeParse({ ...valid, whatsappNumber: "+51 999" }).success).toBe(false);
+  });
+});
