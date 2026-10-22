@@ -39,6 +39,22 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Public tenant site (SD-209). Values come per tenant from
+     lib/domain/site-theme.ts → inline style on the site's <body>, plus the
+     derived tints in .site below. Outside .site they resolve to nothing. */
+  --color-site-primary: var(--site-primary);
+  --color-site-primary-fg: var(--site-primary-fg);
+  --color-site-accent: var(--site-accent);
+  --color-site-accent-fg: var(--site-accent-fg);
+  --color-site-bg: var(--site-bg);
+  --color-site-fg: var(--site-fg);
+  --color-site-muted: var(--site-muted);
+  --color-site-surface: var(--site-surface);
+  --color-site-line: var(--site-line);
+  --radius-site: var(--site-radius);
+  --font-site-heading: var(--site-font-heading);
+  --font-site-body: var(--site-font-body);
+
   /* No --color-success/--color-warning here on purpose: a single shared
      green/amber can't pass WCAG AA both as solid-chip-background-with-
      white-text AND as plain text on the page/card background in both
@@ -100,8 +116,28 @@
   --ring: #818CF8;
 }
 
+/* Public tenant site (SD-209). The base colors arrive as an inline style on
+   <body> (validated hex only — see themeToCssVars); these tints derive from
+   them, so every theme gets consistent secondary text/surfaces/borders.
+   Muted text at 70% of fg keeps ≥ 4.5:1 on both light and dark presets. */
+.site {
+  --site-muted: color-mix(in srgb, var(--site-fg) 70%, var(--site-bg));
+  --site-surface: color-mix(in srgb, var(--site-fg) 4%, var(--site-bg));
+  --site-line: color-mix(in srgb, var(--site-fg) 12%, var(--site-bg));
+
+  background: var(--site-bg);
+  color: var(--site-fg);
+  font-family: var(--site-font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
 html {
   scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 body {

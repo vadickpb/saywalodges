@@ -582,6 +582,25 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Un color con contraste insuficiente muestra advertencia y el CTA sigue siendo legible.
   - [ ] El tema solo acepta valores validados (hex, presets); intentar inyectar CSS falla (test).
   - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad.
+- **Parte 1 (hecha, adelantada a pedido)**: plantilla nueva en `components/site/*` (hero editorial con barra de
+  datos, intro + amenities, galería bento con visor `<dialog>`, espacios en tarjetas, tarifas + CTA de
+  disponibilidad, ubicación, FAQ `<details>`, contacto, footer y barra CTA fija en móvil). Migración
+  `properties.theme`/`properties.content` (jsonb, sin grant de escritura todavía). Lógica en
+  `lib/domain/site-theme.ts` (5 presets, contraste WCAG, `themeToCssVars`) y `lib/domain/site-content.ts`.
+  `dictionaries/` quedó solo con etiquetas genéricas. Fotos locales con `npm run db:seed-storage`.
+  Cubre los criterios 1 y 3 y la parte de "CTA legible" del 2 (`foregroundFor`). El aviso de contraste en el
+  editor, las reseñas y Lighthouse quedan para SD-210.
+
+### [ ] SD-210 · feat(dashboard): site appearance editor
+`M` · Depende: SD-106, SD-201, SD-209 (parte 1) · Review: `R+S`
+- **Alcance**: "Sitio → Apariencia" en el dashboard: elegir preset, colores, par tipográfico y radio, con vista
+  previa en vivo y aviso de contraste (`contrastWarnings`); editar `properties.content` (textos y FAQ por idioma).
+  Server action + zod con los mismos schemas de `lib/domain`; ampliar el grant de `update` de `authenticated`
+  a `theme`/`content`. Sección de reseñas cuando haya fuente de datos.
+- **Criterios**
+  - [ ] Un color con contraste insuficiente muestra advertencia antes de guardar.
+  - [ ] Un miembro de otra org no puede editar el tema (test pgTAP).
+  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (medido en un deploy de preview).
 
 ---
 

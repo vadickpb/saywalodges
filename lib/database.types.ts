@@ -246,6 +246,7 @@ export type Database = {
           address_locality: string;
           address_region: string;
           airbnb_url: string;
+          content: NonNullable<Json>;
           created_at: string;
           custom_domain: string | null;
           email: string;
@@ -269,6 +270,7 @@ export type Database = {
           slug: string;
           star_rating: number | null;
           subdomain: string;
+          theme: NonNullable<Json>;
           whatsapp_message_en: string;
           whatsapp_message_es: string;
           whatsapp_number: string;
@@ -279,6 +281,7 @@ export type Database = {
           address_locality?: string;
           address_region?: string;
           airbnb_url?: string;
+          content?: NonNullable<Json>;
           created_at?: string;
           custom_domain?: string | null;
           email?: string;
@@ -302,6 +305,7 @@ export type Database = {
           slug: string;
           star_rating?: number | null;
           subdomain: string;
+          theme?: NonNullable<Json>;
           whatsapp_message_en?: string;
           whatsapp_message_es?: string;
           whatsapp_number: string;
@@ -311,6 +315,7 @@ export type Database = {
           address_locality?: string;
           address_region?: string;
           airbnb_url?: string;
+          content?: NonNullable<Json>;
           created_at?: string;
           custom_domain?: string | null;
           email?: string;
@@ -334,6 +339,7 @@ export type Database = {
           slug?: string;
           star_rating?: number | null;
           subdomain?: string;
+          theme?: NonNullable<Json>;
           whatsapp_message_en?: string;
           whatsapp_message_es?: string;
           whatsapp_number?: string;
