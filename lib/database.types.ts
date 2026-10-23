@@ -138,6 +138,58 @@ export type Database = {
           },
         ];
       };
+      fees: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          id: string;
+          kind: Database["public"]["Enums"]["fee_kind"];
+          name: string;
+          org_id: string;
+          property_id: string;
+          unit_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["fee_kind"];
+          name: string;
+          org_id: string;
+          property_id: string;
+          unit_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          id?: string;
+          kind?: Database["public"]["Enums"]["fee_kind"];
+          name?: string;
+          org_id?: string;
+          property_id?: string;
+          unit_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fees_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "fees_unit_scope_fkey";
+            columns: ["unit_id", "property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "property_id", "org_id"];
+          },
+        ];
+      };
       memberships: {
         Row: {
           created_at: string;
@@ -248,6 +300,7 @@ export type Database = {
           airbnb_url: string;
           content: NonNullable<Json>;
           created_at: string;
+          currency: Database["public"]["Enums"]["currency_code"];
           custom_domain: string | null;
           email: string;
           id: string;
@@ -283,6 +336,7 @@ export type Database = {
           airbnb_url?: string;
           content?: NonNullable<Json>;
           created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
           custom_domain?: string | null;
           email?: string;
           id?: string;
@@ -317,6 +371,7 @@ export type Database = {
           airbnb_url?: string;
           content?: NonNullable<Json>;
           created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
           custom_domain?: string | null;
           email?: string;
           id?: string;
@@ -415,6 +470,58 @@ export type Database = {
           },
         ];
       };
+      seasons: {
+        Row: {
+          created_at: string;
+          end_date: string;
+          id: string;
+          name: string;
+          org_id: string;
+          priority: number;
+          property_id: string;
+          start_date: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          end_date: string;
+          id?: string;
+          name: string;
+          org_id: string;
+          priority?: number;
+          property_id: string;
+          start_date: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          end_date?: string;
+          id?: string;
+          name?: string;
+          org_id?: string;
+          priority?: number;
+          property_id?: string;
+          start_date?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "seasons_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "seasons_property_org_fkey";
+            columns: ["property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
       spaces: {
         Row: {
           badge_en: string | null;
@@ -479,6 +586,71 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "properties";
             referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      unit_rates: {
+        Row: {
+          created_at: string;
+          extra_guest_cents: number;
+          id: string;
+          min_nights: number;
+          nightly_cents: number;
+          org_id: string;
+          property_id: string;
+          season_id: string | null;
+          unit_id: string;
+          updated_at: string;
+          weekend_nightly_cents: number | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          extra_guest_cents?: number;
+          id?: string;
+          min_nights?: number;
+          nightly_cents: number;
+          org_id: string;
+          property_id: string;
+          season_id?: string | null;
+          unit_id: string;
+          updated_at?: string;
+          weekend_nightly_cents?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          extra_guest_cents?: number;
+          id?: string;
+          min_nights?: number;
+          nightly_cents?: number;
+          org_id?: string;
+          property_id?: string;
+          season_id?: string | null;
+          unit_id?: string;
+          updated_at?: string;
+          weekend_nightly_cents?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "unit_rates_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "unit_rates_season_scope_fkey";
+            columns: ["season_id", "property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "seasons";
+            referencedColumns: ["id", "property_id", "org_id"];
+          },
+          {
+            foreignKeyName: "unit_rates_unit_scope_fkey";
+            columns: ["unit_id", "property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "property_id", "org_id"];
           },
         ];
       };
@@ -564,6 +736,8 @@ export type Database = {
       };
     };
     Enums: {
+      currency_code: "PEN" | "USD";
+      fee_kind: "per_stay" | "per_night" | "per_guest";
       membership_role: "owner" | "staff";
       photo_role: "hero" | "gallery" | "room";
       space_category: "pool" | "rooms" | "common" | "outdoor";
@@ -698,6 +872,8 @@ export const Constants = {
   },
   public: {
     Enums: {
+      currency_code: ["PEN", "USD"],
+      fee_kind: ["per_stay", "per_night", "per_guest"],
       membership_role: ["owner", "staff"],
       photo_role: ["hero", "gallery", "room"],
       space_category: ["pool", "rooms", "common", "outdoor"],

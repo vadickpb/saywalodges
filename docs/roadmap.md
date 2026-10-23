@@ -709,14 +709,35 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     del proyecto; crear las unidades reales desde el dashboard después del deploy (el seed es solo local).
     Publicación del PR y despliegue pendientes; el marcado del ticket refleja implementación y verificación local.
 
-### [ ] SD-205 · feat(db): seasons, unit rates and fees
+### [x] SD-205 · feat(db): seasons, unit rates and fees
 `M` · Depende: SD-204 · Review: `R+S`
 - **Alcance**: `seasons` (rango de fechas, prioridad), `unit_rates` (base o por temporada: `nightly_cents`,
   `weekend_nightly_cents`, `extra_guest_cents`, `min_nights`), `fees` (`per_stay|per_night|per_guest`),
   `currency` en `properties`; `check` constraints (montos ≥ 0, `end_date > start_date`).
 - **Criterios**
-  - [ ] Constraints rechazan datos inválidos (pgTAP).
-  - [ ] Seed con tarifas reales de Saywa (temporada baja/alta/feriados).
+  - [x] Constraints rechazan datos inválidos (pgTAP).
+  - [x] Seed con tarifas de Saywa: referencias existentes USD 220/300 para base/alta y USD 500 por noche
+        de feriado confirmado por el propietario. Incluye los 16 feriados nacionales del calendario 2027,
+        prioridad 20 sobre 10 de temporada alta; sin puentes ni regionales. Cada fecha cubre su noche `[fecha, fecha+1)`.
+        El año del seed, mínimo de 1 noche y extra de 0 siguen siendo ejemplos locales.
+
+- **Avance de implementación**:
+  - Migración aditiva `20261023030950_seasons_unit_rates_and_fees.sql`: moneda PEN/USD por propiedad,
+    temporadas con fechas finitas `[inicio, fin)` y prioridades, tarifas base/temporada por unidad y cargos
+    por estancia/noche/huésped. Sin tarifas nuevas en producción; no reemplaza todavía `rate_tiers`.
+  - Importes enteros no negativos en céntimos; fin de semana nullable (usar tarifa normal), mínimo de noches
+    positivo. Una base por unidad y una tarifa por unidad/temporada. Solapes entre temporadas de distinta
+    prioridad permitidos, empates solapados rechazados. Detalles y cascadas en ADR 0005.
+  - RLS por operación y grants por columna; FKs compuestas mantienen org/propiedad/unidad/temporada.
+    Índices de exclusión/unicidad incluyen org_id para impedir inferencias de datos privados mediante
+    errores distintos antes de validar FKs (hallazgo de revisión corregido y cubierto por regresiones).
+  - Tipos regenerados desde Supabase local en `lib/database.types.ts`. Seed de dos organizaciones;
+    feriado y cargo de demo expresamente ficticios; Saywa usa el precio de feriado confirmado por el propietario.
+  - Verificación: reconstrucción local, 208 asserts pgTAP (100 nuevos), 113 pruebas unitarias, lint,
+    typecheck y build en verde. `reviewer` aprobado; `security-reviewer` sin hallazgos tras correcciones.
+  - No añade UI ni cotizador: motor en SD-206, editor en SD-207. Sin cambios en BD remota o `.env.local`.
+    Precio de feriados confirmado por el usuario al completar el seed. PR y despliegue pendientes;
+    el marcado refleja implementación y verificación local. Referencias de calendario en ADR 0005.
 
 ### [ ] SD-206 · feat(domain): pricing engine
 `M` · Depende: — (tipos de SD-205) · Review: `R`
