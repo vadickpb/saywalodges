@@ -41,6 +41,10 @@ modelo numérico aislado por organización para el motor de SD-206 y el editor d
 - La migración no crea tarifas en producción. El seed local usa las referencias antiguas USD 220/300
   para Saywa; el año 2027 es un ejemplo explícito. Importes de fin de semana/extra y mínimo de noches
   son valores de ejemplo hasta confirmar reglas comerciales. El feriado y el cargo del tenant demo
-  son ficticios. Falta confirmar fechas y precio de feriados de Saywa para cumplir el seed real completo.
+  son ficticios. El propietario confirmó USD 500 por noche de feriado: el seed incluye los 16 feriados
+  nacionales de 2027 con prioridad 20, frente a 10 de la temporada alta. Fechas contrastadas con
+  [Time and Date](https://www.timeanddate.com/holidays/peru/2027) y la lista nacional de
+  [gob.pe](https://www.gob.pe/feriados); los días puente y feriados regionales no se incluyen.
+  Cada fecha cubre la noche que comienza en ella; no se amplía automáticamente a fines de semana.
 - No se importan usuarios de desarrollo ni seed en la base remota. La migración se aplica por el
   procedimiento de despliegue del proyecto antes de código que dependa del nuevo esquema.

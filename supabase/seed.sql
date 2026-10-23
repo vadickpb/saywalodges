@@ -330,7 +330,8 @@ VALUES
 -- Migration backfills existing production rows; a fresh local reset inserts
 -- the properties afterwards, so seed the known currency explicitly too.
 UPDATE public.properties SET currency = 'USD' WHERE slug = 'saywa-lodges';
--- Holiday dates/prices are still "on request": do not invent a Saywa rate.
+-- Saywa owner confirmed USD 500 per holiday night; national dates for 2027
+-- are listed below. Regional holidays and discretionary bridge days are excluded.
 -- The demo holiday and fee below are synthetic examples, not Saywa prices.
 INSERT INTO public.seasons (id, org_id, property_id, name, start_date, end_date, priority)
 VALUES
@@ -346,3 +347,39 @@ VALUES
 
 INSERT INTO public.fees (id, org_id, property_id, unit_id, name, kind, amount_cents)
 VALUES ('ee205003-0000-4000-8000-000000000001', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'ee204001-0000-4000-8000-000000000002', 'Limpieza demo (ejemplo ficticio)', 'per_stay', 5000);
+
+-- Saywa national holidays, 2027 local seed. Owner-confirmed USD 500/night
+-- (50000 cents). Every row covers the night starting on that holiday date;
+-- consecutive holidays stay separate adjacent [date, date+1) ranges.
+-- Calendar checked 2026-10-22 against:
+-- https://www.timeanddate.com/holidays/peru/2027 (National Holiday entries only)
+-- https://www.gob.pe/feriados (national calendar; excludes regional/bridge days)
+WITH holidays(day, label) AS (VALUES
+  (date '2027-01-01', 'Año Nuevo'),
+  (date '2027-03-25', 'Jueves Santo'),
+  (date '2027-03-26', 'Viernes Santo'),
+  (date '2027-05-01', 'Día del Trabajo'),
+  (date '2027-06-07', 'Batalla de Arica y Día de la Bandera'),
+  (date '2027-06-29', 'San Pedro y San Pablo'),
+  (date '2027-07-23', 'Día de la Fuerza Aérea del Perú'),
+  (date '2027-07-28', 'Fiestas Patrias — 28 de julio'),
+  (date '2027-07-29', 'Fiestas Patrias — 29 de julio'),
+  (date '2027-08-06', 'Batalla de Junín'),
+  (date '2027-08-30', 'Santa Rosa de Lima'),
+  (date '2027-10-08', 'Combate de Angamos'),
+  (date '2027-11-01', 'Todos los Santos'),
+  (date '2027-12-08', 'Inmaculada Concepción'),
+  (date '2027-12-09', 'Batalla de Ayacucho'),
+  (date '2027-12-25', 'Navidad')
+), inserted AS (
+  INSERT INTO public.seasons (id, org_id, property_id, name, start_date, end_date, priority)
+  SELECT ('ee205010-0000-4000-8000-' || to_char(day, 'YYYYMMDD') || '0000')::uuid,
+    'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654',
+    'Feriado nacional 2027: ' || label, day, day + 1, 20
+  FROM holidays
+  RETURNING id, org_id, property_id, start_date
+)
+INSERT INTO public.unit_rates (id, org_id, property_id, unit_id, season_id, nightly_cents, weekend_nightly_cents, extra_guest_cents, min_nights)
+SELECT ('ee205011-0000-4000-8000-' || to_char(start_date, 'YYYYMMDD') || '0000')::uuid,
+  org_id, property_id, 'ee204001-0000-4000-8000-000000000001', id, 50000, NULL, 0, 1
+FROM inserted;

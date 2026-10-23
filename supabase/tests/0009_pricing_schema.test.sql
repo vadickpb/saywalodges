@@ -1,6 +1,6 @@
 -- SD-205: pricing constraints, per-column privileges and tenant isolation.
 begin;
-select plan(96);
+select plan(100);
 
 select ok((select relrowsecurity from pg_class where oid='public.seasons'::regclass), 'seasons has RLS');
 
@@ -9,6 +9,12 @@ select ok((select relrowsecurity from pg_class where oid='public.unit_rates'::re
 select ok((select relrowsecurity from pg_class where oid='public.fees'::regclass), 'fees has RLS');
 
 select is((select currency::text from public.properties where id='131583b5-785e-4127-81f0-e097163c5654'), 'USD'::text, 'Existing Saywa is denominated in USD');
+
+select is((select count(*)::int from public.seasons where org_id='bf88f504-051f-4fdc-ab73-4fa12d715817' and name like 'Feriado nacional 2027:%'), 16, 'All sixteen 2027 national holidays seeded for Saywa');
+select is((select count(*)::int from public.unit_rates r join public.seasons s on s.id=r.season_id where s.name like 'Feriado nacional 2027:%' and r.unit_id='ee204001-0000-4000-8000-000000000001' and r.nightly_cents=50000 and r.weekend_nightly_cents is null), 16, 'Every Saywa holiday costs owner-confirmed USD 500 per night');
+select is((select count(*)::int from public.seasons where name like 'Feriado nacional 2027:%' and end_date=start_date+1 and priority>10), 16, 'Holiday nights have half-open one-night ranges and outrank high season');
+select results_eq($$select start_date from public.seasons where name like 'Feriado nacional 2027:%' and start_date between '2027-03-01' and '2027-03-31' order by start_date$$, $$values (date '2027-03-25'), (date '2027-03-26')$$, 'Movable Holy Week holidays use verified 2027 dates');
+
 
 select is((select currency::text from public.properties where id='57f914ac-3890-47c1-9d6d-1492782cf712'), 'PEN'::text, 'Other properties default to PEN');
 
@@ -100,7 +106,7 @@ select throws_ok($$insert into public.seasons (org_id,property_id,name,start_dat
 
 select lives_ok($$insert into public.seasons (org_id,property_id,name,start_date,end_date,priority) values ('bf88f504-051f-4fdc-ab73-4fa12d715817','131583b5-785e-4127-81f0-e097163c5654','Adjacent','2027-10-01','2027-11-01',10)$$, 'Checkout/start boundary does not overlap');
 
-select lives_ok($$insert into public.seasons (org_id,property_id,name,start_date,end_date,priority) values ('bf88f504-051f-4fdc-ab73-4fa12d715817','131583b5-785e-4127-81f0-e097163c5654','Holiday override','2027-07-28','2027-07-30',20)$$, 'Higher-priority holidays may overlap a season');
+select lives_ok($$insert into public.seasons (org_id,property_id,name,start_date,end_date,priority) values ('bf88f504-051f-4fdc-ab73-4fa12d715817','131583b5-785e-4127-81f0-e097163c5654','Holiday override','2027-07-28','2027-07-30',30)$$, 'Higher-priority holidays may overlap a season');
 
 select throws_ok($$update public.unit_rates set nightly_cents=-1 where id='ee205002-0000-4000-8000-000000000001'$$, '23514', null, 'Invalid nightly_cents=-1 rejected');
 
