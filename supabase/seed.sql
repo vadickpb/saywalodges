@@ -323,3 +323,26 @@ INSERT INTO public.units (id, org_id, property_id, name, kind, max_guests, inclu
 VALUES
   ('ee204001-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Saywa Lodges — Casa completa', 'entire_place', 13, 13, true),
   ('ee204001-0000-4000-8000-000000000002', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'Demo — Habitación', 'room', 4, 2, true);
+
+-- SD-205: local examples, never a production price import. Saywa's old
+-- published tiers say USD 220 low / USD 300 high (June–September). The year
+-- 2027 is an explicit local fixture, not a confirmed future operating season.
+-- Migration backfills existing production rows; a fresh local reset inserts
+-- the properties afterwards, so seed the known currency explicitly too.
+UPDATE public.properties SET currency = 'USD' WHERE slug = 'saywa-lodges';
+-- Holiday dates/prices are still "on request": do not invent a Saywa rate.
+-- The demo holiday and fee below are synthetic examples, not Saywa prices.
+INSERT INTO public.seasons (id, org_id, property_id, name, start_date, end_date, priority)
+VALUES
+  ('ee205001-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Temporada alta (ejemplo local 2027)', '2027-06-01', '2027-10-01', 10),
+  ('ee205001-0000-4000-8000-000000000002', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'Feriado demo (ejemplo ficticio)', '2027-07-28', '2027-07-30', 20);
+
+INSERT INTO public.unit_rates (id, org_id, property_id, unit_id, season_id, nightly_cents, weekend_nightly_cents, extra_guest_cents, min_nights)
+VALUES
+  ('ee205002-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'ee204001-0000-4000-8000-000000000001', NULL, 22000, NULL, 0, 1),
+  ('ee205002-0000-4000-8000-000000000002', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'ee204001-0000-4000-8000-000000000001', 'ee205001-0000-4000-8000-000000000001', 30000, NULL, 0, 1),
+  ('ee205002-0000-4000-8000-000000000003', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'ee204001-0000-4000-8000-000000000002', NULL, 10000, 12000, 2500, 1),
+  ('ee205002-0000-4000-8000-000000000004', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'ee204001-0000-4000-8000-000000000002', 'ee205001-0000-4000-8000-000000000002', 15000, NULL, 2500, 2);
+
+INSERT INTO public.fees (id, org_id, property_id, unit_id, name, kind, amount_cents)
+VALUES ('ee205003-0000-4000-8000-000000000001', 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712', 'ee204001-0000-4000-8000-000000000002', 'Limpieza demo (ejemplo ficticio)', 'per_stay', 5000);
