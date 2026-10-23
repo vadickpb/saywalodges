@@ -678,13 +678,36 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - Despliegue: el usuario retira las dos credenciales antiguas de Vercel después de desplegar este PR.
     Push y apertura del PR pendientes de confirmación; el cierre documental no implica merge ni despliegue.
 
-### [ ] SD-204 · feat: bookable units
+### [x] SD-204 · feat: bookable units
 `M` · Depende: SD-106 · Review: `R+S`
 - **Alcance**: tabla `units` (kind `entire_place|room`, `max_guests`, `included_guests`, `active`); CRUD en dashboard;
   seed de Saywa (casa entera y/o habitaciones).
 - **Criterios**
-  - [ ] Una propiedad puede tener 1..n unidades; desactivar una la oculta del cotizador.
-  - [ ] pgTAP de aislamiento.
+  - [x] Una propiedad admite múltiples unidades; desactivar una la excluye del inventario público activo.
+        `lib/dal/public/units.ts#getActiveUnits` prepara la consulta para el futuro cotizador (SD-402/404);
+        aún no hay cotizador en el que comprobar visualmente el selector.
+  - [x] pgTAP de aislamiento, permisos y constraints: `0008_units.test.sql` (29 asserts).
+- **Nota de cierre**:
+  - Tabla `units` separada de los espacios de la galería: nombre, tipo, capacidades, estado y timestamps.
+    FK compuesta `(property_id, org_id)`, RLS por operación y permisos por columna impiden cambiar
+    identidad/organización/propiedad/timestamps por REST. Anon solo lee unidades activas de propiedades publicadas;
+    los miembros administran también las inactivas y las de su propia propiedad no publicada.
+  - Dashboard `Sitio → Unidades` (`/app/site/units`): listado, alta, edición, activar/desactivar y borrado confirmado.
+    Server actions con sesión y membresía, zod, DAL con filtros por org y comprobación de filas afectadas.
+    `ContentForm` admite ahora campos numéricos, reutilizando el patrón de errores y valores preservados.
+  - Seed local: Saywa como casa completa para 13 huéspedes (13 incluidos como ejemplo hasta SD-205/207)
+    y demo como habitación para 4 (2 incluidos). No se crean unidades ni se fijan precios en producción.
+  - Migración nueva `20261022230307_bookable_units.sql`, reconstrucción local y tipos regenerados en
+    `lib/database.types.ts` (ubicación vigente del repo). Reversión destructiva documentada en la migración.
+  - `lint`, `typecheck`, 113 tests y `build` en verde; `supabase db reset --local` y 108 asserts pgTAP en verde.
+    Prueba HTTP real con owner local: listado propio, formularios, creación, rechazo de capacidad inválida,
+    edición, activación/desactivación y eliminación; unidad inactiva fuera de inventario público; acceso a
+    unidad ajena o ID inválido → 404; página y acción sin sesión → login. Se retiraron los datos temporales.
+  - `reviewer`: aprobado; `security-reviewer`: sin hallazgos. La interacción visual y el ancho móvil no se
+    verificaron: Computer Use quedó pendiente de permisos del sistema; HTTP no sustituye esa verificación.
+  - Sin cambios en BD remota ni `.env.local`. Para desplegar: aplicar primero la migración por el procedimiento
+    del proyecto; crear las unidades reales desde el dashboard después del deploy (el seed es solo local).
+    Publicación del PR y despliegue pendientes; el marcado del ticket refleja implementación y verificación local.
 
 ### [ ] SD-205 · feat(db): seasons, unit rates and fees
 `M` · Depende: SD-204 · Review: `R+S`
