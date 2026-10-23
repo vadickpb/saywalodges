@@ -12,6 +12,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:pricing": "vitest run lib/domain/pricing.test.ts --coverage",
     "db:seed-storage": "node scripts/seed-local-storage.mjs"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "@types/node": "^24.19.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "5.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",

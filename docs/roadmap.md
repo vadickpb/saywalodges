@@ -739,15 +739,34 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     Precio de feriados confirmado por el usuario al completar el seed. PR y despliegue pendientes;
     el marcado refleja implementación y verificación local. Referencias de calendario en ADR 0005.
 
-### [ ] SD-206 · feat(domain): pricing engine
+### [x] SD-206 · feat(domain): pricing engine
 `M` · Depende: — (tipos de SD-205) · Review: `R`
 - **Alcance**: `lib/domain/pricing.ts` puro: `quoteStay({ rates, seasons, fees, checkIn, checkOut, guests })` →
   desglose por noche, fees, total, adelanto (`deposit_percent`), errores tipados (mínimo de noches, capacidad).
   Temporada de mayor prioridad gana; fin de semana = noches de viernes y sábado.
 - **Criterios**
-  - [ ] Cobertura ≥ 90 %.
-  - [ ] Casos: cruce de temporadas, feriado dentro de temporada, huéspedes extra, mínimo de noches por temporada
+  - [x] Cobertura ≥ 90 %: motor al 100 % en líneas, sentencias, funciones y ramas.
+  - [x] Casos: cruce de temporadas, feriado dentro de temporada, huéspedes extra, mínimo de noches por temporada
         de la noche de llegada, redondeo del adelanto en céntimos.
+
+- **Nota de cierre**:
+  - `lib/domain/pricing.ts#quoteStay` puro, sin I/O: DTOs y resultado discriminado con errores tipados,
+    validación zod, desglose por noche/cargo, total, adelanto y saldo. Fechas civiles `[entrada, salida)`
+    de Lima representadas en UTC para aritmética, sin depender de la zona del equipo ni del día actual.
+  - Temporada ganadora por prioridad; si falta su tarifa devuelve error sin sustituir por una inferior.
+    Viernes/sábado usan el precio de fin de semana; null hereda el normal y cero es válido. Mínimo de
+    noches según llegada; huéspedes extra por noche y cargos por estancia/noche/huésped (una vez por estancia).
+  - Aritmética monetaria con BigInt y límites de enteros seguros; redondeo del adelanto al céntimo, mitad
+    hacia arriba. `depositPercent` requerido en cada llamada, sin valor comercial fijado para Saywa ni
+    persistencia nueva. Límite técnico explícito de 366 noches por llamada. Decisiones en ADR 0006.
+  - 65 tests nuevos de precios, 178 totales; lint, typecheck y build en verde. Cobertura V8 del motor:
+    94/94 sentencias, 71/71 ramas, 6/6 funciones y 75/75 líneas (100 %). CI ejecuta la suite con cobertura
+    y exige 90 % en esas métricas. Dependencia de desarrollo `@vitest/coverage-v8` alineada con Vitest 5.0.3,
+    justificada por el criterio de cobertura; informes excluidos de ESLint/Git.
+  - `reviewer` aprobado, sin hallazgos.
+  - Sin UI, migraciones, cambios de BD ni `.env.local`. La futura acción/route cargará precios y política
+    de adelanto del servidor y recalculará; el motor no autoriza ni verifica disponibilidad.
+    Publicación y despliegue pendientes; siguiente pantalla y simulador en SD-207.
 
 ### [ ] SD-207 · feat(dashboard): rates and seasons management
 `M` · Depende: SD-205, SD-206 · Review: `R`
@@ -1038,3 +1057,12 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Cambiar la paleta en los tokens recolorea la landing sin tocar componentes.
   - [ ] Lighthouse móvil ≥ 90 en rendimiento, accesibilidad y SEO.
   - [ ] El CTA abre WhatsApp con mensaje prellenado y el clic queda registrado.
+
+
+## Propuesta de ticket fuera del alcance actual
+
+- **Mantenimiento de dependencias y revisión de avisos de seguridad**: `npm audit` durante SD-206
+  reportó 9 paquetes con avisos (incluido Next.js 16.2.6 con severidad crítica). Las versiones afectadas
+  coinciden con `main`; el complemento de cobertura no introduce esos avisos. Evaluar exposición real,
+  actualizar dependencias y verificar rutas/host/auth en un ticket propio, antes de ampliar la publicación.
+  Informe consultado el 2026-10-23; no se ejecutó `npm audit fix` ni actualizaciones generales en SD-206.

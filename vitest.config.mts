@@ -6,6 +6,12 @@ import path from "node:path";
 export default defineConfig({
   test: {
     environment: "node",
+    coverage: {
+      provider: "v8",
+      include: ["lib/domain/pricing.ts"],
+      reporter: ["text", "json-summary", "html"],
+      thresholds: { lines: 90, statements: 90, functions: 90, branches: 90 },
+    },
     include: ["lib/**/*.test.ts"],
     // Dummy defaults so modules that import lib/env.ts (which validates
     // eagerly at import time) don't crash in test files that never touch
