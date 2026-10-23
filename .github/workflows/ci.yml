@@ -33,7 +33,7 @@ jobs:
 
       - run: npm run typecheck
 
-      - run: npm run test
+      - run: npm run test -- --coverage
 
       # The build never connects to Supabase (every route that reads
       # property content is server-rendered on demand, not statically
