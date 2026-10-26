@@ -33,6 +33,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 | **M4 · Primera reserva directa** 🎯 | Fase 4 | Link de reserva + pago por voucher en producción para Saywa |
 | **M5 · Pago en línea** | Fase 5 | Mercado Pago por tenant |
 | **M6 · Listo para clientes** | Fase 6–7 | CRM, check-in, dominios propios, hardening, portafolio |
+| **M8 · Finanzas** | Fase 8 (SD-801–805) | Ingresos, egresos, reportes estilo Airbnb y Excel para el contador |
 
 ---
 
@@ -1084,10 +1085,114 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Lighthouse móvil ≥ 90 en rendimiento, accesibilidad y SEO.
   - [ ] El CTA abre WhatsApp con mensaje prellenado y el clic queda registrado.
 
+### [ ] SD-705 · chore(deps): security update of dependencies
+`S` · Depende: — · Review: `R+S` · **Prioridad: antes de la Fase 8**
+- **Alcance**: `npm audit` (SD-206, 2026-10-23) reportó 9 paquetes con avisos, incluido Next.js 16.2.6 con
+  severidad crítica. Evaluar exposición real, actualizar a versiones corregidas (leer las notas de migración en
+  `node_modules/next/dist/docs/`), sin `npm audit fix --force` a ciegas.
+- **Criterios**
+  - [ ] `npm audit` sin avisos altos/críticos o cada aviso restante justificado en el PR.
+  - [ ] Enrutamiento por host/idioma, login y dashboard verificados contra el servidor local tras actualizar.
+
+## Fase 8 — Finanzas (M8)
+
+Libro de ingresos y egresos por propiedad y casa (unidad), reportes de rendimiento estilo Airbnb y Excel para
+el contador. Empieza con registro manual; la carga automática desde reservas y calendario llega en SD-807.
+Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR 0007.
+**Orden acordado (2026-10-25)**: SD-705 → SD-801…806 antes de retomar las Fases 3–4; SD-807 espera a SD-305 y SD-401.
+
+### [ ] SD-801 · feat(db): finance ledger
+`M` · Depende: SD-204, SD-705 · Review: `R+S`
+- **Alcance**:
+  - `finance_categories` por organización (`kind` `income|expense`, nombre, orden, archivada) con categorías
+    por defecto sembradas en orgs existentes y nuevas. Ingresos: Alquiler, Servicios extra, Otros. Egresos:
+    Limpieza, Mantenimiento, Agua, Luz, Internet, Gas, Insumos, Lavandería, Comisiones de plataforma,
+    Impuestos y arbitrios, Personal, Otros.
+  - `finance_entries`: `occurred_on` (fecha de cobro/pago), `amount_cents` > 0, `currency`, `fx_rate_pen`
+    obligatorio si la moneda no es PEN, `amount_pen_cents` generado, `unit_id` nullable (null = gasto general),
+    categoría con FK compuesta que fija `kind`, `payment_method`, contraparte, nota. Para alquileres:
+    `stay_start`/`stay_end` (`[)`), `channel` (`direct|airbnb|booking|other`), huéspedes.
+    `related_entry_id` para ligar limpieza/mantenimiento/comisión a su alquiler. `receipt_path`,
+    `created_by`, `source` (`manual|booking|ical`) y `external_ref` único por org para cargas idempotentes.
+  - `units.cleaning_cost_cents` opcional (costo de limpieza sugerido por casa).
+  - RLS: owner lee y edita todo; staff inserta y solo lee/edita lo que creó (`created_by = auth.uid()`).
+    Helper `private.is_owner(org_id)`.
+  - Bucket **privado** `finance-receipts` (`{org_id}/...`, JPEG/PNG/WebP/PDF, 5 MB): insertar miembros de la
+    org; leer el owner o quien lo subió; sin lectura pública.
+- **Criterios**
+  - [ ] pgTAP: staff no ve entradas ni comprobantes de otros; otra org no ve nada; USD sin tipo de cambio falla;
+        categoría de otra org o de `kind` distinto falla; `external_ref` duplicado falla.
+  - [ ] ADR 0007 aceptado.
+
+### [ ] SD-802 · feat(domain): finance calculations
+`S` · Depende: SD-801 · Review: `R`
+- **Alcance**: `lib/domain/finance.ts` puro: conversión a PEN con redondeo exacto (BigInt, como `pricing.ts`),
+  totales por mes/categoría/casa, utilidad por alquiler (ingreso − comisión − costos ligados). Reutiliza el
+  convertidor decimal→céntimos de SD-207.
+- **Criterios**
+  - [ ] Cobertura ≥ 90 % en las cuatro métricas.
+
+### [ ] SD-803 · feat(dashboard): income and expense register
+`L` · Depende: SD-801, SD-802 · Review: `R+S`
+- **Alcance**: `/app/finance` (nav "Finanzas"). Botones "+ Ingreso" / "+ Egreso"; formulario corto con fecha de
+  hoy, categoría en chips, casa o "General", foto con la cámara (`capture`). Alquiler: casa, fechas, canal,
+  huésped, **monto bruto y comisión de plataforma** (crea el egreso de comisión ligado) y casilla "Agregar
+  limpieza" con el costo de la casa. Tipo de cambio prellenado con el último usado. Lista con filtros
+  (mes, tipo, categoría, casa) y tarjetas en móvil; cada alquiler muestra sus costos y utilidad. KPIs del mes.
+  Staff ve solo "Registrar" y sus propios movimientos. Comprobantes por enlace firmado de corta duración.
+- **Criterios**
+  - [ ] Staff no ve totales ni movimientos ajenos (verificado con sesión real, no solo política).
+  - [ ] Registrar un alquiler con limpieza y comisión crea tres movimientos ligados en una sola operación (RPC).
+  - [ ] Comprobante no aceptado por contenido (p. ej. SVG/HTML con extensión de imagen) se rechaza (test).
+
+### [ ] SD-804 · feat(finance): performance reports
+`L` · Depende: SD-802, SD-803 · Review: `R`
+- **Alcance**: `lib/domain/finance-reports.ts` puro + `/app/finance/reports` (solo owner). Selector de base
+  **por estadía** (prorrateo por noche, para rendimiento) o **por cobro** (caja, para el contador).
+  - Mensual: bruto, comisiones y neto por canal; egresos por categoría (top 5); utilidad y margen; por casa:
+    noches reservadas/disponibles, ocupación %, ADR, RevPAR, estadía promedio, nº de alquileres; comparación
+    con el mes anterior y el mismo mes del año pasado; utilidad por alquiler.
+  - Anual: 12 meses (ingresos, egresos, utilidad, ocupación, ADR, noches), acumulado del año, año contra año,
+    mejor/peor mes y estacionalidad. Gráficos en SVG propio (sin dependencia).
+  - Global: ranking de casas, mezcla de canales y ahorro en comisiones de las reservas directas, costo promedio
+    de limpieza/mantenimiento por alquiler.
+  - Estado de resultados mensual/anual imprimible (CSS de impresión → PDF del navegador) con logo y período.
+  - Noches disponibles = días con la casa activa; nota visible hasta que SD-807 descuente bloqueos del dueño.
+- **Criterios**
+  - [ ] Un alquiler que cruza meses reparte noches e ingreso por noche en "por estadía" y cae entero en la fecha
+        de cobro en "por cobro" (tests).
+  - [ ] Cobertura ≥ 90 % de `finance-reports.ts`; cifras del panel iguales a las del motor para el mismo período.
+
+### [ ] SD-805 · feat(finance): accountant Excel export
+`M` · Depende: SD-803, SD-804 · Review: `R+S`
+- **Alcance**: route handler solo owner que genera `.xlsx` en el servidor con `exceljs` (dependencia nueva:
+  fechas y números reales, sin binarios nativos). Rango: mes, año o personalizado. Hojas: Resumen (mes ×
+  ingresos/egresos/neto en PEN, por categoría y casa), Ingresos, Egresos (moneda, monto, TC, PEN, medio,
+  alquiler relacionado, comprobante sí/no), Rendimiento (mes × casa) y Por alquiler. Encabezado congelado,
+  autofiltro, `#,##0.00`, fila de totales con `SUM`.
+- **Criterios**
+  - [ ] Test que relee el archivo generado: tipos de celda (fecha/número), totales y hojas esperadas.
+  - [ ] Staff y otra org reciben 404/redirect, no un archivo.
+
+### [ ] SD-806 · feat(finance): recurring expenses
+`S` · Depende: SD-803 · Review: `R`
+- **Alcance**: plantillas mensuales (agua, luz, internet…) con día y monto estimado; cada mes aparecen como
+  "pendientes" y se confirman con el monto real en un clic. Sin cron.
+- **Criterios**
+  - [ ] Confirmar dos veces el mismo pendiente no duplica el egreso.
+
+### [ ] SD-807 · feat(finance): automatic income from bookings and calendar
+`M` · Depende: SD-305, SD-401, SD-803 · Review: `R+S`
+- **Alcance**: reservas directas: al confirmar el pago se crea el ingreso (`source = booking`, `external_ref`
+  = pago, idempotente). Airbnb/Booking: iCal solo trae fechas, así que cada estadía importada sin ingreso
+  aparece en "Alquileres por completar" con limpieza sugerida. Ocupación de SD-804 descuenta bloqueos del dueño.
+- **Criterios**
+  - [ ] Reprocesar el mismo pago o el mismo evento iCal no duplica movimientos.
+
 
 ## Propuesta de ticket fuera del alcance actual
 
-- **Mantenimiento de dependencias y revisión de avisos de seguridad**: `npm audit` durante SD-206
+- **Mantenimiento de dependencias y revisión de avisos de seguridad** (convertido en SD-705): `npm audit` durante SD-206
   reportó 9 paquetes con avisos (incluido Next.js 16.2.6 con severidad crítica). Las versiones afectadas
   coinciden con `main`; el complemento de cobertura no introduce esos avisos. Evaluar exposición real,
   actualizar dependencias y verificar rutas/host/auth en un ticket propio, antes de ampliar la publicación.
