@@ -37,6 +37,7 @@ anota lo que encuentres fuera de alcance como propuesta de ticket nuevo.
 
 ## 7. Cerrar
 - Commits en Conventional Commits, con el id del ticket en el cuerpo (`Refs: SD-041`).
-- Pide confirmación antes de `git push` y de abrir el PR.
+- Push, PR y squash merge los hace el agente sin pedir confirmación, solo si se cumplen las condiciones de
+  "Autonomía de PR y merge" en `AGENTS.md`.
 - PR con `.github/pull_request_template.md` completo. Squash merge con CI en verde.
 - Marca el ticket como hecho en `docs/roadmap.md`.
