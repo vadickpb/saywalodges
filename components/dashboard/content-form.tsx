@@ -19,7 +19,7 @@ type FormState = {
 export type ContentField = {
   name: string;
   label: string;
-  kind?: "text" | "textarea" | "select" | "number";
+  kind?: "text" | "textarea" | "select" | "number" | "date";
   min?: number;
   max?: number;
   step?: number;
@@ -102,7 +102,7 @@ export function ContentForm({ fields, initial, action, id, submitLabel, resetOnS
                   ))}
                 </select>
               ) : (
-                <Input key={inputKey} {...common} type={field.kind === "number" ? "number" : "text"} min={field.min} max={field.max} step={field.step} />
+                <Input key={inputKey} {...common} type={field.kind === "number" || field.kind === "date" ? field.kind : "text"} min={field.min} max={field.max} step={field.step} />
               )}
               {fieldErrors && (
                 <p id={`${fieldId}-error`} role="alert" className="text-sm text-destructive">

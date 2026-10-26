@@ -8,9 +8,9 @@ export default defineConfig({
     environment: "node",
     coverage: {
       provider: "v8",
-      include: ["lib/domain/pricing.ts"],
+      include: ["lib/domain/pricing.ts", "lib/domain/rates-management.ts"],
       reporter: ["text", "json-summary", "html"],
-      thresholds: { lines: 90, statements: 90, functions: 90, branches: 90 },
+      thresholds: { perFile: true, lines: 90, statements: 90, functions: 90, branches: 90 },
     },
     include: ["lib/**/*.test.ts"],
     // Dummy defaults so modules that import lib/env.ts (which validates

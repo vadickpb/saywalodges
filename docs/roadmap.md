@@ -768,11 +768,37 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     de adelanto del servidor y recalculará; el motor no autoriza ni verifica disponibilidad.
     Publicación y despliegue pendientes; siguiente pantalla y simulador en SD-207.
 
-### [ ] SD-207 · feat(dashboard): rates and seasons management
+### [x] SD-207 · feat(dashboard): rates and seasons management
 `M` · Depende: SD-205, SD-206 · Review: `R`
 - **Alcance**: UI de temporadas y tarifas por unidad; simulador de cotización en vivo usando `quoteStay`.
 - **Criterios**
-  - [ ] El simulador coincide con el cálculo del servidor para las mismas entradas.
+  - [x] El simulador coincide con el cálculo del servidor para las mismas entradas.
+- **Nota de cierre**:
+  - Dashboard `/app/rates`: listado, alta, edición y borrado confirmado de temporadas, tarifas por unidad
+    y cargos. Moneda de la propiedad visible; precio base, viernes/sábado opcional, extra por huésped
+    y mínimo de noches. Explica prioridades, fin de temporada excluido y borrado en cascada de sus tarifas.
+  - Conversión decimal exacta a céntimos con zod y límites de enteros de Postgres. Errores seguros para
+    duplicados y temporadas solapadas de igual prioridad; identidad de unidad inmutable al editar.
+  - DAL con sesión, membresía y filtros por org/propiedad en cada operación; relaciones verificadas antes
+    de escribir y respaldadas por las FKs existentes. Sin service-role, cambios de esquema ni BD remota.
+  - Simulador en vivo: cada acción recarga capacidad, moneda, temporadas, tarifas y cargos guardados y
+    llama a `quoteStay` en el servidor. Solo acepta unidad, fechas, huéspedes y porcentaje de prueba;
+    no acepta importes de cotización del cliente. El adelanto no persiste una política comercial.
+    Desglose por noche/cargo, total, adelanto y saldo; oculta respuestas de escenarios anteriores.
+    Se cancela el reset nativo del formulario para conservar los campos tras cada respuesta.
+  - Verificación: lint, typecheck, 237 tests (59 nuevos) y build en verde. Motor y validadores al 100 %
+    en las cuatro métricas, mínimo 90 % por archivo en CI y `test:pricing`. Build con red para Google Fonts.
+  - HTTP local con sesión: CRUD real, fechas inválidas, solapes, duplicados, identidad inmutable,
+    rechazo de unidad ajena, páginas de edición ajenas sin formulario, borrados ajenos sin efecto y
+    mutaciones anónimas redirigidas al login. Total 53531, adelanto 26766 y saldo 26765 céntimos coinciden
+    con una llamada independiente al motor; importes manipulados en el formulario son ignorados.
+    Datos temporales eliminados; dashboard y ambos sitios públicos responden correctamente.
+  - Chrome local: cálculo automático 27–30/07/2027, 13 huéspedes: USD 1300 (300 + 500 + 500), adelanto
+    de prueba al 50 % y saldo de USD 650. Con 14 huéspedes muestra capacidad máxima y conserva el campo;
+    al volver a 13 oculta el resultado anterior y recalcula. `reviewer` y `security-reviewer` aprobados.
+  - Sin cambios en `.env.local`, migraciones ni producción. Push, PR y despliegue pendientes de confirmación;
+    el marcado refleja implementación y verificación local. La sección pública de tarifas sigue usando
+    `rate_tiers` hasta SD-208; el simulador no comprueba disponibilidad ni crea reservas.
 
 ### [ ] SD-208 · feat(site): data-driven rates section and theming
 `M` · Depende: SD-207 · Review: `R`
