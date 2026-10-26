@@ -30,7 +30,10 @@ de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura
 - Las tarifas publicadas siguen visibles, pero su edición desde la aplicación queda temporalmente
   pendiente hasta SD-207. El nuevo modelo y motor de precios se implementan en SD-205/206.
 - El modelo de temporadas, tarifas y cargos se documenta en el [ADR 0005](docs/adr/0005-pricing-schema.md);
-  el motor puro de SD-206 está en `lib/domain/pricing.ts`; el editor y simulador siguen pendientes (SD-207).
+  el motor puro está en `lib/domain/pricing.ts`. El dashboard **Tarifas** (`/app/rates`, SD-207) permite
+  editar temporadas, precios por unidad y cargos; el simulador recalcula con los importes guardados en el servidor.
+  El adelanto del simulador es un escenario de prueba: no guarda una política ni crea reservas.
+  La sección pública todavía usa `rate_tiers`; se conectará al nuevo modelo en SD-208.
 - Las decisiones sobre dominios, RLS, prevención de dobles reservas y pagos están en los ADRs 0001–0004;
   consulta el roadmap para distinguir lo implementado de lo previsto.
 
@@ -103,7 +106,7 @@ npx supabase gen types typescript --local > lib/database.types.ts
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run test` | Tests unitarios (Vitest) |
-| `npm run test:pricing` | Tests del motor de precios con cobertura (mínimo 90 %) |
+| `npm run test:pricing` | Tests del motor y validadores de tarifas con cobertura (mínimo 90 % por archivo) |
 | `npm run db:seed-storage` | Cargar imágenes en Storage local |
 
 ## Estado del proyecto
