@@ -30,6 +30,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     );
   }
   const view = parseLedgerView(await searchParams, currentMonth(new Date()));
+  const filtersActive = Boolean(view.kind || view.categoryId || view.unitId || view.general);
   const [categories, units, ledger] = await Promise.all([
     listCategories(ctx.supabase, ctx.orgId),
     listUnits(ctx.supabase, ctx.orgId),
@@ -37,6 +38,9 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
       month: view.month, kind: view.kind, categoryId: view.categoryId, unitId: view.unitId, general: view.general,
     }),
   ]);
+  // The cards are the MONTH's totals whatever filters narrow the list below; the
+  // owner gets a second, unfiltered read only when filters are active.
+  const monthLedger = !ctx.isOwner ? null : filtersActive ? await listEntries(ctx.supabase, ctx.orgId, { month: view.month }) : ledger;
   const categoryById = new Map(categories.map((c) => [c.id, c]));
   const unitName = new Map(units.map((u) => [u.id, u.name]));
 
@@ -47,7 +51,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     occurredOn: e.occurredOn, amountPenCents: e.amountPenCents, unitId: e.unitId, relatedEntryId: e.relatedEntryId,
     stayStart: e.stayStart, stayEnd: e.stayEnd,
   });
-  const summary = ctx.isOwner ? summarizeEntries(ledger.entries.map(toFinance)) : null;
+  const summary = monthLedger ? summarizeEntries(monthLedger.entries.map(toFinance)) : null;
   const profitByRental = new Map<string, { gross: number; commission: number; other: number; net: number }>();
   if (ctx.isOwner) {
     const rentals = ledger.entries.filter((e) => e.kind === "income" && e.stayStart !== null);
@@ -89,7 +93,12 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         </div>
       )}
       {summary && !summary.ok && <p className="text-sm text-destructive">No se pudieron calcular los totales.</p>}
-      {summary?.ok && <p className="-mt-3 text-xs text-muted-foreground">Totales en soles, por fecha de cobro, según los filtros activos.</p>}
+      {summary?.ok && (
+        <p className="-mt-3 text-xs text-muted-foreground">
+          Totales del mes en soles, por fecha de cobro.
+          {monthLedger?.truncated && ` Hay más de ${LEDGER_LIMIT} movimientos este mes: estos totales son parciales.`}
+        </p>
+      )}
 
       <form method="get" action="/app/finance" className="flex flex-wrap items-end gap-2">
         <input type="hidden" name="month" value={view.month} />
@@ -142,7 +151,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                           <p className="text-sm text-muted-foreground">
                             Estadía {shortDate(e.stayStart)}–{shortDate(e.stayEnd)}
                             {e.channel && ` · ${CHANNEL_LABELS[e.channel]}`}
-                            {e.guests !== null && ` · ${e.guests} huéspedes`}
+                            {e.guests !== null && ` · ${e.guests} ${e.guests === 1 ? "huésped" : "huéspedes"}`}
                           </p>
                         )}
                         {e.note && <p className="text-sm text-muted-foreground">{e.note}</p>}
@@ -173,7 +182,12 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                         label="Eliminar"
                         ariaLabel={`Eliminar ${category} del ${shortDate(e.occurredOn)}`}
                         variant="destructive"
-                        confirm={{ title: "¿Eliminar este movimiento?", description: "También se borra su comprobante. No se puede deshacer." }}
+                        confirm={{
+                          title: "¿Eliminar este movimiento?",
+                          description: e.stayStart
+                            ? "Se borra el alquiler junto con su comisión, su limpieza y los comprobantes. No se puede deshacer."
+                            : "También se borra su comprobante. No se puede deshacer.",
+                        }}
                         successMessage="Movimiento eliminado"
                       />
                     </div>

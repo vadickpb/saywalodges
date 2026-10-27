@@ -92,6 +92,19 @@ describe("createEntryAction", () => {
     expect(dal.createEntry).toHaveBeenCalledWith(supabase, ORG, expect.anything(), path);
   });
 
+  it("accepts the camera photo input as the receipt and prefers an explicitly chosen file", async () => {
+    const data = fd(expenseFields);
+    data.set("receiptPhoto", new File(["%PDF-1.4 photo"], "foto.pdf", { type: "application/pdf" }));
+    await expect(createEntryAction(prev, data)).rejects.toThrow("REDIRECT:");
+    expect(dal.uploadReceipt).toHaveBeenCalledTimes(1);
+
+    vi.mocked(dal.uploadReceipt).mockClear();
+    const both = fd(expenseFields, new File([Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x4a, 0x46])], "a.jpg", { type: "image/jpeg" }));
+    both.set("receiptPhoto", pdf());
+    await expect(createEntryAction(prev, both)).rejects.toThrow("REDIRECT:");
+    expect(vi.mocked(dal.uploadReceipt).mock.calls[0][1]).toMatch(/\.jpg$/); // the chosen file wins over the photo input
+  });
+
   it("removes the uploaded object again when saving the row fails", async () => {
     vi.mocked(dal.createEntry).mockResolvedValue({ ok: false });
     const r = await createEntryAction(prev, fd(expenseFields, pdf()));
@@ -124,13 +137,15 @@ describe("createEntryAction", () => {
 describe("createRentalAction", () => {
   it("passes the cleaning cost only when its checkbox is ticked", async () => {
     await expect(createRentalAction(prev, fd(rentalFields))).rejects.toThrow("REDIRECT:/app/finance?month=2027-05");
-    expect(vi.mocked(dal.createRental).mock.calls[0][1]).toMatchObject({ commission: 15000, cleaning: undefined });
+    expect(vi.mocked(dal.createRental).mock.calls[0][0]).toBe(supabase);
+    expect(vi.mocked(dal.createRental).mock.calls[0][1]).toBe(ORG); // the session org, never a form field
+    expect(vi.mocked(dal.createRental).mock.calls[0][2]).toMatchObject({ commission: 15000, cleaning: undefined });
 
     vi.mocked(dal.createRental).mockClear();
     const ticked = fd(rentalFields);
     ticked.set("addCleaning", "on");
     await expect(createRentalAction(prev, ticked)).rejects.toThrow("REDIRECT:");
-    expect(vi.mocked(dal.createRental).mock.calls[0][1]).toMatchObject({ commission: 15000, cleaning: 8000 });
+    expect(vi.mocked(dal.createRental).mock.calls[0][2]).toMatchObject({ commission: 15000, cleaning: 8000 });
   });
 
   it("validates the stay and cleans up the receipt when the atomic call fails", async () => {

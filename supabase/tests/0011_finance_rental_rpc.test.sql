@@ -3,7 +3,7 @@
 --   users Saywa owner a3b45db1-..., Saywa staff c5d77e30-..., Demo owner bd6a1c86-...
 --   units Saywa ee204001-...0001, Demo ee204001-...0002
 begin;
-select plan(22);
+select plan(26);
 
 -- ─── Saywa owner: rental + commission + cleaning in one call ────────────────
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
@@ -13,6 +13,7 @@ create temp table result (rental_id uuid);
 grant all on result to authenticated;
 insert into result
 select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-05-01',
     p_stay_end => '2027-05-04',
@@ -54,6 +55,7 @@ create temp table usd_result (rental_id uuid);
 grant all on usd_result to authenticated;
 insert into usd_result
 select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-06-01',
     p_stay_end => '2027-06-02',
@@ -79,6 +81,7 @@ select results_eq(
 
 -- Optional costs: absent or zero create nothing.
 select lives_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-07-01',
     p_stay_end => '2027-07-02',
@@ -101,6 +104,7 @@ select is((select count(*)::int from public.finance_entries where related_entry_
 
 -- Validation comes from the table constraints, and nothing is left behind.
 select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-08-01',
     p_stay_end => '2027-08-02',
@@ -119,6 +123,7 @@ select throws_ok($$select public.create_rental_entries(
   )$$,
   '23514', null, 'USD without an exchange rate is rejected');
 select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-08-05',
     p_stay_end => '2027-08-05',
@@ -137,6 +142,7 @@ select throws_ok($$select public.create_rental_entries(
   )$$,
   '23514', null, 'A stay must end after it starts');
 select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-08-01',
     p_stay_end => '2027-08-02',
@@ -159,6 +165,7 @@ select is((select count(*)::int from public.finance_entries where counterparty i
 
 -- Unit checks: unknown unit and a unit of another org.
 select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => '00000000-0000-4000-8000-0000000000ff',
     p_stay_start => '2027-09-01',
     p_stay_end => '2027-09-02',
@@ -177,6 +184,7 @@ select throws_ok($$select public.create_rental_entries(
   )$$,
   '42501', null, 'An unknown unit is rejected');
 select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000002',
     p_stay_start => '2027-09-01',
     p_stay_end => '2027-09-02',
@@ -195,6 +203,18 @@ select throws_ok($$select public.create_rental_entries(
   )$$,
   '42501', null, 'A unit of another org is rejected (its published row is visible, but not writable)');
 
+select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'ff24bacc-47d2-40bc-9210-f860e98892fd', p_unit_id => 'ee204001-0000-4000-8000-000000000001', p_stay_start => '2027-09-01',
+    p_stay_end => '2027-09-02', p_channel => 'direct', p_occurred_on => '2027-09-01', p_amount_cents => 5000, p_currency => 'PEN')$$,
+  '42501', null, 'A unit that does not belong to the stated org is rejected (the session org must match)');
+select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_unit_id => 'ee204001-0000-4000-8000-000000000001', p_stay_start => '2027-09-10',
+    p_stay_end => '2027-09-11', p_channel => 'direct', p_occurred_on => '2027-09-10', p_amount_cents => 5000, p_currency => 'PEN',
+    p_receipt_path => 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/9a9a9a9a-0000-4000-8000-000000000001.pdf')$$,
+  '42501', null, 'A receipt that does not exist is rejected');
+select is((select payment_method::text from public.finance_entries where related_entry_id = (select rental_id from usd_result)), null,
+  'The commission of a direct rental is not marked as paid through a platform');
+
 -- ─── Saywa staff ────────────────────────────────────────────────────────────
 reset role;
 select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true);
@@ -204,6 +224,7 @@ create temp table staff_result (rental_id uuid);
 grant all on staff_result to authenticated;
 insert into staff_result
 select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-10-01',
     p_stay_end => '2027-10-03',
@@ -220,7 +241,10 @@ select public.create_rental_entries(
     p_commission_cents => 9000,
     p_cleaning_cents => 5000
   );
-select is((select count(*)::int from public.finance_entries), 3, 'Staff registers a rental with its two costs and sees only those three');
+select is((select count(*)::int from public.finance_entries where created_by = 'c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40'::uuid), 3,
+  'Staff registers a rental with its two costs');
+select is((select count(*)::int from public.finance_entries where created_by is distinct from 'c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40'::uuid), 0,
+  'Staff sees only the entries they created');
 select is((select count(*)::int from public.finance_entries where counterparty = 'Guest One'), 0, 'Staff does not see the owner''s rentals');
 select is((select created_by from public.finance_entries where id = (select rental_id from staff_result)),
   'c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40'::uuid, 'created_by is the staff member');
@@ -230,6 +254,7 @@ reset role;
 select set_config('request.jwt.claims', '{"sub":"bd6a1c86-01e2-40a4-ba79-4e28b373e880"}', true);
 set local role authenticated;
 select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-11-01',
     p_stay_end => '2027-11-02',
@@ -254,6 +279,7 @@ select is((select count(*)::int from public.finance_entries where org_id = 'bf88
 reset role;
 set local role anon;
 select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-11-01',
     p_stay_end => '2027-11-02',
@@ -279,6 +305,7 @@ update public.finance_categories set system_key = null where org_id = 'bf88f504-
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
 set local role authenticated;
 select throws_ok($$select public.create_rental_entries(
+    p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817',
     p_unit_id => 'ee204001-0000-4000-8000-000000000001',
     p_stay_start => '2027-12-01',
     p_stay_end => '2027-12-02',

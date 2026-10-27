@@ -9,6 +9,10 @@ select set_config('storage.allow_delete_query', 'true', true);
 
 -- Category ids by key, readable by every role under test.
 create temp table cat as select org_id, system_key, id from public.finance_categories;
+
+-- A real receipt object (the receipt guard requires the object to exist and be visible).
+insert into storage.objects (bucket_id, name, owner_id)
+values ('finance-receipts', 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/6f3a8c10-1111-4222-8333-444455556666.jpg', 'a3b45db1-7c15-4528-a4ba-be625665fb6d');
 grant select on cat to anon, authenticated;
 
 -- ─── Structure and seed ─────────────────────────────────────────────────────
@@ -146,13 +150,13 @@ select throws_ok(
     select 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'expense', id, '2027-02-05', 500, 'PEN',
       'ff24bacc-47d2-40bc-9210-f860e98892fd/receipts/x.jpg'
     from cat where org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817' and system_key = 'water'$$,
-  '23514', null, 'A receipt path under another org prefix is rejected');
+  '42501', null, 'A receipt path under another org prefix is rejected (the receipt guard answers before the format check)');
 select throws_ok(
   $$insert into public.finance_entries (org_id, kind, category_id, occurred_on, amount_cents, currency, receipt_path)
     select 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'expense', id, '2027-02-05', 500, 'PEN',
       'bf88f504-051f-4fdc-ab73-4fa12d715817/../ff24bacc-47d2-40bc-9210-f860e98892fd/x.jpg'
     from cat where org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817' and system_key = 'water'$$,
-  '23514', null, 'A receipt path with .. is rejected');
+  '42501', null, 'A receipt path with .. is rejected (the receipt guard answers before the format check)');
 
 select throws_ok(
   $$insert into public.finance_entries (org_id, kind, category_id, occurred_on, amount_cents, currency, source, external_ref)
@@ -187,7 +191,8 @@ select results_eq(
 select hasnt_column('public', 'units', 'cleaning_cost_cents', 'The public units table carries no internal cost');
 select lives_ok(
   $$insert into public.finance_unit_settings (unit_id, org_id, cleaning_cost_cents)
-    values ('ee204001-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', 8000)$$,
+    values ('ee204001-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', 8000)
+    on conflict (unit_id) do update set cleaning_cost_cents = excluded.cleaning_cost_cents$$,
   'Owner sets a suggested cleaning cost');
 select throws_ok(
   $$update public.finance_unit_settings set cleaning_cost_cents = -1$$,
@@ -215,7 +220,7 @@ select throws_ok(
   '23514', null, 'An exchange rate of 100 or more is rejected');
 select lives_ok(
   $$insert into public.finance_entries (org_id, kind, category_id, occurred_on, amount_cents, currency, receipt_path)
-    select 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'expense', id, '2027-02-05', 777, 'PEN', 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/ok.jpg'
+    select 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'expense', id, '2027-02-05', 777, 'PEN', 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/6f3a8c10-1111-4222-8333-444455556666.jpg'
     from cat where org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817' and system_key = 'water'$$,
   'A receipt path under the own org prefix is accepted');
 
@@ -244,7 +249,8 @@ select results_eq(
     from cat where org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817' and system_key = 'cleaning'
     returning created_by$$,
   $$values ('c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40'::uuid)$$, 'Staff registers an expense; created_by is the session user');
-select is((select count(*)::int from public.finance_entries), 1, 'Staff only sees the entries they created');
+select is((select count(*)::int from public.finance_entries where created_by is distinct from 'c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40'::uuid), 0,
+  'Staff only sees entries they created (none by anyone else)');
 select is((select count(*)::int from public.finance_entries where counterparty = 'Owner only'), 0, 'Staff cannot see the owner''s entries');
 select results_eq($$update public.finance_entries set amount_cents = 1 where counterparty = 'Owner only' returning id$$,
   $$select id from public.finance_entries where false$$, 'Staff cannot edit the owner''s entries');
@@ -332,25 +338,25 @@ select results_eq($$update storage.objects set name = 'bf88f504-051f-4fdc-ab73-4
   $$select name from storage.objects where false$$, 'Staff cannot rename or replace receipts (update is owner-only)');
 select results_eq($$delete from storage.objects where bucket_id = 'finance-receipts' and name like '%owner.pdf' returning name$$,
   $$select name from storage.objects where false$$, 'Staff cannot delete the owner''s receipts');
-select results_eq($$select name from storage.objects where bucket_id = 'finance-receipts' order by name$$,
+select results_eq($$select name from storage.objects where bucket_id = 'finance-receipts' and name in ('bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/owner.pdf', 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/staff.jpg') order by name$$,
   $$values ('bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/staff.jpg'::text)$$,
   'Staff only reads the receipts they uploaded');
 
 reset role;
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
 set local role authenticated;
-select is((select count(*)::int from storage.objects where bucket_id = 'finance-receipts'), 2, 'The owner reads every receipt of the org');
+select is((select count(*)::int from storage.objects where bucket_id = 'finance-receipts' and name in ('bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/owner.pdf', 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/staff.jpg')), 2, 'The owner reads every receipt of the org');
 select results_eq($$delete from storage.objects where bucket_id = 'finance-receipts' and name like '%staff.jpg' returning name$$,
   $$values ('bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/staff.jpg'::text)$$, 'The owner can delete any receipt of the org');
 
 reset role;
 select set_config('request.jwt.claims', '{"sub":"bd6a1c86-01e2-40a4-ba79-4e28b373e880"}', true);
 set local role authenticated;
-select is((select count(*)::int from storage.objects where bucket_id = 'finance-receipts'), 0, 'Another org reads no receipts');
+select is((select count(*)::int from storage.objects where bucket_id = 'finance-receipts' and name in ('bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/owner.pdf', 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/staff.jpg')), 0, 'Another org reads no receipts');
 
 reset role;
 set local role anon;
-select is((select count(*)::int from storage.objects where bucket_id = 'finance-receipts'), 0, 'anon reads no receipts');
+select is((select count(*)::int from storage.objects where bucket_id = 'finance-receipts' and name in ('bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/owner.pdf', 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/staff.jpg')), 0, 'anon reads no receipts');
 
 select * from finish();
 rollback;

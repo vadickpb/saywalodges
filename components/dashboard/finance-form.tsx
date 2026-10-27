@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useMemo, useState } from "react";
+import { cloneElement, isValidElement, useActionState, useId, useMemo, useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,12 +9,7 @@ import { toPenCents, positiveMoneySchema } from "@/lib/domain/finance";
 import { CHANNELS, CHANNEL_LABELS, PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from "@/lib/domain/finance-forms";
 import { cn } from "cn";
 
-type FormState = {
-  ok: boolean;
-  errors?: Record<string, string[]>;
-  formError?: string;
-  values?: Record<string, string>;
-};
+import type { FormState } from "@/app/app/site/_lib/form-state";
 
 export type FinanceFormMode = "rental" | "income" | "expense" | "edit";
 
@@ -46,12 +41,22 @@ function Errors({ id, messages }: { id: string; messages: string[] | undefined }
   );
 }
 
+// Connects the message(s) to the control for screen readers: the child gets
+// aria-describedby (error first, then hint) and aria-invalid when it has errors.
 function Field({ label, htmlFor, errors, hint, children }: { label: string; htmlFor: string; errors?: string[]; hint?: string; children: React.ReactNode }) {
+  const describedBy = [errors ? `${htmlFor}-error` : null, hint ? `${htmlFor}-hint` : null].filter(Boolean).join(" ") || undefined;
+  const control = isValidElement(children)
+    ? cloneElement(children as ReactElement<Record<string, unknown>>, { "aria-describedby": describedBy, ...(errors ? { "aria-invalid": true } : {}) })
+    : children;
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {control}
+      {hint && (
+        <p id={`${htmlFor}-hint`} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      )}
       <Errors id={`${htmlFor}-error`} messages={errors} />
     </div>
   );
@@ -75,11 +80,13 @@ export function FinanceForm(props: Props) {
 
   const [currency, setCurrency] = useState<"PEN" | "USD">(value("currency", propertyCurrency ?? "PEN") === "USD" ? "USD" : "PEN");
   const [amount, setAmount] = useState(value("amount"));
-  const [fxRate, setFxRate] = useState(value("fxRate", lastFxRate));
+  const [fxRate, setFxRate] = useState(value("fxRate") || lastFxRate);
   const [unitId, setUnitId] = useState(value("unitId"));
-  const [addCleaning, setAddCleaning] = useState(state.values?.cleaning ? state.values.cleaning !== "" : false);
+  const [addCleaning, setAddCleaning] = useState(false);
   const [cleaning, setCleaning] = useState(value("cleaning"));
   const isRental = mode === "rental";
+  // An existing rental keeps its currency and category: its commission and cleaning are linked to it and would not follow.
+  const lockRental = mode === "edit" && Boolean(stayInfo);
   const kind: "income" | "expense" = mode === "expense" ? "expense" : mode === "edit" ? (entryKind ?? "expense") : "income";
 
   const suggested = useMemo(() => {
@@ -99,7 +106,7 @@ export function FinanceForm(props: Props) {
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-5" encType="multipart/form-data">
       {entryId && <input type="hidden" name="id" value={entryId} />}
-      {(mode === "edit" || mode !== "rental") && <input type="hidden" name="kind" value={kind} />}
+      {mode !== "rental" && <input type="hidden" name="kind" value={kind} />}
       {state.formError && (
         <p role="alert" className="text-sm text-destructive">
           {state.formError}
@@ -147,10 +154,11 @@ export function FinanceForm(props: Props) {
 
       {mode === "edit" && stayInfo && <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">{stayInfo}</p>}
 
-      {!isRental && (
-        <fieldset className="flex flex-col gap-2">
+      {lockRental && <input type="hidden" name="categoryId" value={value("categoryId")} />}
+      {!isRental && !lockRental && (
+        <fieldset className="flex flex-col gap-2" aria-describedby={errors.categoryId ? id("categoryId-error") : undefined}>
           <legend className="mb-1 text-sm font-medium text-foreground">Categoría</legend>
-          <div className="flex flex-wrap gap-2" aria-describedby={errors.categoryId ? id("categoryId-error") : undefined}>
+          <div className="flex flex-wrap gap-2">
             {categories.map((c) => (
               <label key={c.id} className="cursor-pointer">
                 <input type="radio" name="categoryId" value={c.id} required defaultChecked={value("categoryId") === c.id} className="peer sr-only" />
@@ -169,7 +177,8 @@ export function FinanceForm(props: Props) {
           <Input id={id("amount")} name="amount" inputMode="decimal" required placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} aria-invalid={errors.amount ? true : undefined} />
         </Field>
         <Field label="Moneda" htmlFor={id("currency")} errors={errors.currency}>
-          <select id={id("currency")} name="currency" value={currency} onChange={(e) => setCurrency(e.target.value === "USD" ? "USD" : "PEN")} className={selectClass}>
+          {lockRental && <input type="hidden" name="currency" value={currency} />}
+          <select id={id("currency")} name={lockRental ? undefined : "currency"} disabled={lockRental} value={currency} onChange={(e) => setCurrency(e.target.value === "USD" ? "USD" : "PEN")} className={selectClass}>
             <option value="PEN">Soles (S/)</option>
             <option value="USD">Dólares (US$)</option>
           </select>
@@ -247,14 +256,22 @@ export function FinanceForm(props: Props) {
         <Textarea id={id("note")} name="note" rows={2} maxLength={1000} defaultValue={value("note")} />
       </Field>
 
-      <Field
-        label={hasReceipt ? "Reemplazar comprobante (opcional)" : "Comprobante (opcional)"}
-        htmlFor={id("receipt")}
-        errors={errors.receipt}
-        hint="Foto, JPEG, PNG, WebP o PDF; máximo 4 MB. Se guarda en un espacio privado."
-      >
-        <Input id={id("receipt")} name="receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-invalid={errors.receipt ? true : undefined} />
-      </Field>
+      <div className="flex flex-col gap-3">
+        <Field
+          label={hasReceipt ? "Reemplazar comprobante: tomar foto (opcional)" : "Comprobante: tomar foto (opcional)"}
+          htmlFor={id("receiptPhoto")}
+          errors={errors.receipt}
+        >
+          <Input id={id("receiptPhoto")} name="receiptPhoto" type="file" accept="image/*" capture="environment" />
+        </Field>
+        <Field
+          label="…o elegir un archivo (opcional)"
+          htmlFor={id("receipt")}
+          hint="JPEG, PNG, WebP o PDF; máximo 4 MB. Se guarda en un espacio privado. Si el formulario muestra un error, vuelve a elegir el archivo."
+        >
+          <Input id={id("receipt")} name="receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" />
+        </Field>
+      </div>
 
       <Button type="submit" disabled={pending} className={cn("self-start")}>
         {pending ? "Guardando…" : mode === "edit" ? "Guardar cambios" : "Registrar"}

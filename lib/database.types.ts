@@ -919,6 +919,7 @@ export type Database = {
           p_guests?: number;
           p_note?: string;
           p_occurred_on: string;
+          p_org_id: string;
           p_payment_method?: Database["public"]["Enums"]["finance_payment_method"];
           p_receipt_path?: string;
           p_stay_end: string;
@@ -927,6 +928,7 @@ export type Database = {
         };
         Returns: string;
       };
+      delete_finance_entry: { Args: { p_entry_id: string }; Returns: string[] };
       reorder_amenities: {
         Args: { p_ids: string[]; p_property_id: string };
         Returns: number;

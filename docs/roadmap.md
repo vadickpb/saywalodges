@@ -1209,13 +1209,18 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
     `{org}/receipts/{uuid}.ext` generada por el servidor; si falla el guardado se borra el objeto; reemplazar borra el anterior
     solo después de guardar; la ruta `/app/finance/receipt/[id]` autoriza al hacer clic con la sesión del usuario y firma 60 s.
     Verificado: un staff no firma el comprobante de otro ni falsificando `receipt_path`.
+  - Hallazgos de review aplicados: el comprobante debe existir y ser visible para quien lo asigna, con formato exacto y un solo uso
+    (disparador + restricciones + índice único, migración `20261027204814`); `create_rental_entries` recibe la organización de la
+    sesión y exige que coincida con la de la unidad; borrar un alquiler borra también su comisión y limpieza y devuelve los
+    comprobantes por limpiar (`delete_finance_entry`, atómica); los totales son siempre del mes completo, sin importar los filtros;
+    `capture` para la cámara; errores asociados a sus campos; un alquiler editado conserva moneda y categoría; consultas por lotes.
   - Costo de limpieza sugerido: se precarga solo si la moneda del alquiler es la de la propiedad.
   - Fuera de alcance: administrar categorías (renombrar/archivar/crear) y el costo de limpieza por unidad desde la UI; los datos existen y
     se leen, pero hoy se cargan por la BD. Nota para SD-804/805: reportes por estadía y Excel. La barra inferior móvil ahora tiene 8 ítems.
-  - Pruebas: pgTAP 311 (nuevo `0011`, 22 asserts), Vitest con DAL (25), acciones (16), formularios (15) y vista (10); verificación con
+  - Pruebas: pgTAP 338 en 12 archivos (nuevos `0011` y `0012`), Vitest con DAL, acciones, formularios y vista; verificación con
     sesiones reales de dueño, staff y otra organización; páginas renderizadas con datos reales.
-  - Despliegue: aplicar `20261027195656_finance_rental_rpc.sql` en producción (junto con `20261027184334_finance_ledger.sql` si aún no se
-    aplicó) antes de usar la pantalla; después `get_advisors`. No hay datos financieros en producción.
+  - Despliegue: aplicar `20261027195656_finance_rental_rpc.sql` y `20261027204814_finance_receipt_guard.sql` en producción (junto con
+    `20261027184334_finance_ledger.sql` si aún no se aplicó) antes de usar la pantalla; después `get_advisors`. No hay datos financieros en producción.
 
 ### [ ] SD-804 · feat(finance): performance reports
 `L` · Depende: SD-802, SD-803 · Review: `R`

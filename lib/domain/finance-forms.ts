@@ -86,7 +86,7 @@ export const rentalFormSchema = z
     stayStart: isoDate,
     stayEnd: isoDate,
     channel: z.enum(CHANNELS, { message: "Selecciona el canal" }),
-    guests: optional(z.coerce.number().int("Usa un número entero").min(1, "Mínimo 1").max(1000, "Máximo 1000")),
+    guests: optional(z.coerce.number({ error: "Usa un número entero" }).int("Usa un número entero").min(1, "Mínimo 1").max(1000, "Máximo 1000")),
     guestName: counterparty,
     occurredOn: isoDate,
     amount: positiveMoneySchema,

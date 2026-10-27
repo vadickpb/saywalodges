@@ -89,6 +89,12 @@ describe("rentalFormSchema", () => {
     expect(rentalFormSchema.safeParse({ ...rental, fxRate: "3.75" }).success).toBe(false);
   });
 
+  it("explains a non-numeric guest count in Spanish", () => {
+    const r = rentalFormSchema.safeParse({ ...rental, guests: "abc" });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues.find((i) => i.path[0] === "guests")?.message).toBe("Usa un número entero");
+  });
+
   it("rejects bad units, channels, guest counts and costs", () => {
     for (const bad of [
       { unitId: "" }, { channel: "tripadvisor" }, { guests: "0" }, { guests: "1001" }, { guests: "2.5" }, { guests: "abc" },

@@ -32,7 +32,11 @@ type ReceiptRead = { ok: true; receipt: Receipt | null } | { ok: false; error: s
 // size is re-checked here: the browser's file picker and the bucket's declared
 // MIME list are only conveniences.
 async function readReceipt(formData: FormData): Promise<ReceiptRead> {
-  const file = formData.get("receipt");
+  // Two inputs feed the same receipt: "Tomar foto" (camera, receiptPhoto) and
+  // "Elegir archivo" (receipt, any allowed type). The chosen file wins.
+  const chosen = formData.get("receipt");
+  const photo = formData.get("receiptPhoto");
+  const file = chosen instanceof File && chosen.size > 0 ? chosen : photo;
   if (!(file instanceof File) || file.size === 0) return { ok: true, receipt: null };
   if (file.size > MAX_RECEIPT_BYTES) return { ok: false, error: "El comprobante supera los 4 MB." };
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -91,7 +95,7 @@ export async function createRentalAction(_prev: FormState, formData: FormData): 
 
   const staged = await stageReceipt(ctx.supabase, ctx.orgId, read.receipt);
   if (!staged.ok) return fail(values, GENERIC_ERROR);
-  const result = await createRental(ctx.supabase, parsed.data, staged.path);
+  const result = await createRental(ctx.supabase, ctx.orgId, parsed.data, staged.path);
   if (!result.ok) {
     if (staged.path) await removeReceipt(ctx.supabase, staged.path);
     return fail(values, GENERIC_ERROR);

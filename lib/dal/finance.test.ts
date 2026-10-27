@@ -156,6 +156,16 @@ describe("small reads", () => {
     expect((await listLinkedCosts(client, ORG, ["r1"]))[0].relatedEntryId).toBe("r1");
     await expect(listLinkedCosts(fake({ tables: { finance_entries: [{ data: null, error: {} }] } }).client, ORG, ["r1"])).rejects.toThrow("costos");
   });
+
+  it("splits a long list of rentals into batches of 100 so the URL stays short", async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `r${i}`);
+    const batch = (rel: string) => ({ data: [row({ id: `c-${rel}`, related_entry_id: rel })], error: null });
+    const { client, calls } = fake({ tables: { finance_entries: [batch("r0"), batch("r100"), batch("r200")] } });
+    const costs = await listLinkedCosts(client, ORG, ids);
+    const inCalls = calls.filter((c) => c.method === "in");
+    expect(inCalls.map((c) => (c.args[1] as string[]).length)).toEqual([100, 100, 50]);
+    expect(costs).toHaveLength(3);
+  });
 });
 
 describe("createEntry", () => {
@@ -226,30 +236,35 @@ describe("updateEntry", () => {
 });
 
 describe("deleteEntry", () => {
-  it("deletes the row first and then the receipt object", async () => {
-    const { client, order, remove } = fake({
-      tables: { finance_entries: [{ data: { receipt_path: `${ORG}/receipts/a.jpg` }, error: null }, { data: [{ id: "e1" }], error: null }] },
-    });
+  it("deletes through the atomic function and then removes every returned receipt", async () => {
+    const { client, order, remove, rpc } = fake({ rpc: { data: [`${ORG}/receipts/a.jpg`, `${ORG}/receipts/b.pdf`], error: null } });
     expect(await deleteEntry(client, ORG, "e1")).toEqual({ ok: true });
-    expect(order).toEqual(["delete:finance_entries", "storage:remove"]);
-    expect(remove).toHaveBeenCalledWith([`${ORG}/receipts/a.jpg`]);
+    expect(rpc).toHaveBeenCalledWith("delete_finance_entry", { p_entry_id: "e1" });
+    expect(order).toEqual(["storage:remove", "storage:remove"]);
+    expect(remove).toHaveBeenNthCalledWith(1, [`${ORG}/receipts/a.jpg`]);
+    expect(remove).toHaveBeenNthCalledWith(2, [`${ORG}/receipts/b.pdf`]);
   });
 
-  it("skips storage for an entry without a receipt", async () => {
-    const { client, remove } = fake({ tables: { finance_entries: [{ data: { receipt_path: null }, error: null }, { data: [{ id: "e1" }], error: null }] } });
+  it("touches no storage when nothing had a receipt", async () => {
+    const { client, remove } = fake({ rpc: { data: [], error: null } });
     expect(await deleteEntry(client, ORG, "e1")).toEqual({ ok: true });
     expect(remove).not.toHaveBeenCalled();
   });
 
-  it("fails and keeps the receipt when the row is not found, not allowed or not deleted", async () => {
+  it("fails without touching storage when the database refuses (missing, not yours) or answers oddly", async () => {
     silent();
-    const missing = fake({ tables: { finance_entries: [{ data: null, error: null }] } });
-    expect(await deleteEntry(missing.client, ORG, "e1")).toEqual({ ok: false });
-    const readError = fake({ tables: { finance_entries: [{ data: null, error: {} }] } });
-    expect(await deleteEntry(readError.client, ORG, "e1")).toEqual({ ok: false });
-    const blocked = fake({ tables: { finance_entries: [{ data: { receipt_path: "p" }, error: null }, { data: [], error: null }] } });
-    expect(await deleteEntry(blocked.client, ORG, "e1")).toEqual({ ok: false });
-    expect(blocked.remove).not.toHaveBeenCalled();
+    const refused = fake({ rpc: { data: null, error: { message: "entry not found", code: "42501" } } });
+    expect(await deleteEntry(refused.client, ORG, "e1")).toEqual({ ok: false });
+    expect(refused.remove).not.toHaveBeenCalled();
+    const odd = fake({ rpc: { data: "nope", error: null } });
+    expect(await deleteEntry(odd.client, ORG, "e1")).toEqual({ ok: false });
+    expect(odd.remove).not.toHaveBeenCalled();
+  });
+
+  it("still succeeds when a leftover receipt cannot be removed (logged, harmless)", async () => {
+    silent();
+    const { client } = fake({ rpc: { data: [`${ORG}/receipts/a.jpg`], error: null }, remove: { data: [], error: null } });
+    expect(await deleteEntry(client, ORG, "e1")).toEqual({ ok: true });
   });
 });
 
@@ -262,9 +277,9 @@ describe("createRental", () => {
 
   it("calls the atomic function with the mapped arguments and returns the id", async () => {
     const { client, rpc } = fake({ rpc: { data: "rental-id", error: null } });
-    expect(await createRental(client, input, `${ORG}/receipts/a.jpg`)).toEqual({ ok: true, id: "rental-id" });
+    expect(await createRental(client, ORG, input, `${ORG}/receipts/a.jpg`)).toEqual({ ok: true, id: "rental-id" });
     expect(rpc).toHaveBeenCalledWith("create_rental_entries", {
-      p_unit_id: "u1", p_stay_start: "2027-05-01", p_stay_end: "2027-05-04", p_channel: "airbnb", p_occurred_on: "2027-05-04",
+      p_org_id: ORG, p_unit_id: "u1", p_stay_start: "2027-05-01", p_stay_end: "2027-05-04", p_channel: "airbnb", p_occurred_on: "2027-05-04",
       p_amount_cents: 100000, p_currency: "USD", p_guests: 4, p_guest_name: "Ana", p_fx_rate_pen: 3.75, p_payment_method: "platform",
       p_receipt_path: `${ORG}/receipts/a.jpg`, p_note: "n", p_commission_cents: 15000, p_cleaning_cents: 8000,
     });
@@ -272,14 +287,14 @@ describe("createRental", () => {
 
   it("omits the exchange rate for PEN", async () => {
     const { client, rpc } = fake({ rpc: { data: "id", error: null } });
-    await createRental(client, { ...(input as object), currency: "PEN", fxRate: undefined } as never);
+    await createRental(client, ORG, { ...(input as object), currency: "PEN", fxRate: undefined } as never);
     expect((rpc.mock.calls[0] as unknown as [string, Record<string, unknown>])[1].p_fx_rate_pen).toBeUndefined();
   });
 
   it("reports a generic failure on an error or an unexpected result", async () => {
     silent();
-    expect(await createRental(fake({ rpc: { data: null, error: { message: "rls" } } }).client, input)).toEqual({ ok: false });
-    expect(await createRental(fake({ rpc: { data: 42, error: null } }).client, input)).toEqual({ ok: false });
+    expect(await createRental(fake({ rpc: { data: null, error: { message: "rls" } } }).client, ORG, input)).toEqual({ ok: false });
+    expect(await createRental(fake({ rpc: { data: 42, error: null } }).client, ORG, input)).toEqual({ ok: false });
   });
 });
 

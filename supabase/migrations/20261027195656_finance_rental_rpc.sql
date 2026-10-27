@@ -1,20 +1,21 @@
 -- SD-803: register a rental together with its platform commission and cleaning
 -- cost as ONE atomic operation (ADR 0007). Additive migration.
--- Rollback: drop function public.create_rental_entries(uuid, date, date, public.finance_channel, date, integer,
+-- Rollback: drop function public.create_rental_entries(uuid, uuid, date, date, public.finance_channel, date, integer,
 --   public.currency_code, integer, text, numeric, public.finance_payment_method, text, text, integer, integer);
 --
 -- SECURITY INVOKER on purpose: it runs with the caller's rights, so the table
 -- RLS, column grants and the related_entry guard trigger from SD-801 decide
 -- what is allowed (an owner or a staff member of the unit's org; nobody else).
--- The org is derived from the unit, never taken from a parameter. If the caller
--- cannot see the unit, or sees a unit of another org, the first insert fails
--- with 42501 and nothing is written.
+-- p_org_id is the session's org and must equal the unit's org (42501 otherwise). If the
+-- caller cannot see the unit or write into its org, the first insert fails with
+-- 42501 and nothing is written.
 --
 -- Commission and cleaning share the rental's currency and exchange rate: one
 -- registration, one rate. They are linked to the rental (related_entry_id) so
 -- reports can show profit per stay.
 
 create function public.create_rental_entries(
+  p_org_id uuid,
   p_unit_id uuid,
   p_stay_start date,
   p_stay_end date,
@@ -42,7 +43,10 @@ declare
   v_category uuid;
 begin
   select u.org_id into v_org from public.units u where u.id = p_unit_id;
-  if v_org is null then
+  -- The unit must belong to the org the caller is working in (the session's
+  -- active org). A multi-org user can therefore never book a rental into another
+  -- org by passing one of its units; RLS still decides what the caller may write.
+  if v_org is null or v_org <> p_org_id then
     raise exception 'unit not found' using errcode = '42501';
   end if;
 
@@ -71,7 +75,7 @@ begin
       payment_method, related_entry_id
     ) values (
       v_org, 'expense', v_category, p_occurred_on, p_commission_cents, p_currency, p_fx_rate_pen, p_unit_id,
-      'platform', v_rental
+      case when p_channel in ('airbnb', 'booking') then 'platform'::public.finance_payment_method end, v_rental
     );
   end if;
 
@@ -95,10 +99,10 @@ end;
 $$;
 
 revoke execute on function public.create_rental_entries(
-  uuid, date, date, public.finance_channel, date, integer, public.currency_code,
+  uuid, uuid, date, date, public.finance_channel, date, integer, public.currency_code,
   integer, text, numeric, public.finance_payment_method, text, text, integer, integer
 ) from public, anon;
 grant execute on function public.create_rental_entries(
-  uuid, date, date, public.finance_channel, date, integer, public.currency_code,
+  uuid, uuid, date, date, public.finance_channel, date, integer, public.currency_code,
   integer, text, numeric, public.finance_payment_method, text, text, integer, integer
 ) to authenticated;

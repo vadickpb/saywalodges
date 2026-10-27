@@ -17,6 +17,7 @@ export type Result<T = object> = ({ ok: true } & T) | { ok: false };
 
 export const RECEIPTS_BUCKET = "finance-receipts";
 export const LEDGER_LIMIT = 500;
+const LINKED_BATCH = 100;
 
 export type FinanceCategory = {
   id: string;
@@ -140,18 +141,24 @@ export async function listEntries(
 // they fall in: a stay's cleaning is dated on check-out and can land in the next
 // month, but the stay's profit needs it. RLS still scopes the rows.
 export async function listLinkedCosts(supabase: Client, orgId: string, rentalIds: string[]): Promise<LedgerEntry[]> {
-  if (rentalIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from("finance_entries")
-    .select(COLUMNS)
-    .eq("org_id", orgId)
-    .eq("kind", "expense")
-    .in("related_entry_id", rentalIds);
-  if (error) {
-    console.error("listLinkedCosts failed:", error);
-    throw new Error("No se pudieron cargar los costos del alquiler.");
+  // Batches keep the request URL short: a month can hold hundreds of rentals and a
+  // long `in (...)` list can exceed the gateway's limit.
+  const batches: string[][] = [];
+  for (let i = 0; i < rentalIds.length; i += LINKED_BATCH) batches.push(rentalIds.slice(i, i + LINKED_BATCH));
+  const results = await Promise.all(
+    batches.map((ids) =>
+      supabase.from("finance_entries").select(COLUMNS).eq("org_id", orgId).eq("kind", "expense").in("related_entry_id", ids)
+    )
+  );
+  const entries: LedgerEntry[] = [];
+  for (const { data, error } of results) {
+    if (error) {
+      console.error("listLinkedCosts failed:", error);
+      throw new Error("No se pudieron cargar los costos del alquiler.");
+    }
+    entries.push(...data.map(toEntry));
   }
-  return data.map(toEntry);
+  return entries;
 }
 
 export async function getEntry(supabase: Client, orgId: string, id: string): Promise<LedgerEntry | null> {
@@ -270,38 +277,27 @@ export async function updateEntry(
   return { ok: true };
 }
 
-// Row first, then the receipt object: a failed row delete must not leave an
+// The entry and the costs linked to it are deleted by one atomic database call
+// (public.delete_finance_entry, SECURITY INVOKER: RLS decides what can go). Only
+// afterwards are the receipt objects removed: a failed delete never leaves an
 // entry pointing at a removed file, while a leftover private object is harmless
 // and only logged.
 export async function deleteEntry(supabase: Client, orgId: string, id: string): Promise<Result> {
-  const { data: current, error: readError } = await supabase
-    .from("finance_entries")
-    .select("receipt_path")
-    .eq("org_id", orgId)
-    .eq("id", id)
-    .maybeSingle();
-  if (readError || !current) {
-    if (readError) console.error("deleteEntry lookup failed:", readError);
+  void orgId; // the function derives everything from the row and RLS; kept for a uniform signature
+  const { data, error } = await supabase.rpc("delete_finance_entry", { p_entry_id: id });
+  if (error || !Array.isArray(data)) {
+    console.error("deleteEntry failed:", error ?? "unexpected result");
     return { ok: false };
   }
-  const { data: deleted, error } = await supabase
-    .from("finance_entries")
-    .delete()
-    .eq("org_id", orgId)
-    .eq("id", id)
-    .select("id");
-  if (error || deleted.length !== 1) {
-    console.error("deleteEntry failed:", error ?? `expected 1 row, got ${deleted?.length}`);
-    return { ok: false };
-  }
-  if (current.receipt_path) await removeReceipt(supabase, current.receipt_path);
+  for (const path of data) await removeReceipt(supabase, path);
   return { ok: true };
 }
 
 // One atomic call: the rental plus its optional commission and cleaning, linked
 // (public.create_rental_entries, SECURITY INVOKER — RLS applies to every insert).
-export async function createRental(supabase: Client, input: RentalForm, receiptPath?: string): Promise<Result<{ id: string }>> {
+export async function createRental(supabase: Client, orgId: string, input: RentalForm, receiptPath?: string): Promise<Result<{ id: string }>> {
   const { data, error } = await supabase.rpc("create_rental_entries", {
+    p_org_id: orgId,
     p_unit_id: input.unitId,
     p_stay_start: input.stayStart,
     p_stay_end: input.stayEnd,
