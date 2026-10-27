@@ -1120,7 +1120,7 @@ el contador. Empieza con registro manual; la carga automática desde reservas y 
 Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR 0007.
 **Orden acordado (2026-10-25)**: SD-705 → SD-801…806 antes de retomar las Fases 3–4; SD-807 espera a SD-305 y SD-401.
 
-### [ ] SD-801 · feat(db): finance ledger
+### [x] SD-801 · feat(db): finance ledger
 `M` · Depende: SD-204, SD-705 · Review: `R+S`
 - **Alcance**:
   - `finance_categories` por organización (`kind` `income|expense`, nombre, orden, archivada) con categorías
@@ -1139,9 +1139,21 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - Bucket **privado** `finance-receipts` (`{org_id}/...`, JPEG/PNG/WebP/PDF, 5 MB): insertar miembros de la
     org; leer el owner o quien lo subió; sin lectura pública.
 - **Criterios**
-  - [ ] pgTAP: staff no ve entradas ni comprobantes de otros; otra org no ve nada; USD sin tipo de cambio falla;
-        categoría de otra org o de `kind` distinto falla; `external_ref` duplicado falla.
-  - [ ] ADR 0007 aceptado.
+  - [x] pgTAP `0010_finance_ledger.test.sql` (62 asserts): staff no ve entradas ni comprobantes de otros; otra org y `anon`
+        no ven nada; USD sin tipo de cambio falla; categoría de otra org o de `kind` distinto falla; `external_ref` duplicado falla.
+  - [x] ADR 0007 aceptado.
+- **Nota de cierre**:
+  - Migración `20261027184334_finance_ledger.sql`: `finance_categories` (15 por defecto con `system_key` estable, sembradas
+    para orgs existentes y por trigger para las nuevas), `finance_entries` con conversión a PEN generada por la BD
+    (`round` mitad hacia arriba), `private.is_owner`, `units.cleaning_cost_cents` y bucket privado `finance-receipts`.
+  - Decisiones de integridad: la categoría fija org y `kind` por FK compuesta; una unidad con historial no se puede borrar
+    (`on delete restrict`, se desactiva); borrar un alquiler deja sus costos como egresos sueltos (`set null`).
+    `created_by`, `source` y `external_ref` no son escribibles por usuarios (solo cargas de confianza, SD-807).
+  - Hallazgo propio corregido durante las pruebas: dentro de la política de `INSERT`/`UPDATE`, `related_entry_id` sin calificar
+    se resolvía contra la tabla interna de la subconsulta y bloqueaba todo enlace (fallaba cerrado); ahora se califica la
+    columna de la fila externa y hay pruebas positiva y negativa.
+  - Seed local: usuario `staff@saywalodges.test` (rol `staff` en Saywa) para ejercitar permisos. Sin datos financieros en producción.
+  - Despliegue: aplicar la migración con el procedimiento del proyecto antes de usar SD-803; no rompe el código actual.
 
 ### [ ] SD-802 · feat(domain): finance calculations
 `S` · Depende: SD-801 · Review: `R`

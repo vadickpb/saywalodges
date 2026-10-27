@@ -1,6 +1,6 @@
 # ADR 0007 · Libro de ingresos y egresos
 
-- Estado: propuesto · Fecha: 2026-10-25
+- Estado: aceptado (SD-801) · Fecha: 2026-10-25
 
 ## Contexto
 
