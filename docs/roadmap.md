@@ -1160,13 +1160,23 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - Seed local: usuario `staff@saywalodges.test` (rol `staff` en Saywa) para ejercitar permisos. Sin datos financieros en producción.
   - Despliegue: aplicar la migración con el procedimiento del proyecto antes de usar SD-803; no rompe el código actual.
 
-### [ ] SD-802 · feat(domain): finance calculations
+### [x] SD-802 · feat(domain): finance calculations
 `S` · Depende: SD-801 · Review: `R`
 - **Alcance**: `lib/domain/finance.ts` puro: conversión a PEN con redondeo exacto (BigInt, como `pricing.ts`),
   totales por mes/categoría/casa, utilidad por alquiler (ingreso − comisión − costos ligados). Reutiliza el
   convertidor decimal→céntimos de SD-207.
 - **Criterios**
-  - [ ] Cobertura ≥ 90 % en las cuatro métricas.
+  - [x] Cobertura ≥ 90 % en las cuatro métricas: `finance.ts` al 100 % (sentencias, ramas, funciones y líneas); CI lo exige por archivo.
+- **Nota de cierre**:
+  - `lib/domain/finance.ts` puro, sin I/O: `toPenCents` replica la columna generada de la BD (BigInt, mitad hacia arriba,
+    tipo de cambio `0 < tc < 100`, PEN sin tipo de cambio) para que el formulario muestre el mismo valor que se guardará;
+    `positiveMoneySchema` reutiliza `moneySchema` de SD-207 (decimal a céntimos exacto, mayor que cero).
+  - `summarizeEntries` suma el `amount_pen_cents` guardado (una sola fuente de verdad con la BD) por mes, categoría y casa
+    (el gasto general va al final), con rango de fechas inclusivo y margen en puntos básicos redondeado lejos de cero.
+    `rentalProfits` calcula bruto, comisión de plataforma, otros costos ligados y neto por alquiler.
+  - Errores tipados (`INVALID_AMOUNT`, `AMOUNT_OVERFLOW`, etc.) en vez de redondear pasado `MAX_SAFE_INTEGER`.
+  - `finance.ts` se agregó a la cobertura exigida (`vitest.config.mts`) y a `npm run test:pricing`.
+  - Base de cálculo: este módulo es **por cobro** (caja). El prorrateo por noche para ocupación/ADR/RevPAR es SD-804.
 
 ### [ ] SD-803 · feat(dashboard): income and expense register
 `L` · Depende: SD-801, SD-802 · Review: `R+S`
