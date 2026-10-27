@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { BookOpenCheck, CalendarDays, FileText, Globe, Settings, Tag, Users } from "lucide-react";
+import { BookOpenCheck, CalendarDays, FileText, Globe, Settings, Tag, Users, Wallet } from "lucide-react";
 import { SidebarNav, type NavItem } from "@/components/ui/sidebar-nav";
 import { MobileBottomNav } from "@/components/ui/mobile-bottom-nav";
 
@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/guests", label: "Huéspedes", icon: Users },
   { href: "/app/site", label: "Sitio", icon: Globe },
   { href: "/app/rates", label: "Tarifas", icon: Tag },
+  { href: "/app/finance", label: "Finanzas", icon: Wallet },
   { href: "/app/settings", label: "Ajustes", icon: Settings },
 ];
 

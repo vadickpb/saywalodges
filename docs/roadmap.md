@@ -1178,7 +1178,7 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - `finance.ts` se agregó a la cobertura exigida (`vitest.config.mts`) y a `npm run test:pricing`.
   - Base de cálculo: este módulo es **por cobro** (caja). El prorrateo por noche para ocupación/ADR/RevPAR es SD-804.
 
-### [ ] SD-803 · feat(dashboard): income and expense register
+### [x] SD-803 · feat(dashboard): income and expense register
 `L` · Depende: SD-801, SD-802 · Review: `R+S`
 - **Alcance**: `/app/finance` (nav "Finanzas"). Botones "+ Ingreso" / "+ Egreso"; formulario corto con fecha de
   hoy, categoría en chips, casa o "General", foto con la cámara (`capture`). Alquiler: casa, fechas, canal,
@@ -1194,9 +1194,28 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
     del cliente no es de fiar.
   - El staff no ve `finance_unit_settings` editable ni totales; el DAL no ofrece edición del costo de limpieza al staff.
 - **Criterios**
-  - [ ] Staff no ve totales ni movimientos ajenos (verificado con sesión real, no solo política).
-  - [ ] Registrar un alquiler con limpieza y comisión crea tres movimientos ligados en una sola operación (RPC).
-  - [ ] Comprobante no aceptado por contenido (p. ej. SVG/HTML con extensión de imagen) se rechaza (test).
+  - [x] Staff no ve totales ni movimientos ajenos (verificado con sesión real contra Supabase local, no solo política).
+  - [x] Registrar un alquiler con limpieza y comisión crea tres movimientos ligados en una sola operación (`create_rental_entries`, pgTAP `0011`).
+  - [x] Comprobante no aceptado por contenido (p. ej. SVG/HTML con extensión de imagen) se rechaza (`app/app/finance/actions.test.ts`).
+- **Nota de cierre**:
+  - Pantallas: `/app/finance` (mes anterior/siguiente, filtros por tipo/categoría/casa, tarjetas de ingresos, egresos, utilidad y margen
+    solo para el dueño, lista con la utilidad de cada alquiler), `/app/finance/new?type=rental|income|expense` y `/app/finance/[id]`
+    (editar/borrar con confirmación). Entrada "Finanzas" en el menú. El staff ve solo "Registrar" y sus propios movimientos.
+  - `public.create_rental_entries` (migración `20261027195656`): `SECURITY INVOKER`, así que RLS, permisos por columna y el trigger de
+    enlace se aplican a cada insert; la org sale de la unidad, nunca de un parámetro; los tres movimientos se escriben o ninguno. Los
+    parámetros opcionales tienen `default null` y se llama con argumentos con nombre (si no, los tipos generados los exigen no nulos).
+    Comisión y limpieza usan la moneda y el tipo de cambio del alquiler (un registro, un tipo de cambio).
+  - Comprobantes: subida con el cliente de sesión a `finance-receipts`, tipo real por magic bytes (JPEG/PNG/WebP/PDF) y 4 MB, ruta
+    `{org}/receipts/{uuid}.ext` generada por el servidor; si falla el guardado se borra el objeto; reemplazar borra el anterior
+    solo después de guardar; la ruta `/app/finance/receipt/[id]` autoriza al hacer clic con la sesión del usuario y firma 60 s.
+    Verificado: un staff no firma el comprobante de otro ni falsificando `receipt_path`.
+  - Costo de limpieza sugerido: se precarga solo si la moneda del alquiler es la de la propiedad.
+  - Fuera de alcance: administrar categorías (renombrar/archivar/crear) y el costo de limpieza por unidad desde la UI; los datos existen y
+    se leen, pero hoy se cargan por la BD. Nota para SD-804/805: reportes por estadía y Excel. La barra inferior móvil ahora tiene 8 ítems.
+  - Pruebas: pgTAP 311 (nuevo `0011`, 22 asserts), Vitest con DAL (25), acciones (16), formularios (15) y vista (10); verificación con
+    sesiones reales de dueño, staff y otra organización; páginas renderizadas con datos reales.
+  - Despliegue: aplicar `20261027195656_finance_rental_rpc.sql` en producción (junto con `20261027184334_finance_ledger.sql` si aún no se
+    aplicó) antes de usar la pantalla; después `get_advisors`. No hay datos financieros en producción.
 
 ### [ ] SD-804 · feat(finance): performance reports
 `L` · Depende: SD-802, SD-803 · Review: `R`
