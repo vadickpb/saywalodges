@@ -28,19 +28,24 @@ export type ReportUnit = {
   name: string;
   active: boolean;
   // First civil date the house counts as available (its creation date). Nights
-  // before it are not "available"; nights the owner blocked are NOT subtracted
-  // until the calendar exists (SD-807).
+  // the owner blocked are NOT subtracted until the calendar exists (SD-807).
   availableFrom: string;
+  // Exclusive date the house stopped operating, for an inactive house. Without
+  // it an inactive house counts as operating until its last booked night.
+  availableUntil?: string | null;
 };
 
 export type Period = { from: string; toExclusive: string };
 
-export type ReportError = "INVALID_AMOUNT" | "AMOUNT_OVERFLOW" | "STAY_TOO_LONG";
+export type ReportError = "INVALID_AMOUNT" | "AMOUNT_OVERFLOW" | "STAY_TOO_LONG" | "INVALID_STAY";
 
 export const MAX_REPORT_STAY_NIGHTS = 3660;
 
 const ZERO = BigInt(0);
-const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+// Every amount in the data adds up to at most this, so any sum, difference and
+// basis-point ratio computed from it (a ratio can be ~10000x its numerator) is
+// still a safe integer: conversion with Number() never loses precision.
+const MAX_TOTAL = BigInt(Math.floor(Number.MAX_SAFE_INTEGER / 10_000));
 const BPS = BigInt(10_000);
 
 // ─── Slices ─────────────────────────────────────────────────────────────────
@@ -62,7 +67,10 @@ export type PreparedReport = {
   cash: Slice[];
   stay: Slice[];
   nights: NightSlice[];
+  nightRange: Map<string, { first: string; last: string }>; // booked nights per house
   rentals: Map<string, ReportEntry>;
+  // Pass EVERY house, archived ones included: money of a house that is missing
+  // here still counts in the totals but not in the per-house table.
   units: ReportUnit[];
 };
 
@@ -72,9 +80,7 @@ class ReportFailure extends Error {
   }
 }
 
-// prepareReport rejects data whose amounts do not add up to a safe integer, so
-// every sum, difference, share and average computed from it fits one too: this
-// conversion cannot lose precision.
+// See MAX_TOTAL: prepareReport only accepts data for which this is exact.
 function safe(value: bigint): number {
   return Number(value);
 }
@@ -103,6 +109,8 @@ export function splitAcrossNights(total: bigint, count: number): bigint[] {
   return Array.from({ length: count }, (_, i) => (i === count - 1 ? base + rest : base));
 }
 
+// A cost linked to a rental follows that rental's nights, but keeps ITS OWN house
+// when it has one (the table only checks that both belong to the same org).
 function sliceOf(entry: ReportEntry, date: string, cents: bigint, rental: ReportEntry | null): Slice {
   return {
     date,
@@ -125,9 +133,12 @@ export function prepareReport(entries: readonly ReportEntry[], units: readonly R
     for (const e of entries) {
       if (!Number.isSafeInteger(e.amountPenCents) || e.amountPenCents < 0) throw new ReportFailure("INVALID_AMOUNT");
       everything += BigInt(e.amountPenCents);
-      if (everything > MAX_SAFE) throw new ReportFailure("AMOUNT_OVERFLOW");
+      if (everything > MAX_TOTAL) throw new ReportFailure("AMOUNT_OVERFLOW");
       if (e.kind === "income" && e.stayStart !== null && e.stayEnd !== null) {
-        if (nightsBetween(e.stayStart, e.stayEnd) > MAX_REPORT_STAY_NIGHTS) throw new ReportFailure("STAY_TOO_LONG");
+        const length = nightsBetween(e.stayStart, e.stayEnd);
+        // The table guarantees stay_end > stay_start; a malformed date gives NaN. Either way do not divide by it.
+        if (!Number.isInteger(length) || length < 1) throw new ReportFailure("INVALID_STAY");
+        if (length > MAX_REPORT_STAY_NIGHTS) throw new ReportFailure("STAY_TOO_LONG");
         rentals.set(e.id, e);
       }
     }
@@ -152,7 +163,17 @@ export function prepareReport(entries: readonly ReportEntry[], units: readonly R
         stay.push(sliceOf(e, e.occurredOn, total, null));
       }
     }
-    return { ok: true, prepared: { cash, stay, nights, rentals, units: [...units] } };
+    const nightRange = new Map<string, { first: string; last: string }>();
+    for (const n of nights) {
+      if (n.unitId === null) continue;
+      const range = nightRange.get(n.unitId);
+      if (range === undefined) nightRange.set(n.unitId, { first: n.date, last: n.date });
+      else {
+        if (n.date < range.first) range.first = n.date;
+        if (n.date > range.last) range.last = n.date;
+      }
+    }
+    return { ok: true, prepared: { cash, stay, nights, nightRange, rentals, units: [...units] } };
   } catch (error) {
     if (error instanceof ReportFailure) return { ok: false, error: error.code };
     throw error;
@@ -205,10 +226,24 @@ export type PeriodReport = {
 
 const inPeriod = (date: string, p: Period) => date >= p.from && date < p.toExclusive;
 
-function availableNights(unit: ReportUnit, p: Period): number {
-  if (!unit.active) return 0;
-  const start = unit.availableFrom > p.from ? unit.availableFrom : p.from;
-  return start >= p.toExclusive ? 0 : nightsBetween(start, p.toExclusive);
+// The window in which a house counts as available: from its creation date — or
+// from its first booked night when history was loaded from before it — until it
+// stopped operating. An active house has no end. An inactive one ends at the
+// later of its declared end and its last booked night (so history is never
+// erased and booked nights always fall inside the window); with neither, it is
+// never counted as available.
+function availableNights(unit: ReportUnit, booked: { first: string; last: string } | undefined, p: Period): number {
+  const from = booked !== undefined && booked.first < unit.availableFrom ? booked.first : unit.availableFrom;
+  let end: string | null = null;
+  if (!unit.active) {
+    const lastBooked = booked !== undefined ? addDays(booked.last, 1) : null;
+    const declared = unit.availableUntil ?? null;
+    end = declared !== null && (lastBooked === null || declared > lastBooked) ? declared : lastBooked;
+    if (end === null || end <= from) return 0;
+  }
+  const start = from > p.from ? from : p.from;
+  const stop = end === null || end > p.toExclusive ? p.toExclusive : end;
+  return start >= stop ? 0 : nightsBetween(start, stop);
 }
 
 function ratio(numerator: bigint, denominator: bigint, scale: bigint): number | null {
@@ -278,7 +313,7 @@ export function periodReport(prepared: PreparedReport, period: Period, basis: Re
     .map((u) => {
       const perf = perUnit.get(u.id) ?? { booked: 0, revenue: ZERO, rentals: new Map<string, number>() };
       const money = unitMoney.get(u.id) ?? { income: ZERO, expense: ZERO };
-      const available = availableNights(u, period);
+      const available = availableNights(u, prepared.nightRange.get(u.id), period);
       totalBooked += perf.booked;
       totalAvailable += available;
       totalRevenue += perf.revenue;
@@ -432,11 +467,17 @@ export function yearReport(prepared: PreparedReport, year: number, basis: Report
 export type GlobalReport = {
   report: PeriodReport;
   ranking: UnitPerformance[]; // by net profit, best first
+  // Shares are each rounded, so they may not add up to exactly 10000.
   channelMix: { channel: ReportChannel | null; grossCents: number; shareBps: number }[];
+  // A REFERENCE estimate, not a measurement: the weighted commission rate of the Airbnb and Booking rentals applied to
+  // the direct gross (assumes the same demand at the same price through the platforms, and that every platform
+  // commission was registered). `estimatedCents` is rounded once, from the exact ratio; the rate is for display.
   directSavings: {
-    platformCommissionRateBps: number | null; // commission / gross over Airbnb + Booking rentals
-    estimatedCents: number | null; // direct gross x that rate: what the same revenue would have paid in commission
+    platformCommissionRateBps: number | null;
+    estimatedCents: number | null;
   };
+  // Averages over the rentals of the period of the costs LINKED to a rental (maintenance is rarely linked to one,
+  // so that figure is usually small). The UI should say "ligados a alquileres".
   avgCleaningPerRentalCents: number | null;
   avgMaintenancePerRentalCents: number | null;
 };
@@ -469,7 +510,7 @@ export function globalReport(prepared: PreparedReport, period: Period, basis: Re
     channelMix,
     directSavings: {
       platformCommissionRateBps: rateBps,
-      estimatedCents: rateBps === null ? null : safe(divRound(directGross * BigInt(rateBps), BPS)),
+      estimatedCents: platformGross === ZERO ? null : safe(divRound(directGross * platformCommission, platformGross)),
     },
     avgCleaningPerRentalCents: perRental("cleaning"),
     avgMaintenancePerRentalCents: perRental("maintenance"),

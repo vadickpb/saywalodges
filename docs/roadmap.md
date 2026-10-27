@@ -1254,8 +1254,23 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
     (tasa de comisión de Airbnb y Booking aplicada al bruto directo) y costo promedio de limpieza y mantenimiento por alquiler.
   - `prepareReport` valida una sola vez que los montos suman un entero seguro, así que ningún total posterior puede desbordar.
   - Cobertura de `finance-reports.ts`: 100 % de sentencias, funciones y líneas y 99,3 % de ramas (exigido por archivo en CI).
+  - Revisión aplicada: la ventana de disponibilidad de una casa abre en su creación **o en su primera noche reservada** si se cargó
+    historia anterior (antes daba ocupación > 100 %); una casa desactivada **conserva su historia** (opera hasta su fecha de baja,
+    `availableUntil`, o hasta su última noche reservada) en vez de pasar a 0 noches disponibles; una estadía de 0 noches o con fechas
+    mal formadas devuelve `INVALID_STAY` en vez de lanzar; el tope de suma de montos pasó a `MAX_SAFE_INTEGER / 10000` para que
+    ninguna razón en puntos básicos pierda precisión; el ahorro estimado se redondea una sola vez desde la razón exacta.
   - Pendiente (parte 2): DAL de lectura de unidades/entradas para reportes, `/app/finance/reports` (solo dueño, selector de base),
     gráficos SVG, estado de resultados imprimible y la nota de bloqueos del dueño; criterio de "cifras del panel iguales a las del motor".
+    Reglas que la UI y el DAL de la parte 2 deben respetar (de la revisión):
+    - Pasar **todas** las casas, archivadas incluidas (si falta una, su dinero cuenta en los totales pero no en la tabla por casa), y
+      `availableUntil` de las inactivas (p. ej. `updated_at` de la desactivación).
+    - Rotular el ahorro por reservas directas como **estimación referencial** y mostrar la tasa usada: mezcla Airbnb y Booking en una
+      tasa ponderada, supone que se registró cada comisión y que la demanda sería la misma por la plataforma.
+    - Rotular los promedios de limpieza y mantenimiento como "ligados a alquileres" (el mantenimiento casi nunca se liga a uno).
+    - Los porcentajes de la mezcla de canales se redondean uno a uno y pueden no sumar exactamente 100 %; mostrar "≈".
+    - Aclarar el conteo de alquileres por base: en "por cobro" cuentan los cobrados en el período; en "por estadía" los que tienen noches
+      en él (una estadía que cruza meses cuenta en cada mes). Un costo ligado conserva su propia casa si la tiene.
+    - Calcular `prepareReport` una vez por solicitud (con miles de noches reparte una tajada por noche) y no por período.
 
 ### [ ] SD-805 · feat(finance): accountant Excel export
 `M` · Depende: SD-803, SD-804 · Review: `R+S`

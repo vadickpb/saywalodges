@@ -86,6 +86,19 @@ describe("prepareReport", () => {
     expect(prepareReport([forever], [])).toEqual({ ok: false, error: "STAY_TOO_LONG" });
   });
 
+  it("rejects a stay with no nights, a backwards stay or a malformed date instead of crashing", () => {
+    const stay = (stayStart: string, stayEnd: string) => entry({ kind: "income", amountPenCents: 100, unitId: "u1", stayStart, stayEnd });
+    for (const [start, end] of [["2027-02-05", "2027-02-05"], ["2027-02-05", "2027-02-01"], ["garbage", "2027-02-01"], ["2027-02-01", "2027-13-45"]]) {
+      expect(prepareReport([stay(start, end)], [])).toEqual({ ok: false, error: "INVALID_STAY" });
+    }
+  });
+
+  it("accepts totals up to the bound that keeps every ratio exact and rejects just above it", () => {
+    const limit = Math.floor(Number.MAX_SAFE_INTEGER / 10_000);
+    expect(prepareReport([entry({ kind: "income", amountPenCents: limit })], []).ok).toBe(true);
+    expect(prepareReport([entry({ kind: "income", amountPenCents: limit + 1 })], [])).toEqual({ ok: false, error: "AMOUNT_OVERFLOW" });
+  });
+
   it("does not swallow unexpected errors", () => {
     const poisoned = [{ ...entry({ kind: "income", amountPenCents: 1 }), get amountPenCents(): number { throw new Error("boom"); } }];
     expect(() => prepareReport(poisoned, [])).toThrow("boom");
@@ -136,14 +149,42 @@ describe("a stay that crosses a month boundary", () => {
 
 describe("availability", () => {
   const rental = entry({ kind: "income", amountPenCents: 1000, unitId: "u1", stayStart: "2027-02-20", stayEnd: "2027-02-22" });
-  it("counts only the days a house existed and was active", () => {
+
+  it("counts the days from the house's creation, or from its first booked night when history predates it", () => {
     const mid = periodReport(prepare([rental], [unit({ availableFrom: "2027-02-15" })]), FEB, "stay");
     expect(mid.units[0].availableNights).toBe(14); // 15..28 Feb
+    // History loaded from before the house was created in the system: the window opens at the first booked night.
     const later = periodReport(prepare([rental], [unit({ availableFrom: "2027-03-10" })]), FEB, "stay");
-    expect(later.units[0]).toMatchObject({ availableNights: 0, occupancyBps: null, revparCents: null });
+    expect(later.units[0]).toMatchObject({ availableNights: 9, bookedNights: 2, occupancyBps: 2222 }); // 20..28 Feb
+    const early = entry({ kind: "income", amountPenCents: 10000, unitId: "u1", stayStart: "2027-02-01", stayEnd: "2027-02-11" });
+    const report = periodReport(prepare([early], [unit({ availableFrom: "2027-02-20" })]), FEB, "stay");
+    expect(report.units[0]).toMatchObject({ bookedNights: 10, availableNights: 28, occupancyBps: 3571 }); // never above 100 %
+    expect(report.performance.occupancyBps).toBe(3571);
+  });
+
+  it("keeps the history of an inactive house instead of erasing it", () => {
+    // No declared end: operating until its last booked night (21 Feb) -> 1..21 Feb = 21 nights, 2 booked.
     const off = periodReport(prepare([rental], [unit({ active: false })]), FEB, "stay");
-    expect(off.units[0]).toMatchObject({ availableNights: 0, bookedNights: 2, occupancyBps: null });
-    expect(off.performance.occupancyBps).toBeNull();
+    expect(off.units[0]).toMatchObject({ availableNights: 21, bookedNights: 2, occupancyBps: 952 });
+    expect(off.performance).toMatchObject({ bookedNights: 2, availableNights: 21, occupancyBps: 952 });
+    // A declared end after the last booking extends the window; one before it never cuts booked nights off.
+    expect(periodReport(prepare([rental], [unit({ active: false, availableUntil: "2027-02-25" })]), FEB, "stay").units[0].availableNights).toBe(24);
+    expect(periodReport(prepare([rental], [unit({ active: false, availableUntil: "2027-02-10" })]), FEB, "stay").units[0].availableNights).toBe(21);
+    // After it stopped operating it contributes nothing, so later months are not diluted.
+    const march = periodReport(prepare([rental], [unit({ active: false })]), { from: "2027-03-01", toExclusive: "2027-04-01" }, "stay");
+    expect(march.units[0]).toMatchObject({ availableNights: 0, occupancyBps: null });
+    // An active house ignores a stale end date.
+    expect(periodReport(prepare([rental], [unit({ availableUntil: "2027-02-10" })]), FEB, "stay").units[0].availableNights).toBe(28);
+  });
+
+  it("never counts an inactive house with no bookings and no end date", () => {
+    const report = periodReport(prepare([], [unit({ active: false })]), FEB, "stay");
+    expect(report.units[0]).toMatchObject({ availableNights: 0, occupancyBps: null });
+    expect(report.performance.occupancyBps).toBeNull();
+    const empty = periodReport(prepare([], [unit({ active: false, availableUntil: "2026-12-01" })]), FEB, "stay");
+    expect(empty.units[0].availableNights).toBe(0); // window ended before the period
+    const noWindow = periodReport(prepare([], [unit({ active: false, availableUntil: "2027-01-01" })]), FEB, "stay");
+    expect(noWindow.units[0].availableNights).toBe(0); // end == start: empty window
   });
 
   it("returns null ratios for a house with no bookings and keeps houses sorted by name", () => {
@@ -158,6 +199,16 @@ describe("availability", () => {
     const report = periodReport(prepare([orphan]), FEB, "stay");
     expect(report.performance.bookedNights).toBe(0);
     expect(report.general.incomeCents).toBe(900);
+  });
+
+  it("books a linked cost on its own house when it has one, spread over its rental's nights", () => {
+    const stay = entry({ kind: "income", amountPenCents: 3000, unitId: "u1", stayStart: "2027-02-01", stayEnd: "2027-02-04", channel: "direct" });
+    const cleaning = entry({ kind: "expense", amountPenCents: 300, unitId: "u2", relatedEntryId: stay.id, categoryId: "c-clean", categoryKey: "cleaning" });
+    const report = periodReport(prepare([stay, cleaning], [unit(), unit({ id: "u2", name: "Anexo" })]), FEB, "stay");
+    const byId = Object.fromEntries(report.units.map((u) => [u.unitId, u]));
+    expect(byId.u1).toMatchObject({ incomeCents: 3000, expenseCents: 0 });
+    expect(byId.u2).toMatchObject({ incomeCents: 0, expenseCents: 300 });
+    expect(periodReport(prepare([stay, cleaning], [unit(), unit({ id: "u2", name: "Anexo" })]), { from: "2027-02-04", toExclusive: "2027-03-01" }, "stay").totals.expenseCents).toBe(0);
   });
 });
 
@@ -295,8 +346,9 @@ describe("globalReport", () => {
     expect(g.ranking[0]).toMatchObject({ incomeCents: 100000, expenseCents: 3000 + 6000 + 900, netCents: 90100 });
     expect(g.ranking[1]).toMatchObject({ incomeCents: 100001, expenseCents: 12000 + 8002, netCents: 79999 });
     expect(g.channelMix.map((c) => [c.channel, c.shareBps])).toEqual([["airbnb", 5000], ["direct", 3000], ["booking", 2000]]);
-    // Airbnb 12000/100001 and Booking 6000/40000 -> 18000/140001 = 12.86 %; direct gross 60000 x that rate.
-    expect(g.directSavings).toEqual({ platformCommissionRateBps: 1286, estimatedCents: 7716 });
+    // Airbnb 12000/100001 and Booking 6000/40000 -> 18000/140001 = 12.86 % (shown); the estimate uses the exact ratio, one rounding:
+    // 60000 x 18000 / 140001 = 7714.2 -> 7714 (rounding the rate first would give 7716).
+    expect(g.directSavings).toEqual({ platformCommissionRateBps: 1286, estimatedCents: 7714 });
     expect(g.avgCleaningPerRentalCents).toBe(Math.round((8002 + 3000) / 3)); // 3667
     expect(g.avgMaintenancePerRentalCents).toBe(300); // 900 over 3 rentals
   });
