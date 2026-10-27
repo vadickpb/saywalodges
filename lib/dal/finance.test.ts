@@ -239,7 +239,7 @@ describe("deleteEntry", () => {
   it("deletes through the atomic function and then removes every returned receipt", async () => {
     const { client, order, remove, rpc } = fake({ rpc: { data: [`${ORG}/receipts/a.jpg`, `${ORG}/receipts/b.pdf`], error: null } });
     expect(await deleteEntry(client, ORG, "e1")).toEqual({ ok: true });
-    expect(rpc).toHaveBeenCalledWith("delete_finance_entry", { p_entry_id: "e1" });
+    expect(rpc).toHaveBeenCalledWith("delete_finance_entry", { p_org_id: ORG, p_entry_id: "e1" });
     expect(order).toEqual(["storage:remove", "storage:remove"]);
     expect(remove).toHaveBeenNthCalledWith(1, [`${ORG}/receipts/a.jpg`]);
     expect(remove).toHaveBeenNthCalledWith(2, [`${ORG}/receipts/b.pdf`]);

@@ -283,8 +283,7 @@ export async function updateEntry(
 // entry pointing at a removed file, while a leftover private object is harmless
 // and only logged.
 export async function deleteEntry(supabase: Client, orgId: string, id: string): Promise<Result> {
-  void orgId; // the function derives everything from the row and RLS; kept for a uniform signature
-  const { data, error } = await supabase.rpc("delete_finance_entry", { p_entry_id: id });
+  const { data, error } = await supabase.rpc("delete_finance_entry", { p_org_id: orgId, p_entry_id: id });
   if (error || !Array.isArray(data)) {
     console.error("deleteEntry failed:", error ?? "unexpected result");
     return { ok: false };

@@ -74,7 +74,7 @@ select results_eq(
   $$insert into public.finance_entries (org_id, kind, category_id, occurred_on, amount_cents, currency, unit_id,
       stay_start, stay_end, channel, guests, payment_method, counterparty)
     select 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'income', id, '2027-02-03', 80000, 'PEN',
-      'ee204001-0000-4000-8000-000000000001', '2027-02-01', '2027-02-04', 'airbnb', 4, 'platform', 'Guest A'
+      'ee204001-0000-4000-8000-000000000001', '2027-02-01', '2027-02-04', 'airbnb', 4, 'platform', 'Guest A 0010'
     from cat where org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817' and system_key = 'rental'
     returning amount_pen_cents$$,
   $$values (80000::bigint)$$, 'Owner records a rental; PEN amounts convert 1:1');
@@ -172,18 +172,18 @@ select throws_ok(
 
 -- A cleaning cost linked to the rental; deleting the rental keeps the cost.
 select lives_ok(
-  $$insert into public.finance_entries (org_id, kind, category_id, occurred_on, amount_cents, currency, unit_id, related_entry_id)
+  $$insert into public.finance_entries (org_id, kind, category_id, occurred_on, amount_cents, currency, unit_id, note, related_entry_id)
     select 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'expense', c.id, '2027-02-04', 8000, 'PEN',
-      'ee204001-0000-4000-8000-000000000001',
-      (select id from public.finance_entries where counterparty = 'Guest A')
+      'ee204001-0000-4000-8000-000000000001', 'cleaning-0010',
+      (select id from public.finance_entries where counterparty = 'Guest A 0010')
     from cat c where c.org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817' and c.system_key = 'cleaning'$$,
   'Owner links a cleaning cost to the rental');
 select throws_ok(
   $$delete from public.units where id = 'ee204001-0000-4000-8000-000000000001'$$,
   '23503', null, 'A unit with financial history cannot be deleted');
-delete from public.finance_entries where counterparty = 'Guest A';
+delete from public.finance_entries where counterparty = 'Guest A 0010';
 select results_eq(
-  $$select related_entry_id is null from public.finance_entries where amount_cents = 8000$$,
+  $$select related_entry_id is null from public.finance_entries where note = 'cleaning-0010'$$,
   $$values (true)$$, 'Deleting the rental keeps its cost, unlinked');
 
 -- Suggested cleaning cost lives in its own owner-managed table, never in public.units

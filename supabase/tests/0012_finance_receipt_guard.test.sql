@@ -3,7 +3,7 @@
 --   users Saywa owner a3b45db1-..., Saywa staff c5d77e30-..., Demo owner bd6a1c86-...
 --   unit  Saywa ee204001-...0001
 begin;
-select plan(23);
+select plan(28);
 select set_config('storage.allow_delete_query', 'true', true);
 
 create temp table cat as select org_id, system_key, id from public.finance_categories;
@@ -105,19 +105,19 @@ select is((select count(*)::int from public.finance_entries where related_entry_
   'The rental was registered with two linked costs');
 
 -- Deleting only a cost keeps the rental.
-select lives_ok($$select public.delete_finance_entry((select id from public.finance_entries where related_entry_id = (select id from ids where label = 'rental') limit 1))$$,
+select lives_ok($$select public.delete_finance_entry(p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_entry_id => (select id from public.finance_entries where related_entry_id = (select id from ids where label = 'rental') limit 1))$$,
   'Deleting one linked cost works');
 select is((select count(*)::int from public.finance_entries where id = (select id from ids where label = 'rental')), 1,
   'Deleting a cost does not delete the rental');
 
 select results_eq(
-  $$select unnest(public.delete_finance_entry((select id from ids where label = 'rental')))$$,
+  $$select unnest(public.delete_finance_entry(p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_entry_id => (select id from ids where label = 'rental')))$$,
   $$values ('bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/aaaaaaaa-0000-4000-8000-000000000003.pdf'::text)$$,
   'Deleting a rental returns the receipt paths to clean up');
 select is((select count(*)::int from public.finance_entries where id = (select id from ids where label = 'rental')
             or related_entry_id = (select id from ids where label = 'rental')), 0,
   'The rental and its remaining linked costs are gone');
-select throws_ok($$select public.delete_finance_entry('00000000-0000-4000-8000-0000000000ff')$$,
+select throws_ok($$select public.delete_finance_entry(p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_entry_id => '00000000-0000-4000-8000-0000000000ff')$$,
   '42501', null, 'Deleting an unknown entry raises');
 
 -- An owner entry for the staff / other-org checks below.
@@ -131,7 +131,7 @@ reset role;
 select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true);
 set local role authenticated;
 
-select throws_ok($$select public.delete_finance_entry((select id from ids where label = 'owner_entry'))$$,
+select throws_ok($$select public.delete_finance_entry(p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_entry_id => (select id from ids where label = 'owner_entry'))$$,
   '42501', null, 'Staff cannot delete an entry created by the owner');
 insert into ids
 select 'staff_rental', public.create_rental_entries(
@@ -139,23 +139,55 @@ select 'staff_rental', public.create_rental_entries(
   p_stay_start => '2027-07-01', p_stay_end => '2027-07-02', p_channel => 'direct', p_occurred_on => '2027-07-02',
   p_amount_cents => 20000, p_currency => 'PEN', p_commission_cents => 1000, p_cleaning_cents => 2000
 );
-select lives_ok($$select public.delete_finance_entry((select id from ids where label = 'staff_rental'))$$,
+select lives_ok($$select public.delete_finance_entry(p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_entry_id => (select id from ids where label = 'staff_rental'))$$,
   'Staff deletes their own rental with its costs');
 select is((select count(*)::int from public.finance_entries where id = (select id from ids where label = 'staff_rental')
             or related_entry_id = (select id from ids where label = 'staff_rental')), 0,
   'The staff rental and its costs are gone');
 
--- ─── Another organization and anon ──────────────────────────────────────────
+-- The session org is part of the call: a different org id deletes nothing, even for an owner.
+reset role;
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
+set local role authenticated;
+select throws_ok($$select public.delete_finance_entry(p_org_id => 'ff24bacc-47d2-40bc-9210-f860e98892fd', p_entry_id => (select id from ids where label = 'owner_entry'))$$,
+  '42501', null, 'Stating another org id deletes nothing, even for the entry''s owner');
+select is((select count(*)::int from public.finance_entries where id = (select id from ids where label = 'owner_entry')), 1,
+  'The entry is still there after a mismatched-org delete');
+
+-- A cost the owner linked to a staff rental survives when staff deletes that rental (RLS hides it, the link is cleared).
+reset role;
+select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true);
+set local role authenticated;
+insert into ids
+select 'staff_rental2', public.create_rental_entries(
+  p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_unit_id => 'ee204001-0000-4000-8000-000000000001',
+  p_stay_start => '2027-08-01', p_stay_end => '2027-08-02', p_channel => 'direct', p_occurred_on => '2027-08-02', p_amount_cents => 15000, p_currency => 'PEN'
+);
+reset role;
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
+set local role authenticated;
+insert into public.finance_entries (org_id, kind, category_id, occurred_on, amount_cents, currency, counterparty, related_entry_id)
+select 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'expense', id, '2027-08-02', 4321, 'PEN', 'Owner cost on staff rental', (select id from ids where label = 'staff_rental2')
+from cat where org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817' and system_key = 'maintenance';
+
+reset role;
+select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true);
+set local role authenticated;
+select lives_ok($$select public.delete_finance_entry(p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_entry_id => (select id from ids where label = 'staff_rental2'))$$,
+  'Staff deletes their rental even though the owner linked a cost to it');
+reset role;
+select results_eq($$select related_entry_id is null from public.finance_entries where counterparty = 'Owner cost on staff rental'$$,
+  $$values (true)$$, 'The owner''s linked cost survived, unlinked');
+
 reset role;
 select set_config('request.jwt.claims', '{"sub":"bd6a1c86-01e2-40a4-ba79-4e28b373e880"}', true);
 set local role authenticated;
-select throws_ok($$select public.delete_finance_entry((select id from ids where label = 'owner_entry'))$$,
+select throws_ok($$select public.delete_finance_entry(p_org_id => 'bf88f504-051f-4fdc-ab73-4fa12d715817', p_entry_id => (select id from ids where label = 'owner_entry'))$$,
   '42501', null, 'Another org cannot delete Saywa''s entry');
 
 reset role;
-set local role anon;
-select throws_ok($$select public.delete_finance_entry('00000000-0000-4000-8000-0000000000ff')$$,
-  '42501', null, 'anon cannot call delete_finance_entry');
+select ok(not has_function_privilege('anon', 'public.delete_finance_entry(uuid, uuid)', 'execute'), 'anon has no EXECUTE on delete_finance_entry');
+select ok(has_function_privilege('authenticated', 'public.delete_finance_entry(uuid, uuid)', 'execute'), 'authenticated can execute delete_finance_entry');
 
 reset role;
 select is((select count(*)::int from public.finance_entries where id = (select id from ids where label = 'owner_entry')), 1,

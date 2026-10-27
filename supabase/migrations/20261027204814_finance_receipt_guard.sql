@@ -1,5 +1,5 @@
 -- SD-803 review fixes. Additive migration (SD-801's migration is already merged).
--- Rollback: drop function public.delete_finance_entry(uuid);
+-- Rollback: drop function public.delete_finance_entry(uuid, uuid);
 --   drop trigger finance_entries_receipt_guard on public.finance_entries;
 --   drop function private.finance_entries_receipt_guard();
 --   alter table public.finance_entries drop constraint finance_entries_receipt_format_check;
@@ -51,10 +51,11 @@ create trigger finance_entries_receipt_guard before insert or update on public.f
 -- expenses (related_entry_id is set null). For a rental registered by mistake that
 -- distorts the month, so the app deletes the entry and its linked costs together.
 -- SECURITY INVOKER: RLS decides what can be deleted (the owner: everything; staff:
--- only rows they created). Returns the receipt paths of every deleted row so the
+-- only rows they created). p_org_id is the session's org: rows of any other org
+-- (even one the caller also belongs to) are never touched. Returns the receipt paths of every deleted row so the
 -- caller can remove the files; raises 42501, rolling everything back, when the
 -- entry itself was not deleted (missing, or not the caller's).
-create function public.delete_finance_entry(p_entry_id uuid)
+create function public.delete_finance_entry(p_org_id uuid, p_entry_id uuid)
 returns text[]
 language plpgsql
 set search_path = ''
@@ -65,12 +66,12 @@ declare
   v_count integer;
 begin
   with gone as (
-    delete from public.finance_entries c where c.related_entry_id = p_entry_id returning c.receipt_path
+    delete from public.finance_entries c where c.org_id = p_org_id and c.related_entry_id = p_entry_id returning c.receipt_path
   )
   select coalesce(array_agg(receipt_path) filter (where receipt_path is not null), '{}') into v_costs from gone;
 
   with gone as (
-    delete from public.finance_entries e where e.id = p_entry_id returning e.receipt_path
+    delete from public.finance_entries e where e.org_id = p_org_id and e.id = p_entry_id returning e.receipt_path
   )
   select count(*)::integer, coalesce(array_agg(receipt_path) filter (where receipt_path is not null), '{}')
     into v_count, v_entry from gone;
@@ -81,5 +82,5 @@ begin
   return v_costs || v_entry;
 end;
 $$;
-revoke execute on function public.delete_finance_entry(uuid) from public, anon;
-grant execute on function public.delete_finance_entry(uuid) to authenticated;
+revoke execute on function public.delete_finance_entry(uuid, uuid) from public, anon;
+grant execute on function public.delete_finance_entry(uuid, uuid) to authenticated;

@@ -3,7 +3,7 @@
 --   users Saywa owner a3b45db1-..., Saywa staff c5d77e30-..., Demo owner bd6a1c86-...
 --   units Saywa ee204001-...0001, Demo ee204001-...0002
 begin;
-select plan(26);
+select plan(27);
 
 -- ─── Saywa owner: rental + commission + cleaning in one call ────────────────
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
@@ -212,8 +212,11 @@ select throws_ok($$select public.create_rental_entries(
     p_stay_end => '2027-09-11', p_channel => 'direct', p_occurred_on => '2027-09-10', p_amount_cents => 5000, p_currency => 'PEN',
     p_receipt_path => 'bf88f504-051f-4fdc-ab73-4fa12d715817/receipts/9a9a9a9a-0000-4000-8000-000000000001.pdf')$$,
   '42501', null, 'A receipt that does not exist is rejected');
-select is((select payment_method::text from public.finance_entries where related_entry_id = (select rental_id from usd_result)), null,
+select is((select count(*)::int from public.finance_entries where related_entry_id = (select rental_id from usd_result) and payment_method is null), 1,
   'The commission of a direct rental is not marked as paid through a platform');
+select is((select count(*)::int from public.finance_entries where related_entry_id = (select rental_id from result) and payment_method = 'platform'
+            and amount_cents = 15000), 1,
+  'The commission of an Airbnb rental is marked as paid through the platform');
 
 -- ─── Saywa staff ────────────────────────────────────────────────────────────
 reset role;

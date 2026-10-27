@@ -928,7 +928,10 @@ export type Database = {
         };
         Returns: string;
       };
-      delete_finance_entry: { Args: { p_entry_id: string }; Returns: string[] };
+      delete_finance_entry: {
+        Args: { p_entry_id: string; p_org_id: string };
+        Returns: string[];
+      };
       reorder_amenities: {
         Args: { p_ids: string[]; p_property_id: string };
         Returns: number;
