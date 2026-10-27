@@ -23,11 +23,22 @@
       "Bash(git branch:*)",
       "Bash(git switch:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
-    ],
-    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull --ff-only:*)",
       "Bash(git push:*)",
       "Bash(gh pr create:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr status:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh auth status:*)"
+    ],
+    "ask": [
       "Bash(gh issue create:*)",
       "Bash(npm install:*)",
       "Bash(vercel:*)"
@@ -52,7 +63,30 @@
       "mcp__claude_ai_Supabase__merge_branch",
       "mcp__claude_ai_Supabase__reset_branch",
       "mcp__claude_ai_Supabase__delete_branch",
-      "mcp__claude_ai_Supabase__pause_project"
+      "mcp__claude_ai_Supabase__pause_project",
+      "Bash(git push * --force:*)",
+      "Bash(git push * -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git push * --force-with-lease:*)",
+      "Bash(git push --delete:*)",
+      "Bash(git push * --delete:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git push origin HEAD:main:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(gh pr merge * --admin:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(gh pr merge --admin:*)",
+      "Bash(gh pr merge --delete-branch:*)",
+      "Bash(gh pr merge * --delete-branch:*)",
+      "Bash(gh pr merge -d:*)",
+      "Bash(gh pr merge * -d:*)",
+      "Bash(git push * :*)",
+      "Bash(git push * +*)",
+      "Bash(git push * *:refs/heads/main)",
+      "Bash(git push * *:refs/heads/main *)",
+      "Bash(git push * *:main)",
+      "Bash(git push * *:main *)"
     ]
   }
 }
