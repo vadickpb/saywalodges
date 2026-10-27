@@ -1133,22 +1133,27 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
     `stay_start`/`stay_end` (`[)`), `channel` (`direct|airbnb|booking|other`), huéspedes.
     `related_entry_id` para ligar limpieza/mantenimiento/comisión a su alquiler. `receipt_path`,
     `created_by`, `source` (`manual|booking|ical`) y `external_ref` único por org para cargas idempotentes.
-  - `units.cleaning_cost_cents` opcional (costo de limpieza sugerido por casa).
+  - `finance_unit_settings.cleaning_cost_cents` opcional (costo de limpieza sugerido por casa): tabla aparte, no una
+    columna de `units`, porque `units` es legible por `anon` en el sitio público.
   - RLS: owner lee y edita todo; staff inserta y solo lee/edita lo que creó (`created_by = auth.uid()`).
     Helper `private.is_owner(org_id)`.
   - Bucket **privado** `finance-receipts` (`{org_id}/...`, JPEG/PNG/WebP/PDF, 5 MB): insertar miembros de la
     org; leer el owner o quien lo subió; sin lectura pública.
 - **Criterios**
-  - [x] pgTAP `0010_finance_ledger.test.sql` (62 asserts): staff no ve entradas ni comprobantes de otros; otra org y `anon`
+  - [x] pgTAP `0010_finance_ledger.test.sql` (81 asserts): staff no ve entradas ni comprobantes de otros; otra org y `anon`
         no ven nada; USD sin tipo de cambio falla; categoría de otra org o de `kind` distinto falla; `external_ref` duplicado falla.
   - [x] ADR 0007 aceptado.
 - **Nota de cierre**:
   - Migración `20261027184334_finance_ledger.sql`: `finance_categories` (15 por defecto con `system_key` estable, sembradas
     para orgs existentes y por trigger para las nuevas), `finance_entries` con conversión a PEN generada por la BD
-    (`round` mitad hacia arriba), `private.is_owner`, `units.cleaning_cost_cents` y bucket privado `finance-receipts`.
+    (`round` mitad hacia arriba), `private.is_owner`, `finance_unit_settings` (costo de limpieza por unidad; lectura de miembros, escritura del dueño) y bucket privado `finance-receipts`.
   - Decisiones de integridad: la categoría fija org y `kind` por FK compuesta; una unidad con historial no se puede borrar
     (`on delete restrict`, se desactiva); borrar un alquiler deja sus costos como egresos sueltos (`set null`).
     `created_by`, `source` y `external_ref` no son escribibles por usuarios (solo cargas de confianza, SD-807).
+  - Hallazgos de review aplicados: el costo de limpieza se movió fuera de `units` (lo leía cualquier visitante con la clave
+    pública); las categorías de sistema no se pueden borrar (solo renombrar/archivar); una categoría del usuario con el nombre
+    de una de sistema se adopta al re-sembrar; el enlace `related_entry_id` se valida en un trigger que solo actúa cuando el
+    vínculo cambia, para que el staff pueda seguir editando una entrada que el dueño enlazó a algo que no ve.
   - Hallazgo propio corregido durante las pruebas: dentro de la política de `INSERT`/`UPDATE`, `related_entry_id` sin calificar
     se resolvía contra la tabla interna de la subconsulta y bloqueaba todo enlace (fallaba cerrado); ahora se califica la
     columna de la fila externa y hay pruebas positiva y negativa.
@@ -1171,6 +1176,13 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   limpieza" con el costo de la casa. Tipo de cambio prellenado con el último usado. Lista con filtros
   (mes, tipo, categoría, casa) y tarjetas en móvil; cada alquiler muestra sus costos y utilidad. KPIs del mes.
   Staff ve solo "Registrar" y sus propios movimientos. Comprobantes por enlace firmado de corta duración.
+- **Reglas de seguridad para la implementación** (revisión de SD-801):
+  - Comprobantes: subir, firmar (`createSignedUrl`) y borrar **siempre con el cliente de sesión**, nunca con service-role; así
+    aplican las políticas de `finance-receipts` y un staff no puede firmar/borrar el comprobante de otro aunque apunte su
+    `receipt_path` a él. Nombres de objeto = uuid aleatorio bajo `{org_id}/receipts/`; la ruta la construye el servidor.
+  - Tipo de archivo por contenido (magic bytes JPEG/PNG/WebP/PDF) y 5 MB validados en la server action; el `Content-Type`
+    del cliente no es de fiar.
+  - El staff no ve `finance_unit_settings` editable ni totales; el DAL no ofrece edición del costo de limpieza al staff.
 - **Criterios**
   - [ ] Staff no ve totales ni movimientos ajenos (verificado con sesión real, no solo política).
   - [ ] Registrar un alquiler con limpieza y comisión crea tres movimientos ligados en una sola operación (RPC).

@@ -4,7 +4,7 @@
 --   drop function private.seed_finance_categories(uuid), private.seed_finance_categories_trigger(),
 --     private.touch_finance_updated_at(), private.is_owner(uuid);
 --   drop type public.finance_kind, public.finance_channel, public.finance_payment_method, public.finance_source;
---   alter table public.units drop column cleaning_cost_cents;
+--   drop table public.finance_unit_settings; drop function private.finance_default_categories(), private.finance_entries_related_guard();
 --   delete from storage.objects where bucket_id = 'finance-receipts';
 --   delete from storage.buckets where id = 'finance-receipts'; (+ the finance_receipts_* policies)
 
@@ -28,11 +28,46 @@ $$;
 revoke all on function private.is_owner(uuid) from public, anon;
 grant execute on function private.is_owner(uuid) to authenticated;
 
--- Suggested cleaning cost per unit, in the property's currency.
-alter table public.units
-  add column cleaning_cost_cents integer check (cleaning_cost_cents is null or cleaning_cost_cents >= 0);
-grant insert (cleaning_cost_cents) on public.units to authenticated;
-grant update (cleaning_cost_cents) on public.units to authenticated;
+-- Suggested cleaning cost per unit, in the property's currency. Kept OUT of
+-- public.units on purpose: that table is readable by anon (public site), so a
+-- column there would expose an internal cost. Members read it (to prefill a
+-- rental's cleaning); only the owner changes it.
+create function private.touch_finance_updated_at()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+revoke all on function private.touch_finance_updated_at() from public, anon, authenticated;
+
+create table public.finance_unit_settings (
+  unit_id uuid primary key,
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  cleaning_cost_cents integer check (cleaning_cost_cents is null or cleaning_cost_cents >= 0),
+  updated_at timestamptz not null default now(),
+  constraint finance_unit_settings_unit_fkey foreign key (unit_id, org_id)
+    references public.units (id, org_id) on delete cascade
+);
+create index finance_unit_settings_org_id_idx on public.finance_unit_settings(org_id);
+create trigger finance_unit_settings_updated_at before update on public.finance_unit_settings
+  for each row execute function private.touch_finance_updated_at();
+
+alter table public.finance_unit_settings enable row level security;
+create policy finance_unit_settings_select on public.finance_unit_settings for select to authenticated
+  using (private.is_member(org_id));
+create policy finance_unit_settings_insert on public.finance_unit_settings for insert to authenticated
+  with check (private.is_owner(org_id));
+create policy finance_unit_settings_update on public.finance_unit_settings for update to authenticated
+  using (private.is_owner(org_id)) with check (private.is_owner(org_id));
+create policy finance_unit_settings_delete on public.finance_unit_settings for delete to authenticated
+  using (private.is_owner(org_id));
+revoke all on public.finance_unit_settings from public, anon, authenticated;
+grant select on public.finance_unit_settings to authenticated;
+grant insert (unit_id, org_id, cleaning_cost_cents) on public.finance_unit_settings to authenticated;
+grant update (cleaning_cost_cents) on public.finance_unit_settings to authenticated;
+grant delete on public.finance_unit_settings to authenticated;
+grant all on public.finance_unit_settings to service_role;
 
 -- ─── Categories ─────────────────────────────────────────────────────────────
 create table public.finance_categories (
@@ -64,8 +99,10 @@ create policy finance_categories_insert on public.finance_categories for insert 
   with check (private.is_owner(org_id));
 create policy finance_categories_update on public.finance_categories for update to authenticated
   using (private.is_owner(org_id)) with check (private.is_owner(org_id));
+-- Built-in categories (system_key) can be renamed or archived, never deleted:
+-- reports and automatic loads find them by key and the seed does not re-run.
 create policy finance_categories_delete on public.finance_categories for delete to authenticated
-  using (private.is_owner(org_id));
+  using (private.is_owner(org_id) and system_key is null);
 
 revoke all on public.finance_categories from public, anon, authenticated;
 grant select on public.finance_categories to authenticated;
@@ -74,11 +111,11 @@ grant update (name, sort_order, archived) on public.finance_categories to authen
 grant delete on public.finance_categories to authenticated;
 grant all on public.finance_categories to service_role;
 
--- Built-in categories. Idempotent: safe to call again for any org.
-create function private.seed_finance_categories(target_org_id uuid)
-returns void language sql security definer set search_path = '' as $$
-  insert into public.finance_categories (org_id, kind, name, system_key, sort_order)
-  select target_org_id, d.kind::public.finance_kind, d.name, d.system_key, d.sort_order
+-- Built-in categories.
+create function private.finance_default_categories()
+returns table (kind public.finance_kind, name text, system_key text, sort_order integer)
+language sql immutable set search_path = '' as $$
+  select d.kind::public.finance_kind, d.name, d.system_key, d.sort_order
   from (values
     ('income',  'Alquiler',                 'rental',              0),
     ('income',  'Servicios extra',          'extra_services',      1),
@@ -95,7 +132,26 @@ returns void language sql security definer set search_path = '' as $$
     ('expense', 'Impuestos y arbitrios',    'taxes',               9),
     ('expense', 'Personal',                 'payroll',            10),
     ('expense', 'Otros egresos',            'other_expense',      11)
-  ) as d(kind, name, system_key, sort_order)
+  ) as d(kind, name, system_key, sort_order);
+$$;
+revoke all on function private.finance_default_categories() from public, anon, authenticated;
+
+-- Idempotent: safe to call again for any org. A user category that already has
+-- a built-in's name (same kind, ignoring case/spaces) is adopted as that
+-- built-in instead of blocking it through the unique-name index.
+create function private.seed_finance_categories(target_org_id uuid)
+returns void language sql security definer set search_path = '' as $$
+  update public.finance_categories c
+     set system_key = d.system_key
+    from private.finance_default_categories() d
+   where c.org_id = target_org_id and c.system_key is null
+     and c.kind = d.kind and lower(btrim(c.name)) = lower(btrim(d.name))
+     and not exists (
+       select 1 from public.finance_categories x where x.org_id = target_org_id and x.system_key = d.system_key
+     );
+  insert into public.finance_categories (org_id, kind, name, system_key, sort_order)
+  select target_org_id, d.kind, d.name, d.system_key, d.sort_order
+  from private.finance_default_categories() d
   on conflict do nothing;
 $$;
 revoke all on function private.seed_finance_categories(uuid) from public, anon, authenticated;
@@ -200,43 +256,46 @@ create index finance_entries_related_idx on public.finance_entries (related_entr
 create index finance_entries_stay_idx on public.finance_entries (org_id, stay_start) where stay_start is not null;
 create index finance_entries_created_by_idx on public.finance_entries (org_id, created_by);
 
-create function private.touch_finance_updated_at()
-returns trigger language plpgsql set search_path = '' as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
-revoke all on function private.touch_finance_updated_at() from public, anon, authenticated;
 create trigger finance_entries_updated_at before update on public.finance_entries
   for each row execute function private.touch_finance_updated_at();
 
 alter table public.finance_entries enable row level security;
 -- Owner: everything in the org. Staff: register entries and only ever see /
 -- touch their own (created_by defaults to auth.uid() and cannot be set).
--- `related_entry_id` may only point at an entry the caller can already see, so
--- staff cannot attach costs to a rental they cannot read (FK checks bypass RLS).
--- Columns of the outer row are qualified: an unqualified related_entry_id would
--- resolve to r.related_entry_id inside the subquery.
+-- A staff member may only link a cost to an entry they can already see (FK
+-- checks bypass RLS, so without this they could attach costs to a rental they
+-- cannot read). It runs as the caller, so the lookup obeys RLS, and only when
+-- the link is new or changed: an owner linking a staff entry to a rental the
+-- staff cannot see does not stop that staff member from editing other fields.
+create function private.finance_entries_related_guard()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.related_entry_id is not null
+     and (tg_op = 'INSERT' or new.related_entry_id is distinct from old.related_entry_id)
+     and not private.is_owner(new.org_id)
+     and not exists (
+       select 1 from public.finance_entries r where r.id = new.related_entry_id and r.org_id = new.org_id
+     ) then
+    raise exception 'related entry not found' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function private.finance_entries_related_guard() from public, anon, authenticated;
+create trigger finance_entries_related_guard before insert or update on public.finance_entries
+  for each row execute function private.finance_entries_related_guard();
+
 create policy finance_entries_select on public.finance_entries for select to authenticated
   using (private.is_owner(org_id) or (private.is_member(org_id) and created_by = auth.uid()));
 create policy finance_entries_insert on public.finance_entries for insert to authenticated
   with check (
     private.is_member(org_id)
     and (private.is_owner(org_id) or created_by = auth.uid())
-    and (related_entry_id is null or exists (
-      select 1 from public.finance_entries r
-      where r.id = finance_entries.related_entry_id and r.org_id = finance_entries.org_id
-    ))
   );
 create policy finance_entries_update on public.finance_entries for update to authenticated
   using (private.is_owner(org_id) or (private.is_member(org_id) and created_by = auth.uid()))
   with check (
     (private.is_owner(org_id) or (private.is_member(org_id) and created_by = auth.uid()))
-    and (related_entry_id is null or exists (
-      select 1 from public.finance_entries r
-      where r.id = finance_entries.related_entry_id and r.org_id = finance_entries.org_id
-    ))
   );
 create policy finance_entries_delete on public.finance_entries for delete to authenticated
   using (private.is_owner(org_id) or (private.is_member(org_id) and created_by = auth.uid()));

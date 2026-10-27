@@ -346,6 +346,43 @@ export type Database = {
           },
         ];
       };
+      finance_unit_settings: {
+        Row: {
+          cleaning_cost_cents: number | null;
+          org_id: string;
+          unit_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cleaning_cost_cents?: number | null;
+          org_id: string;
+          unit_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          cleaning_cost_cents?: number | null;
+          org_id?: string;
+          unit_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_unit_settings_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_unit_settings_unit_fkey";
+            columns: ["unit_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
       memberships: {
         Row: {
           created_at: string;
@@ -813,7 +850,6 @@ export type Database = {
       units: {
         Row: {
           active: boolean;
-          cleaning_cost_cents: number | null;
           created_at: string;
           id: string;
           included_guests: number;
@@ -827,7 +863,6 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           active?: boolean;
-          cleaning_cost_cents?: number | null;
           created_at?: string;
           id?: string;
           included_guests: number;
@@ -840,7 +875,6 @@ export type Database = {
         };
         Update: {
           active?: boolean;
-          cleaning_cost_cents?: number | null;
           created_at?: string;
           id?: string;
           included_guests?: number;
