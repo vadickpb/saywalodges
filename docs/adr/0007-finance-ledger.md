@@ -1,6 +1,6 @@
 # ADR 0007 · Libro de ingresos y egresos
 
-- Estado: propuesto · Fecha: 2026-10-25
+- Estado: aceptado (SD-801) · Fecha: 2026-10-25
 
 ## Contexto
 
@@ -33,6 +33,10 @@ pero el módulo debe ser útil desde ya y aceptar después la carga automática 
   el reporte lo indica.
 - **Permisos**: el owner ve y edita todo; el staff registra y solo ve y edita lo que él creó, por lo que nunca ve
   totales ni movimientos ajenos. Reportes y Excel son solo del owner (DAL + RLS). Helper `private.is_owner(org_id)`.
+- **Costo de limpieza sugerido**: `finance_unit_settings` (una fila por unidad), fuera de `units` porque esa tabla es
+  pública para `anon`. Lectura de miembros, escritura solo del dueño.
+- **Categorías de sistema**: llevan `system_key` estable; se pueden renombrar o archivar pero no borrar, porque los
+  reportes y las cargas automáticas las buscan por clave.
 - **Comprobantes**: solo un archivo adjunto (foto o PDF), sin campos fiscales. Bucket **privado**
   `finance-receipts` con prefijo `{org_id}/`, tipo validado por contenido y enlaces firmados de corta duración.
   Nunca se usa el bucket público de fotos del sitio.

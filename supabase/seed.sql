@@ -299,6 +299,10 @@ INSERT INTO "auth"."users" (
    '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', 'authenticated', 'authenticated',
    'owner@demo.saywadirect.test', crypt('devpassword123', gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  -- SD-801: a staff member of Saywa, to exercise owner/staff permissions locally.
+  ('00000000-0000-0000-0000-000000000000', 'c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40', 'authenticated', 'authenticated',
+   'staff@saywalodges.test', crypt('devpassword123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
 
 INSERT INTO "auth"."identities" (
@@ -309,12 +313,16 @@ INSERT INTO "auth"."identities" (
    'email', 'a3b45db1-7c15-4528-a4ba-be625665fb6d', now(), now(), now()),
   ('889e1602-ef22-492b-9c1c-fbd4d1a131b0', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880',
    '{"sub":"bd6a1c86-01e2-40a4-ba79-4e28b373e880","email":"owner@demo.saywadirect.test"}'::jsonb,
-   'email', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', now(), now(), now());
+   'email', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', now(), now(), now()),
+  ('3f0a9c52-8d17-4b6e-a1c4-52e7d9b08a63', 'c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40',
+   '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40","email":"staff@saywalodges.test"}'::jsonb,
+   'email', 'c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40', now(), now(), now());
 
 INSERT INTO "public"."memberships" ("org_id", "user_id", "role")
 VALUES
   ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a3b45db1-7c15-4528-a4ba-be625665fb6d', 'owner'),
-  ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', 'owner');
+  ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'bd6a1c86-01e2-40a4-ba79-4e28b373e880', 'owner'),
+  ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40', 'staff');
 
 -- SD-204: bookable inventory, not the spaces shown in the photo gallery.
 -- Local examples only. Included guests equals capacity until real rates are

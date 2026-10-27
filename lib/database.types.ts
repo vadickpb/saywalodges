@@ -190,6 +190,199 @@ export type Database = {
           },
         ];
       };
+      finance_categories: {
+        Row: {
+          archived: boolean;
+          created_at: string;
+          id: string;
+          kind: Database["public"]["Enums"]["finance_kind"];
+          name: string;
+          org_id: string;
+          sort_order: number;
+          system_key: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          archived?: boolean;
+          created_at?: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["finance_kind"];
+          name: string;
+          org_id: string;
+          sort_order?: number;
+          system_key?: string | null;
+        };
+        Update: {
+          archived?: boolean;
+          created_at?: string;
+          id?: string;
+          kind?: Database["public"]["Enums"]["finance_kind"];
+          name?: string;
+          org_id?: string;
+          sort_order?: number;
+          system_key?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_categories_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      finance_entries: {
+        Row: {
+          amount_cents: number;
+          amount_pen_cents: number | null;
+          category_id: string;
+          channel: Database["public"]["Enums"]["finance_channel"] | null;
+          counterparty: string | null;
+          created_at: string;
+          created_by: string | null;
+          currency: Database["public"]["Enums"]["currency_code"];
+          external_ref: string | null;
+          fx_rate_pen: number | null;
+          guests: number | null;
+          id: string;
+          kind: Database["public"]["Enums"]["finance_kind"];
+          note: string | null;
+          occurred_on: string;
+          org_id: string;
+          payment_method:
+            Database["public"]["Enums"]["finance_payment_method"] | null;
+          receipt_path: string | null;
+          related_entry_id: string | null;
+          source: Database["public"]["Enums"]["finance_source"];
+          stay_end: string | null;
+          stay_start: string | null;
+          unit_id: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents: number;
+          amount_pen_cents?: never;
+          category_id: string;
+          channel?: Database["public"]["Enums"]["finance_channel"] | null;
+          counterparty?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          currency: Database["public"]["Enums"]["currency_code"];
+          external_ref?: string | null;
+          fx_rate_pen?: number | null;
+          guests?: number | null;
+          id?: string;
+          kind: Database["public"]["Enums"]["finance_kind"];
+          note?: string | null;
+          occurred_on: string;
+          org_id: string;
+          payment_method?:
+            Database["public"]["Enums"]["finance_payment_method"] | null;
+          receipt_path?: string | null;
+          related_entry_id?: string | null;
+          source?: Database["public"]["Enums"]["finance_source"];
+          stay_end?: string | null;
+          stay_start?: string | null;
+          unit_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          amount_pen_cents?: never;
+          category_id?: string;
+          channel?: Database["public"]["Enums"]["finance_channel"] | null;
+          counterparty?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          external_ref?: string | null;
+          fx_rate_pen?: number | null;
+          guests?: number | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["finance_kind"];
+          note?: string | null;
+          occurred_on?: string;
+          org_id?: string;
+          payment_method?:
+            Database["public"]["Enums"]["finance_payment_method"] | null;
+          receipt_path?: string | null;
+          related_entry_id?: string | null;
+          source?: Database["public"]["Enums"]["finance_source"];
+          stay_end?: string | null;
+          stay_start?: string | null;
+          unit_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_entries_category_fkey";
+            columns: ["category_id", "org_id", "kind"];
+            isOneToOne: false;
+            referencedRelation: "finance_categories";
+            referencedColumns: ["id", "org_id", "kind"];
+          },
+          {
+            foreignKeyName: "finance_entries_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_entries_related_fkey";
+            columns: ["related_entry_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_entries";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "finance_entries_unit_fkey";
+            columns: ["unit_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      finance_unit_settings: {
+        Row: {
+          cleaning_cost_cents: number | null;
+          org_id: string;
+          unit_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cleaning_cost_cents?: number | null;
+          org_id: string;
+          unit_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          cleaning_cost_cents?: number | null;
+          org_id?: string;
+          unit_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_unit_settings_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_unit_settings_unit_fkey";
+            columns: ["unit_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
       memberships: {
         Row: {
           created_at: string;
@@ -738,6 +931,11 @@ export type Database = {
     Enums: {
       currency_code: "PEN" | "USD";
       fee_kind: "per_stay" | "per_night" | "per_guest";
+      finance_channel: "direct" | "airbnb" | "booking" | "other";
+      finance_kind: "income" | "expense";
+      finance_payment_method:
+        "cash" | "bank_transfer" | "yape_plin" | "card" | "platform" | "other";
+      finance_source: "manual" | "booking" | "ical";
       membership_role: "owner" | "staff";
       photo_role: "hero" | "gallery" | "room";
       space_category: "pool" | "rooms" | "common" | "outdoor";
@@ -874,6 +1072,17 @@ export const Constants = {
     Enums: {
       currency_code: ["PEN", "USD"],
       fee_kind: ["per_stay", "per_night", "per_guest"],
+      finance_channel: ["direct", "airbnb", "booking", "other"],
+      finance_kind: ["income", "expense"],
+      finance_payment_method: [
+        "cash",
+        "bank_transfer",
+        "yape_plin",
+        "card",
+        "platform",
+        "other",
+      ],
+      finance_source: ["manual", "booking", "ical"],
       membership_role: ["owner", "staff"],
       photo_role: ["hero", "gallery", "room"],
       space_category: ["pool", "rooms", "common", "outdoor"],
