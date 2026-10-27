@@ -104,7 +104,7 @@ export function FinanceForm(props: Props) {
   }, [amount, currency, fxRate]);
 
   return (
-    <form action={formAction} className="flex max-w-2xl flex-col gap-5" encType="multipart/form-data">
+    <form action={formAction} className="flex max-w-2xl flex-col gap-5">
       {entryId && <input type="hidden" name="id" value={entryId} />}
       {mode !== "rental" && <input type="hidden" name="kind" value={kind} />}
       {state.formError && (
