@@ -5,6 +5,8 @@ import type { Database } from "@/lib/database.types";
 vi.mock("server-only", () => ({}));
 import {
   LEDGER_LIMIT,
+  REPORT_ROW_LIMIT,
+  listAllEntries,
   createEntry,
   createRental,
   deleteEntry,
@@ -39,7 +41,7 @@ function fake(opts: {
   const from = vi.fn((table: string) => {
     const take = (): Result => queues[table]?.shift() ?? { data: [], error: null };
     const b: Record<string, unknown> = {};
-    for (const m of ["select", "eq", "gte", "lt", "is", "not", "in", "order", "limit", "insert", "update", "delete"]) {
+    for (const m of ["select", "eq", "gte", "lt", "is", "not", "in", "order", "limit", "range", "insert", "update", "delete"]) {
       b[m] = vi.fn((...args: unknown[]) => {
         calls.push({ table, method: m, args });
         if (m === "insert" || m === "update" || m === "delete") order.push(`${m}:${table}`);
@@ -326,5 +328,32 @@ describe("receipts", () => {
       sign: { data: null, error: { message: "denied by storage policy" } },
     });
     expect(await signReceipt(signFails.client, ORG, "e1")).toBeNull();
+  });
+
+  describe("listAllEntries", () => {
+    const page = (n: number, tag: string) => ({ data: Array.from({ length: n }, (_, i) => row({ id: `${tag}${i}` })), error: null });
+
+    it("reads every page and is not truncated when the last page is short", async () => {
+      const { client } = fake({ tables: { finance_entries: [page(1000, "a"), page(40, "b")] } });
+      const r = await listAllEntries(client, ORG);
+      expect(r.entries).toHaveLength(1040);
+      expect(r.truncated).toBe(false);
+    });
+
+    it("is truncated only when a row exists past the limit", async () => {
+      const full = Array.from({ length: REPORT_ROW_LIMIT / 1000 }, (_, i) => page(1000, `p${i}`));
+      const exact = await listAllEntries(fake({ tables: { finance_entries: [...full, { data: [], error: null }] } }).client, ORG);
+      expect(exact.entries).toHaveLength(REPORT_ROW_LIMIT);
+      expect(exact.truncated).toBe(false);
+      const over = await listAllEntries(fake({ tables: { finance_entries: [...full, { data: [{ id: "x" }], error: null }] } }).client, ORG);
+      expect(over.truncated).toBe(true);
+    });
+
+    it("throws a generic error without the database message", async () => {
+      silent();
+      await expect(
+        listAllEntries(fake({ tables: { finance_entries: [{ data: null, error: { message: "secret db detail" } }] } }).client, ORG)
+      ).rejects.toThrow("No se pudieron cargar los movimientos.");
+    });
   });
 });

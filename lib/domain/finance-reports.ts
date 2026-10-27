@@ -218,6 +218,8 @@ export type PeriodReport = {
   basis: ReportBasis;
   totals: Totals;
   byChannel: ChannelRow[];
+  // Every category with movement in the period, biggest first (income and expense), for the printable statement.
+  byCategory: CategoryTotals[];
   topExpenses: CategoryTotals[];
   units: UnitPerformance[];
   general: { incomeCents: number; expenseCents: number; netCents: number }; // not tied to a house
@@ -261,7 +263,7 @@ export function periodReport(prepared: PreparedReport, period: Period, basis: Re
   let income = ZERO;
   let expense = ZERO;
   const channels = new Map<ReportChannel | "none", { gross: bigint; commission: bigint; rentals: Set<string> }>();
-  const categories = new Map<string, { slice: Slice; total: bigint }>();
+  const categories = new Map<string, { slice: Slice; total: bigint }>(); // income and expense
   const unitMoney = new Map<string, { income: bigint; expense: bigint }>();
   const general = { income: ZERO, expense: ZERO };
 
@@ -276,10 +278,8 @@ export function periodReport(prepared: PreparedReport, period: Period, basis: Re
     else bucket.expense += s.cents;
     if (s.unitId !== null) unitMoney.set(s.unitId, bucket);
 
-    if (!isIncome) {
-      const current = categories.get(s.categoryId);
-      categories.set(s.categoryId, { slice: s, total: (current?.total ?? ZERO) + s.cents });
-    }
+    const current = categories.get(s.categoryId);
+    categories.set(s.categoryId, { slice: s, total: (current?.total ?? ZERO) + s.cents });
 
     const key = s.channel ?? "none";
     const row = channels.get(key) ?? { gross: ZERO, commission: ZERO, rentals: new Set<string>() };
@@ -345,16 +345,17 @@ export function periodReport(prepared: PreparedReport, period: Period, basis: Re
     }))
     .sort((a, b) => b.grossCents - a.grossCents || compare(a.channel ?? "", b.channel ?? ""));
 
-  const topExpenses: CategoryTotals[] = [...categories.values()]
+  const byCategory: CategoryTotals[] = [...categories.values()]
     .map(({ slice, total }) => ({ categoryId: slice.categoryId, categoryKey: slice.categoryKey, kind: slice.kind, totalCents: safe(total) }))
-    .sort((a, b) => b.totalCents - a.totalCents || compare(a.categoryId, b.categoryId))
-    .slice(0, 5);
+    .sort((a, b) => b.totalCents - a.totalCents || compare(a.categoryId, b.categoryId));
+  const topExpenses = byCategory.filter((c) => c.kind === "expense").slice(0, 5);
 
   return {
     period,
     basis,
     totals: totalsOf(income, expense),
     byChannel,
+    byCategory,
     topExpenses,
     units,
     general: { incomeCents: safe(general.income), expenseCents: safe(general.expense), netCents: safe(general.income - general.expense) },

@@ -161,6 +161,45 @@ export async function listLinkedCosts(supabase: Client, orgId: string, rentalIds
   return entries;
 }
 
+// Every entry of the org, for the reports. PostgREST returns at most 1000 rows per
+// request, so this reads pages in a stable order until the ledger is exhausted or
+// REPORT_ROW_LIMIT is hit (then `truncated` tells the caller the figures are partial).
+// Owner-only in practice: RLS gives a staff member just their own rows.
+export const REPORT_ROW_LIMIT = 20_000;
+const PAGE = 1000;
+
+export async function listAllEntries(supabase: Client, orgId: string): Promise<{ entries: LedgerEntry[]; truncated: boolean }> {
+  const entries: LedgerEntry[] = [];
+  for (let from = 0; from < REPORT_ROW_LIMIT; from += PAGE) {
+    const { data, error } = await supabase
+      .from("finance_entries")
+      .select(COLUMNS)
+      .eq("org_id", orgId)
+      .order("occurred_on")
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error("listAllEntries failed:", error);
+      throw new Error("No se pudieron cargar los movimientos.");
+    }
+    entries.push(...data.map(toEntry));
+    if (data.length < PAGE) return { entries, truncated: false };
+  }
+  // The limit is a whole number of pages: only truncated if one more row exists.
+  const { data: extra, error: extraError } = await supabase
+    .from("finance_entries")
+    .select("id")
+    .eq("org_id", orgId)
+    .order("occurred_on")
+    .order("id")
+    .range(REPORT_ROW_LIMIT, REPORT_ROW_LIMIT);
+  if (extraError) {
+    console.error("listAllEntries probe failed:", extraError);
+    throw new Error("No se pudieron cargar los movimientos.");
+  }
+  return { entries, truncated: extra.length > 0 };
+}
+
 export async function getEntry(supabase: Client, orgId: string, id: string): Promise<LedgerEntry | null> {
   const { data, error } = await supabase.from("finance_entries").select(COLUMNS).eq("org_id", orgId).eq("id", id).maybeSingle();
   if (error) {

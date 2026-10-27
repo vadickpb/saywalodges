@@ -227,6 +227,17 @@ describe("channels, categories and general income", () => {
     ]);
   });
 
+  it("lists every category with movement, income and expense, for the statement", () => {
+    const report = periodReport(prepare([...crossing().all]), FEB, "stay");
+    expect(report.byCategory.map((c) => [c.categoryId, c.kind, c.totalCents])).toEqual([
+      ["c-rental", "income", 50001],
+      ["c-comm", "expense", 6000],
+      ["c-water", "expense", 5000],
+      ["c-clean", "expense", 4002],
+    ]);
+    expect(report.topExpenses.every((c) => c.kind === "expense")).toBe(true); // income never appears in the expense ranking
+  });
+
   it("keeps only the five biggest expense categories, ties by id", () => {
     const costs = ["a", "b", "c", "d", "e", "f", "g"].map((id, i) =>
       entry({ kind: "expense", amountPenCents: id === "f" || id === "g" ? 50 : 100 + i, categoryId: `c-${id}`, categoryKey: null })

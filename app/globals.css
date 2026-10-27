@@ -116,6 +116,20 @@
   --ring: #818CF8;
 }
 
+/* Paper is white: printing from the dark theme must not give light text on a
+   white sheet, so the light palette applies again for print. */
+@media print {
+  .dashboard.dark {
+    --background: #FFFFFF;
+    --foreground: #0F172A;
+    --card: #FFFFFF;
+    --card-foreground: #0F172A;
+    --muted: #F1F5F9;
+    --muted-foreground: #475569;
+    --border: #E2E8F0;
+  }
+}
+
 /* Public tenant site (SD-209). The base colors arrive as an inline style on
    <body> (validated hex only — see themeToCssVars); these tints derive from
    them, so every theme gets consistent secondary text/surfaces/borders.

@@ -18,7 +18,7 @@ type SidebarNavProps = {
 // shell (org selector, actual nav items); this just renders the list.
 export function SidebarNav({ items, activeHref }: SidebarNavProps) {
   return (
-    <nav className="hidden md:flex md:w-56 md:flex-col md:gap-1 md:border-r md:border-border md:p-3">
+    <nav className="hidden md:flex md:w-56 md:flex-col md:gap-1 md:border-r md:border-border md:p-3 print:hidden">
       {items.map(({ href, label, icon: Icon }) => {
         const active = href === activeHref;
         return (
