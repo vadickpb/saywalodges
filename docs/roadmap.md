@@ -1085,14 +1085,33 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Lighthouse móvil ≥ 90 en rendimiento, accesibilidad y SEO.
   - [ ] El CTA abre WhatsApp con mensaje prellenado y el clic queda registrado.
 
-### [ ] SD-705 · chore(deps): security update of dependencies
+### [x] SD-705 · chore(deps): security update of dependencies
 `S` · Depende: — · Review: `R+S` · **Prioridad: antes de la Fase 8**
 - **Alcance**: `npm audit` (SD-206, 2026-10-23) reportó 9 paquetes con avisos, incluido Next.js 16.2.6 con
   severidad crítica. Evaluar exposición real, actualizar a versiones corregidas (leer las notas de migración en
   `node_modules/next/dist/docs/`), sin `npm audit fix --force` a ciegas.
 - **Criterios**
-  - [ ] `npm audit` sin avisos altos/críticos o cada aviso restante justificado en el PR.
-  - [ ] Enrutamiento por host/idioma, login y dashboard verificados contra el servidor local tras actualizar.
+  - [x] `npm audit` sin avisos altos/críticos o cada aviso restante justificado en el PR.
+  - [x] Enrutamiento por host/idioma, login y dashboard verificados contra el servidor local tras actualizar.
+- **Nota de cierre**:
+  - Next y `eslint-config-next` 16.2.6 → 16.4.3, versiones exactas alineadas; lockfile con Sharp 0.35.5
+    y libvips 1.3.4. Sin `audit fix --force`, nuevas dependencias directas ni cambios de esquema.
+  - Auditoría del 2026-10-27: cero vulnerabilidades en todas las severidades. Se revisaron advisories
+    oficiales: el DoS de Server Actions afecta la superficie anterior; se corrige al actualizar. Los
+    parches de optimización de imágenes y Cache Components también quedan incluidos; no se afirma que
+    se hayan reproducido exploits ni comprobado todas las precondiciones del sistema de producción.
+  - Leídas las guías de la versión instalada. Se conserva proxy por host/idioma sin autorización,
+    sesión/membresía en DAL y la restricción de imágenes al host de Storage. Se incluye el bloque
+    de documentación de AGENTS regenerado automáticamente por Next 16.4.3.
+  - Verificación con Node 24.22.1: lint, typecheck, 237 tests, cobertura del dominio de precios al 100 %
+    y build correctos. `reviewer` y `security-reviewer` aprobados.
+  - HTTP local en puerto 3001: login por server action con cookie y redirect, seis pantallas de dashboard,
+    rechazo sin sesión, Saywa y demo en es/en, redirección por idioma, imagen optimizada y aislamiento de
+    rutas de plataforma/internas. `/admin` y APIs legacy siguen devolviendo 404.
+  - La carpeta original presentó lecturas `ECANCELED`/timeout y referencias remotas duplicadas inválidas;
+    se verificó en una copia limpia fuera de Documents con el mismo código y lockfile, conservando el
+    trabajo original. Tres referencias inválidas se apartaron con copia recuperable en `/tmp`.
+    Sin cambios de BD remota, `.env.local` original ni paneles de Vercel/Supabase.
 
 ## Fase 8 — Finanzas (M8)
 
