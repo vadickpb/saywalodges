@@ -12,7 +12,7 @@ export default defineConfig({
       reporter: ["text", "json-summary", "html"],
       thresholds: { perFile: true, lines: 90, statements: 90, functions: 90, branches: 90 },
     },
-    include: ["lib/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "app/**/*.test.ts"],
     // Dummy defaults so modules that import lib/env.ts (which validates
     // eagerly at import time) don't crash in test files that never touch
     // env themselves. env.test.ts overrides process.env directly per case.

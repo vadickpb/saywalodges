@@ -907,6 +907,31 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      create_rental_entries: {
+        Args: {
+          p_amount_cents: number;
+          p_channel: Database["public"]["Enums"]["finance_channel"];
+          p_cleaning_cents?: number;
+          p_commission_cents?: number;
+          p_currency: Database["public"]["Enums"]["currency_code"];
+          p_fx_rate_pen?: number;
+          p_guest_name?: string;
+          p_guests?: number;
+          p_note?: string;
+          p_occurred_on: string;
+          p_org_id: string;
+          p_payment_method?: Database["public"]["Enums"]["finance_payment_method"];
+          p_receipt_path?: string;
+          p_stay_end: string;
+          p_stay_start: string;
+          p_unit_id: string;
+        };
+        Returns: string;
+      };
+      delete_finance_entry: {
+        Args: { p_entry_id: string; p_org_id: string };
+        Returns: string[];
+      };
       reorder_amenities: {
         Args: { p_ids: string[]; p_property_id: string };
         Returns: number;
