@@ -8,7 +8,7 @@ export default defineConfig({
     environment: "node",
     coverage: {
       provider: "v8",
-      include: ["lib/domain/pricing.ts", "lib/domain/rates-management.ts"],
+      include: ["lib/domain/pricing.ts", "lib/domain/rates-management.ts", "lib/domain/finance.ts"],
       reporter: ["text", "json-summary", "html"],
       thresholds: { perFile: true, lines: 90, statements: 90, functions: 90, branches: 90 },
     },
