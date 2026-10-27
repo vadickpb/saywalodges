@@ -75,7 +75,18 @@
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
       "Bash(gh pr merge * --admin:*)",
-      "Bash(gh repo delete:*)"
+      "Bash(gh repo delete:*)",
+      "Bash(gh pr merge --admin:*)",
+      "Bash(gh pr merge --delete-branch:*)",
+      "Bash(gh pr merge * --delete-branch:*)",
+      "Bash(gh pr merge -d:*)",
+      "Bash(gh pr merge * -d:*)",
+      "Bash(git push * :*)",
+      "Bash(git push * +*)",
+      "Bash(git push * *:refs/heads/main)",
+      "Bash(git push * *:refs/heads/main *)",
+      "Bash(git push * *:main)",
+      "Bash(git push * *:main *)"
     ]
   }
 }

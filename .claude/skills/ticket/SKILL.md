@@ -12,8 +12,9 @@ description: Workflow estándar para implementar un ticket de Saywa Direct de pr
 
 ## 2. Entender y planificar
 - Lee los archivos afectados antes de proponer nada.
-- Si el ticket toca BD, seguridad o más de dos capas: plan corto en plan mode y espera aprobación.
-  Si no, un plan de 3 líneas en el chat basta.
+- Publica un plan corto antes de implementar. Para tickets con BD, seguridad o más de dos capas, incluye
+  las decisiones y verificaciones previstas. Dentro del roadmap autorizado se continúa sin esperar otra
+  aprobación, según "Autonomía de trabajo, PR y merge" en `AGENTS.md`.
 - Si implica una decisión de arquitectura nueva, redacta un ADR en `docs/adr/NNNN-slug.md`.
 
 ## 3. Base de datos primero (si aplica)
@@ -38,6 +39,6 @@ anota lo que encuentres fuera de alcance como propuesta de ticket nuevo.
 ## 7. Cerrar
 - Commits en Conventional Commits, con el id del ticket en el cuerpo (`Refs: SD-041`).
 - Push, PR y squash merge los hace el agente sin pedir confirmación, solo si se cumplen las condiciones de
-  "Autonomía de PR y merge" en `AGENTS.md`.
+  "Autonomía de trabajo, PR y merge" en `AGENTS.md`.
 - PR con `.github/pull_request_template.md` completo. Squash merge con CI en verde.
 - Marca el ticket como hecho en `docs/roadmap.md`.
