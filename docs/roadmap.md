@@ -1222,7 +1222,7 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - Despliegue: aplicar `20261027195656_finance_rental_rpc.sql` y `20261027204814_finance_receipt_guard.sql` en producción (junto con
     `20261027184334_finance_ledger.sql` si aún no se aplicó) antes de usar la pantalla; después `get_advisors`. No hay datos financieros en producción.
 
-### [ ] SD-804 · feat(finance): performance reports
+### [~] SD-804 · feat(finance): performance reports
 `L` · Depende: SD-802, SD-803 · Review: `R`
 - **Alcance**: `lib/domain/finance-reports.ts` puro + `/app/finance/reports` (solo owner). Selector de base
   **por estadía** (prorrateo por noche, para rendimiento) o **por cobro** (caja, para el contador).
@@ -1236,9 +1236,26 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - Estado de resultados mensual/anual imprimible (CSS de impresión → PDF del navegador) con logo y período.
   - Noches disponibles = días con la casa activa; nota visible hasta que SD-807 descuente bloqueos del dueño.
 - **Criterios**
-  - [ ] Un alquiler que cruza meses reparte noches e ingreso por noche en "por estadía" y cae entero en la fecha
-        de cobro en "por cobro" (tests).
+  - [x] Un alquiler que cruza meses reparte noches e ingreso por noche en "por estadía" y cae entero en la fecha
+        de cobro en "por cobro" (tests de `finance-reports.test.ts`).
   - [ ] Cobertura ≥ 90 % de `finance-reports.ts`; cifras del panel iguales a las del motor para el mismo período.
+- **Avance — parte 1, motor de cálculo (hecha)**: `lib/domain/finance-reports.ts`, puro y sin I/O.
+  - Todo sale de una sola lista de "tajadas" (monto + fecha): `prepareReport` la construye una vez y `periodReport`,
+    `monthReport`, `yearReport` y `globalReport` solo la agrupan, así que el panel, el estado imprimible y el Excel (SD-805)
+    no pueden discrepar. Base **por cobro**: cada movimiento cuenta entero en su fecha. Base **por estadía**: el ingreso del
+    alquiler y los costos ligados (comisión, limpieza, otros) se reparten por noche, con el residuo de céntimos en la última
+    noche; los gastos generales y los ingresos sin estadía se quedan en su fecha.
+  - Noches, ocupación, tarifa promedio por noche (ADR) e ingreso por noche disponible (RevPAR) son siempre por estadía,
+    cualquiera sea la base del dinero. Noches disponibles = días del período desde que la casa existe, si está activa; no se
+    descuentan bloqueos del dueño hasta SD-807 (la UI debe decirlo).
+  - Mensual con comparación contra el mes anterior y el mismo mes del año pasado (diferencia y porcentaje en puntos básicos,
+    `null` cuando la base es 0); anual con 12 meses, total, año anterior, mejor y peor mes (solo meses con actividad;
+    empate al más temprano); global con ranking por **utilidad**, mezcla de canales, ahorro estimado por reservas directas
+    (tasa de comisión de Airbnb y Booking aplicada al bruto directo) y costo promedio de limpieza y mantenimiento por alquiler.
+  - `prepareReport` valida una sola vez que los montos suman un entero seguro, así que ningún total posterior puede desbordar.
+  - Cobertura de `finance-reports.ts`: 100 % de sentencias, funciones y líneas y 99,3 % de ramas (exigido por archivo en CI).
+  - Pendiente (parte 2): DAL de lectura de unidades/entradas para reportes, `/app/finance/reports` (solo dueño, selector de base),
+    gráficos SVG, estado de resultados imprimible y la nota de bloqueos del dueño; criterio de "cifras del panel iguales a las del motor".
 
 ### [ ] SD-805 · feat(finance): accountant Excel export
 `M` · Depende: SD-803, SD-804 · Review: `R+S`

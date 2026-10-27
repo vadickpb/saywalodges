@@ -12,7 +12,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:pricing": "vitest run lib/domain/pricing.test.ts lib/domain/rates-management.test.ts lib/domain/finance.test.ts --coverage",
+    "test:pricing": "vitest run lib/domain/pricing.test.ts lib/domain/rates-management.test.ts lib/domain/finance.test.ts lib/domain/finance-reports.test.ts --coverage",
     "db:seed-storage": "node scripts/seed-local-storage.mjs"
   },
   "dependencies": {
