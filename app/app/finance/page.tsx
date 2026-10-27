@@ -75,6 +75,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
           <Button asChild size="sm"><Link href="/app/finance/new?type=rental">+ Alquiler</Link></Button>
           <Button asChild size="sm" variant="outline"><Link href="/app/finance/new?type=income">+ Ingreso</Link></Button>
           <Button asChild size="sm" variant="outline"><Link href="/app/finance/new?type=expense">+ Egreso</Link></Button>
+          {ctx.isOwner && <Button asChild size="sm" variant="secondary"><Link href="/app/finance/reports">Reportes</Link></Button>}
         </div>
       </div>
 

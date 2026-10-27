@@ -11,7 +11,7 @@ type MobileBottomNavProps = {
 // it's a plain composed component following the same conventions.
 export function MobileBottomNav({ items, activeHref }: MobileBottomNavProps) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 flex border-t border-border bg-background md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 flex border-t border-border bg-background md:hidden print:hidden">
       {items.map(({ href, label, icon: Icon }) => {
         const active = href === activeHref;
         return (

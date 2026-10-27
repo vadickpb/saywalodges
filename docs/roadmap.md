@@ -1222,7 +1222,7 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - Despliegue: aplicar `20261027195656_finance_rental_rpc.sql` y `20261027204814_finance_receipt_guard.sql` en producción (junto con
     `20261027184334_finance_ledger.sql` si aún no se aplicó) antes de usar la pantalla; después `get_advisors`. No hay datos financieros en producción.
 
-### [~] SD-804 · feat(finance): performance reports
+### [x] SD-804 · feat(finance): performance reports
 `L` · Depende: SD-802, SD-803 · Review: `R`
 - **Alcance**: `lib/domain/finance-reports.ts` puro + `/app/finance/reports` (solo owner). Selector de base
   **por estadía** (prorrateo por noche, para rendimiento) o **por cobro** (caja, para el contador).
@@ -1238,7 +1238,8 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
 - **Criterios**
   - [x] Un alquiler que cruza meses reparte noches e ingreso por noche en "por estadía" y cae entero en la fecha
         de cobro en "por cobro" (tests de `finance-reports.test.ts`).
-  - [ ] Cobertura ≥ 90 % de `finance-reports.ts`; cifras del panel iguales a las del motor para el mismo período.
+  - [x] Cobertura ≥ 90 % de `finance-reports.ts`; cifras del panel iguales a las del motor para el mismo período
+        (las vistas solo formatean lo que devuelve el motor; `prepareReport` se calcula una vez por solicitud).
 - **Avance — parte 1, motor de cálculo (hecha)**: `lib/domain/finance-reports.ts`, puro y sin I/O.
   - Todo sale de una sola lista de "tajadas" (monto + fecha): `prepareReport` la construye una vez y `periodReport`,
     `monthReport`, `yearReport` y `globalReport` solo la agrupan, así que el panel, el estado imprimible y el Excel (SD-805)
@@ -1259,7 +1260,9 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
     `availableUntil`, o hasta su última noche reservada) en vez de pasar a 0 noches disponibles; una estadía de 0 noches o con fechas
     mal formadas devuelve `INVALID_STAY` en vez de lanzar; el tope de suma de montos pasó a `MAX_SAFE_INTEGER / 10000` para que
     ninguna razón en puntos básicos pierda precisión; el ahorro estimado se redondea una sola vez desde la razón exacta.
-  - Pendiente (parte 2): DAL de lectura de unidades/entradas para reportes, `/app/finance/reports` (solo dueño, selector de base),
+  - Parte 2 (hecha): `/app/finance/reports` (mensual, anual, global; solo dueño, staff recibe 404), estado de resultados imprimible en
+    `/app/finance/reports/statement` (siempre en paleta clara al imprimir), DAL `lib/dal/finance-reports.ts` y `listAllEntries` (tope de
+    20.000 filas con aviso de cifras parciales), gráficos SVG con tabla de datos accesible. Cumple las reglas de abajo. Ya no pendiente: DAL de lectura de unidades/entradas para reportes, `/app/finance/reports` (solo dueño, selector de base),
     gráficos SVG, estado de resultados imprimible y la nota de bloqueos del dueño; criterio de "cifras del panel iguales a las del motor".
     Reglas que la UI y el DAL de la parte 2 deben respetar (de la revisión):
     - Pasar **todas** las casas, archivadas incluidas (si falta una, su dinero cuenta en los totales pero no en la tabla por casa), y

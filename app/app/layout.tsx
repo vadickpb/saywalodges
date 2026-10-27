@@ -106,7 +106,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <DashboardNav />
 
           <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
-            <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:px-6">
+            <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 print:hidden md:px-6">
               {orgs.length > 1 ? (
                 <OrgSwitcher orgs={orgs} activeOrgId={activeOrg.id} />
               ) : (
@@ -130,7 +130,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </div>
             </header>
 
-            <main className="flex-1 p-4 md:p-6">{children}</main>
+            <main className="flex-1 p-4 md:p-6 print:p-0">{children}</main>
           </div>
         </div>
         <Toaster theme={isDark ? "dark" : "light"} />
