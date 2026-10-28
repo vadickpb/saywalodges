@@ -86,6 +86,77 @@ export type Database = {
           },
         ];
       };
+      calendar_blocks: {
+        Row: {
+          booking_id: string | null;
+          created_at: string;
+          expires_at: string | null;
+          external_uid: string | null;
+          feed_id: string | null;
+          id: string;
+          note: string | null;
+          org_id: string;
+          period: unknown;
+          property_id: string;
+          source: Database["public"]["Enums"]["calendar_block_source"];
+          unit_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          external_uid?: string | null;
+          feed_id?: string | null;
+          id?: string;
+          note?: string | null;
+          org_id: string;
+          period: unknown;
+          property_id: string;
+          source: Database["public"]["Enums"]["calendar_block_source"];
+          unit_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          booking_id?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          external_uid?: string | null;
+          feed_id?: string | null;
+          id?: string;
+          note?: string | null;
+          org_id?: string;
+          period?: unknown;
+          property_id?: string;
+          source?: Database["public"]["Enums"]["calendar_block_source"];
+          unit_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "calendar_blocks_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "calendar_blocks_unit_org_fkey";
+            columns: ["unit_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "calendar_blocks_unit_property_fkey";
+            columns: ["unit_id", "property_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "property_id"];
+          },
+        ];
+      };
       distances: {
         Row: {
           icon: string;
@@ -1042,6 +1113,16 @@ export type Database = {
           out_entry_id: string;
         }[];
       };
+      create_manual_calendar_block: {
+        Args: {
+          p_end: string;
+          p_note?: string;
+          p_org_id: string;
+          p_start: string;
+          p_unit_id: string;
+        };
+        Returns: string;
+      };
       create_rental_entries: {
         Args: {
           p_amount_cents: number;
@@ -1067,6 +1148,10 @@ export type Database = {
         Args: { p_entry_id: string; p_org_id: string };
         Returns: string[];
       };
+      delete_manual_calendar_block: {
+        Args: { p_block_id: string; p_org_id: string };
+        Returns: undefined;
+      };
       reorder_amenities: {
         Args: { p_ids: string[]; p_property_id: string };
         Returns: number;
@@ -1089,6 +1174,7 @@ export type Database = {
       };
     };
     Enums: {
+      calendar_block_source: "booking" | "ical" | "manual";
       currency_code: "PEN" | "USD";
       fee_kind: "per_stay" | "per_night" | "per_guest";
       finance_channel: "direct" | "airbnb" | "booking" | "other";
@@ -1230,6 +1316,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      calendar_block_source: ["booking", "ical", "manual"],
       currency_code: ["PEN", "USD"],
       fee_kind: ["per_stay", "per_night", "per_guest"],
       finance_channel: ["direct", "airbnb", "booking", "other"],

@@ -68,3 +68,8 @@ jobs:
       - run: supabase db reset
 
       - run: supabase test db
+
+      # Real committing transactions, with no TCP credentials or dblink grants.
+      # Python stdlib + psql inside the already-running local Supabase container.
+      - name: Calendar concurrency (pgTAP, local socket)
+        run: python3 scripts/test-calendar-concurrency.py
