@@ -950,13 +950,21 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Intentar bloquear fechas ocupadas muestra un error claro (del constraint, no de validación previa).
   - [ ] Usable en móvil.
 
-### [ ] SD-304 · feat(ical): per-channel calendar export
+### [x] SD-304 · feat(ical): per-channel calendar export
 `M` · Depende: SD-301 · Review: `R+S`
 - **Alcance**: `ical_feeds` (unit, channel, `import_url`, `export_token`); route `/api/ical/[token]` que genera `.ics`
   con todos los bloques excepto los importados del mismo canal; tokens aleatorios, regenerables.
 - **Criterios**
-  - [ ] El `.ics` pasa un validador iCal y se importa en Google Calendar.
-  - [ ] Token inválido → 404; el `.ics` no contiene datos personales del huésped.
+  - [~] El `.ics` cumple RFC 5545 (CRLF, plegado a 75 octetos, UID/DTSTAMP/DTSTART/DTEND por fecha, tests); falta importarlo en Google Calendar a mano.
+  - [x] Token inválido → 404; el `.ics` no contiene datos personales del huésped.
+- **Avance**: migración `ical_feeds` (una fila por casa y canal; `export_token` de 244 bits aleatorios, único; `import_url` solo https, que usará SD-305) con
+  RLS **solo del dueño** (el token es un secreto), grants por columna (el token solo cambia con `regenerate_ical_token`), y la FK compuesta
+  `calendar_blocks (feed_id, unit_id) → ical_feeds (id, unit_id)` que SD-301 dejó pendiente (un bloque nunca apunta a un feed de otra casa u org) (borrar un feed borra lo que importó; `0013_calendar_blocks.test.sql` ahora crea feeds reales).
+  `get_ical_export(token)` (SECURITY DEFINER, `search_path` vacío, ejecutable por `anon`) devuelve `null` para un token desconocido o mal formado y, si no, solo
+  id y fechas de los bloques de la casa (que terminan hace menos de 30 días) **menos los importados del mismo canal** (incluye reservas directas, holds sin liberar, bloqueos manuales y otros canales).
+  Ruta `GET /api/ical/[token]` (`text/calendar`, `no-store`, 404 vacío igual para token inválido o regenerado, eventos "Reservado" sin datos personales)
+  y pantalla del dueño `/app/calendar/feeds` (crear enlace por casa y canal, copiar, regenerar, eliminar). Generador puro `lib/ical/export.ts` (cobertura ≥ 90 % exigida).
+  Sin límite de peticiones todavía: lo cubre SD-409. La URL se muestra con el host del panel (un host de plataforma, donde `/api/*` se sirve tal cual).
 
 ### [ ] SD-305 · feat(ical): feed import and sync engine
 `L` · Depende: SD-304 · Review: `R+S`
