@@ -417,6 +417,126 @@ export type Database = {
           },
         ];
       };
+      finance_recurring: {
+        Row: {
+          active: boolean;
+          category_id: string;
+          counterparty: string | null;
+          created_at: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          day_of_month: number;
+          estimated_cents: number;
+          id: string;
+          kind: Database["public"]["Enums"]["finance_kind"];
+          name: string;
+          org_id: string;
+          payment_method:
+            Database["public"]["Enums"]["finance_payment_method"] | null;
+          starts_month: string;
+          unit_id: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          category_id: string;
+          counterparty?: string | null;
+          created_at?: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          day_of_month: number;
+          estimated_cents: number;
+          id?: string;
+          kind?: Database["public"]["Enums"]["finance_kind"];
+          name: string;
+          org_id: string;
+          payment_method?:
+            Database["public"]["Enums"]["finance_payment_method"] | null;
+          starts_month?: string;
+          unit_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          category_id?: string;
+          counterparty?: string | null;
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          day_of_month?: number;
+          estimated_cents?: number;
+          id?: string;
+          kind?: Database["public"]["Enums"]["finance_kind"];
+          name?: string;
+          org_id?: string;
+          payment_method?:
+            Database["public"]["Enums"]["finance_payment_method"] | null;
+          starts_month?: string;
+          unit_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_recurring_category_fkey";
+            columns: ["category_id", "org_id", "kind"];
+            isOneToOne: false;
+            referencedRelation: "finance_categories";
+            referencedColumns: ["id", "org_id", "kind"];
+          },
+          {
+            foreignKeyName: "finance_recurring_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_recurring_unit_fkey";
+            columns: ["unit_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      finance_recurring_runs: {
+        Row: {
+          created_at: string;
+          entry_id: string;
+          month: string;
+          org_id: string;
+          recurring_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          entry_id: string;
+          month: string;
+          org_id: string;
+          recurring_id: string;
+        };
+        Update: {
+          created_at?: string;
+          entry_id?: string;
+          month?: string;
+          org_id?: string;
+          recurring_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_recurring_runs_entry_fkey";
+            columns: ["entry_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_entries";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "finance_recurring_runs_recurring_fkey";
+            columns: ["recurring_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_recurring";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
       finance_unit_settings: {
         Row: {
           cleaning_cost_cents: number | null;
@@ -978,6 +1098,21 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      confirm_recurring_expense: {
+        Args: {
+          p_amount_cents: number;
+          p_currency: Database["public"]["Enums"]["currency_code"];
+          p_fx_rate_pen?: number;
+          p_month: string;
+          p_occurred_on?: string;
+          p_org_id: string;
+          p_recurring_id: string;
+        };
+        Returns: {
+          out_created: boolean;
+          out_entry_id: string;
+        }[];
+      };
       create_manual_calendar_block: {
         Args: {
           p_end: string;

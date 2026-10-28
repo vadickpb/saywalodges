@@ -27,8 +27,8 @@ export const CHANNEL_LABELS: Record<(typeof CHANNELS)[number], string> = {
   other: "Otro",
 };
 
-const uuid = z.string().uuid("Selecciona una opción válida");
-const isoDate = z
+export const uuid = z.string().uuid("Selecciona una opción válida");
+export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Ingresa una fecha válida")
   .refine((value) => {
@@ -37,23 +37,23 @@ const isoDate = z
   }, "Ingresa una fecha válida");
 
 // Blank string -> undefined, so optional inputs can be left empty.
-const optional = <T extends z.ZodTypeAny>(schema: T) =>
+export const optional = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((value) => (typeof value === "string" && value.trim() === "" ? undefined : value), schema.optional());
 
-const currency = z.enum(["PEN", "USD"], { message: "Selecciona una moneda" });
-const fxRate = z
+export const currency = z.enum(["PEN", "USD"], { message: "Selecciona una moneda" });
+export const fxRate = z
   .string()
   .trim()
   .regex(/^\d{1,2}(?:[.,]\d{1,6})?$/, "Usa un tipo de cambio como 3.75")
   .transform((value) => value.replace(",", "."))
   .refine((value) => Number(value) > 0 && Number(value) < 100, "El tipo de cambio debe estar entre 0 y 100");
 
-const paymentMethod = optional(z.enum(PAYMENT_METHODS, { message: "Selecciona un medio de pago" }));
+export const paymentMethod = optional(z.enum(PAYMENT_METHODS, { message: "Selecciona un medio de pago" }));
 const note = optional(z.string().trim().max(MAX_NOTE, `Máximo ${MAX_NOTE} caracteres`));
-const counterparty = optional(z.string().trim().max(MAX_TEXT, `Máximo ${MAX_TEXT} caracteres`));
+export const counterparty = optional(z.string().trim().max(MAX_TEXT, `Máximo ${MAX_TEXT} caracteres`));
 
 // Foreign currency needs a rate; PEN must not carry one (matches the table's check).
-function currencyAndRate<T extends { currency: "PEN" | "USD"; fxRate?: string }>(value: T, ctx: z.RefinementCtx) {
+export function currencyAndRate<T extends { currency: "PEN" | "USD"; fxRate?: string }>(value: T, ctx: z.RefinementCtx) {
   if (value.currency === "PEN" && value.fxRate !== undefined) {
     ctx.addIssue({ code: "custom", path: ["fxRate"], message: "El sol no lleva tipo de cambio" });
   }

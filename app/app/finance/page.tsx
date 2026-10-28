@@ -4,13 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MetricCard } from "@/components/ui/metric-card";
 import { RowAction } from "@/components/dashboard/row-action";
-import { LEDGER_LIMIT, listCategories, listEntries, listLinkedCosts, type LedgerEntry } from "@/lib/dal/finance";
+import { PendingExpenses, type PendingItemData } from "@/components/dashboard/recurring-pending";
+import { LEDGER_LIMIT, getLastFxRate, listCategories, listEntries, listLinkedCosts, type LedgerEntry } from "@/lib/dal/finance";
+import { listConfirmed, listTemplates } from "@/lib/dal/finance-recurring";
 import { listUnits } from "@/lib/dal/units";
 import { rentalProfits, summarizeEntries, type FinanceEntry } from "@/lib/domain/finance";
 import { CHANNEL_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/domain/finance-forms";
-import { currentMonth, ledgerQuery, monthLabel, parseLedgerView, shiftMonth } from "@/lib/domain/finance-view";
+import { centsToText, overdueMonths, pendingForMonth } from "@/lib/domain/finance-recurring";
+import { addDays } from "@/lib/domain/finance-reports";
+import { currentMonth, ledgerQuery, monthLabel, monthRange, parseLedgerView, shiftMonth } from "@/lib/domain/finance-view";
 import { formatPrice } from "@/lib/domain/rates-management";
 import { deleteEntryAction } from "./actions";
+import { confirmRecurringAction } from "./recurring/actions";
 import { getFinanceContext } from "./_lib/context";
 
 const selectClass = "h-9 rounded-md border border-input bg-transparent px-2 text-sm dark:bg-input/30";
@@ -64,6 +69,37 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     }
   }
 
+  // Recurring expenses (owner-only): what is still pending in the month shown,
+  // and the earlier months that still have something unconfirmed.
+  let pendingItems: PendingItemData[] = [];
+  let overdue: string[] = [];
+  if (ctx.isOwner) {
+    const thisMonth = currentMonth(new Date());
+    const templates = await listTemplates(ctx.supabase, ctx.orgId);
+    if (templates.some((t) => t.active)) {
+      const months = [view.month, ...Array.from({ length: 12 }, (_, i) => shiftMonth(thisMonth, -(i + 1)))];
+      const confirmed = await listConfirmed(ctx.supabase, ctx.orgId, months);
+      const pending = pendingForMonth(templates, confirmed.get(view.month) ?? new Set(), view.month, thisMonth);
+      overdue = overdueMonths(templates, confirmed, thisMonth).filter((m) => m !== view.month);
+      const usd = pending.some((p) => p.template.currency === "USD") ? await getLastFxRate(ctx.supabase, ctx.orgId, "USD") : null;
+      const range = monthRange(view.month);
+      pendingItems = pending.map((p) => ({
+        recurringId: p.template.id,
+        month: `${p.month}-01`,
+        name: p.template.name,
+        dueOn: p.dueOn,
+        dueLabel: shortDate(p.dueOn),
+        monthStart: range?.from ?? `${p.month}-01`,
+        monthEnd: range ? addDays(range.toExclusive, -1) : p.dueOn,
+        estimated: centsToText(p.template.estimatedCents),
+        estimatedLabel: formatPrice(p.template.estimatedCents, p.template.currency),
+        currency: p.template.currency,
+        supplier: p.template.counterparty,
+        lastFxRate: usd === null ? "" : String(usd),
+      }));
+    }
+  }
+
   const prev = ledgerQuery({ ...view, month: shiftMonth(view.month, -1) });
   const next = ledgerQuery({ ...view, month: shiftMonth(view.month, 1) });
 
@@ -76,6 +112,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
           <Button asChild size="sm" variant="outline"><Link href="/app/finance/new?type=income">+ Ingreso</Link></Button>
           <Button asChild size="sm" variant="outline"><Link href="/app/finance/new?type=expense">+ Egreso</Link></Button>
           {ctx.isOwner && <Button asChild size="sm" variant="secondary"><Link href="/app/finance/reports">Reportes</Link></Button>}
+          {ctx.isOwner && <Button asChild size="sm" variant="secondary"><Link href="/app/finance/recurring">Recurrentes</Link></Button>}
         </div>
       </div>
 
@@ -84,6 +121,30 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         <span className="min-w-36 text-center font-medium capitalize text-foreground">{monthLabel(view.month)}</span>
         <Button asChild variant="outline" size="sm"><Link href={`/app/finance${next}`} aria-label="Mes siguiente">→</Link></Button>
       </nav>
+
+      {ctx.isOwner && overdue.length > 0 && (
+        <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+          Tienes gastos recurrentes sin confirmar en:{" "}
+          {overdue.map((m, i) => (
+            <span key={m}>
+              {i > 0 && ", "}
+              <Link href={`/app/finance?month=${m}`} className="font-medium capitalize text-foreground underline">{monthLabel(m)}</Link>
+            </span>
+          ))}
+          .
+        </p>
+      )}
+      {pendingItems.length > 0 && (
+        <Card>
+          <CardContent className="flex flex-col gap-3 pt-6">
+            <div>
+              <h2 className="font-medium text-foreground">Gastos recurrentes pendientes de {monthLabel(view.month)}</h2>
+              <p className="text-xs text-muted-foreground">Confirma cada uno con el monto real: recién ahí se registra como egreso.</p>
+            </div>
+            <PendingExpenses action={confirmRecurringAction} items={pendingItems} />
+          </CardContent>
+        </Card>
+      )}
 
       {summary?.ok && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
