@@ -849,14 +849,59 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 ## Fase 3 — Calendario e iCal (M3)
 
-### [ ] SD-301 · feat(db): calendar blocks with overlap exclusion
+### [x] SD-301 · feat(db): calendar blocks with overlap exclusion
 `M` · Depende: SD-204 · Review: `R+S`
 - **Alcance**: `btree_gist`; `calendar_blocks (unit_id, period daterange, source booking|ical|manual, booking_id,
   feed_id, external_uid, expires_at)` con `EXCLUDE USING gist (unit_id WITH =, period WITH &&)`; RPCs para bloqueos
   manuales. ADR 0003.
 - **Criterios**
-  - [ ] pgTAP: dos bloques solapados en la misma unidad fallan; check-out = check-in de otro no es solape.
-  - [ ] pgTAP: dos transacciones concurrentes por las mismas fechas → solo una gana.
+  - [x] pgTAP: dos bloques solapados en la misma unidad fallan; check-out = check-in de otro no es solape.
+  - [x] pgTAP: dos transacciones concurrentes por las mismas fechas → solo una gana.
+- **Avance**: migración `20261028132649_calendar_blocks.sql`.
+  - Tabla con `org_id`, `property_id` y `unit_id` coherentes por FK compuestas a `units` (`(unit_id, org_id)` y
+    `(unit_id, property_id)`); `period` solo `[)` acotado y no vacío; `check` de coherencia por origen (`booking` exige
+    `booking_id`; `ical` exige `feed_id` + `external_uid`; `manual` ninguno; solo `booking` puede tener `expires_at`);
+    `note` ≤ 500 (nota de los bloqueos manuales, que pide SD-303). Índice único parcial `(feed_id, external_uid)` para el
+    upsert de SD-305. `booking_id` y `feed_id` son `uuid` sin FK: `bookings` (SD-401) e `ical_feeds` (SD-304) no existen
+    aún; esos tickets añaden la FK.
+  - Acceso: los miembros solo **leen** (RLS `is_member`); `anon` no accede (la disponibilidad pública la resolverá otro
+    ticket sin exponer notas). No hay grants de escritura: los bloqueos manuales se crean y borran con
+    `create_manual_calendar_block` / `delete_manual_calendar_block` (rechazan fechas infinitas, también el `check` de la tabla; el tope de noches queda a decidir en SD-303; `security definer`, `search_path = ''`, exigen
+    membresía y que la unidad/bloque pertenezca a la org indicada; `anon` sin `execute`). El borrado solo alcanza bloques
+    `manual`. Los solapes **no** se pre-validan: el constraint lanza `23P01` y la capa que llame lo traduce (SD-303). Los
+    demás errores: `42501` (sin permiso / no existe en esa org), `22023` (fechas o nota inválidas).
+  - Sin seed: no hay dato local que lo justifique y los tests crean los suyos. Un hold vencido sigue ocupando fechas
+    hasta que lo libere el cron / `create_booking_from_quote` (SD-401), como dice el ADR 0003.
+  - Tests: `0013_calendar_blocks.test.sql` (80 aserciones) y
+    `supabase/tests-concurrency/0014_calendar_blocks_concurrency.test.sql` (21 aserciones).
+    El segundo se ejecuta con `python3 scripts/test-calendar-concurrency.py`, paso obligatorio añadido al job `db`
+    después de `supabase test db`. El controlador usa `supabase_admin` por socket Unix dentro del contenedor local;
+    los dos workers cambian a `authenticated` y usan el JWT del fixture para llamar a los RPCs.
+    No requiere contraseñas, TCP, grants adicionales ni dependencias Python externas.
+  - Concurrencia: A retiene fechas sin commit; B intenta solaparlas y `pg_blocking_pids` confirma que espera
+    **específicamente a A**. Commit de A → B falla con `23P01`; rollback de A → B gana; adyacencia → ambos ganan.
+    También cubre una carrera sin ganador prefijado y un cambio privilegiado concurrente de `manual` a `booking`:
+    el borrado bloquea la fila con `FOR UPDATE` antes de validar su origen y rechaza borrar la reserva.
+    Hay timeouts de consulta, transacción inactiva y proceso; el runner valida el plan TAP completo y limpia
+    fixtures/extensiones incluso ante errores SQL. Solo termina sesiones etiquetadas con el ID de su ejecución.
+    Ejecutar secuencialmente sobre la BD local; no ejercita el pooler. Un corte forzoso del runner/servidor puede
+    requerir `supabase db reset`; nunca ejecutar estas pruebas contra una BD remota.
+  - Evidencia independiente (2026-10-28): `db reset` OK; `test db` **13 archivos / 424 aserciones**;
+    concurrencia **5 ejecuciones consecutivas × 21 aserciones**, todas OK. Mutaciones locales: retirar `FOR UPDATE`
+    hace fallar 3 aserciones; retirar la exclusión hace fallar 7; ambas protecciones restauradas.
+    Error SQL inyectado después de commits: limpieza deja cero fixtures, extensiones de prueba y sesiones propias.
+    Tipos regenerados y equivalencia comprobada con TypeScript. `npm ci`, `lint`, `typecheck`,
+    `test -- --coverage` (**411 tests**) y `build` OK con **Node 24.22.1** en copia sin `.env*` y placeholders de CI.
+  - **Cierre técnico y revisión R+S completados**: Codex realizó la revisión independiente de la implementación
+    de Claude Code, documentada en [docs/reviews/SD-301.md](reviews/SD-301.md), sin hallazgos críticos o importantes
+    abiertos. El usuario confirmó que esta revisión cubre R+S y no requiere subagentes anidados; el fallo al
+    iniciarlos no bloquea el ticket. Listo para commit y PR con las verificaciones locales registradas.
+    No se ejecutó GitHub Actions ni se hizo commit/push/PR/merge. El CI remoto verde se exige para el último
+    commit del PR antes del merge; no es requisito previo para abrirlo.
+  - Antes de habilitar booking/iCal: SD-304/401 deben añadir FKs **compuestas** que aten feed/booking a su unidad
+    y org (una FK por ID solamente no basta); SD-401 debe restringir el borrado de unidades, que hoy cascadea a sus
+    bloques. SD-305 debe repetir `where feed_id is not null` en `ON CONFLICT` (índice parcial).
+
 
 ### [ ] SD-302 · feat(domain): availability helpers
 `S` · Depende: — · Review: `R`
