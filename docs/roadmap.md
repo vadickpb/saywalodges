@@ -903,12 +903,44 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     bloques. SD-305 debe repetir `where feed_id is not null` en `ON CONFLICT` (índice parcial).
 
 
-### [ ] SD-302 · feat(domain): availability helpers
+### [x] SD-302 · feat(domain): availability helpers
 `S` · Depende: — · Review: `R`
 - **Alcance**: `lib/domain/availability.ts` y `dates.ts`: noches entre fechas, rangos `[)`, días bloqueados de un mes,
   "hoy" en `America/Lima`.
 - **Criterios**
-  - [ ] Tests con cambio de mes/año y reloj fijado.
+  - [x] Tests con cambio de mes/año y reloj fijado.
+  - [x] Fechas estrictas: `2027-02-29`, `2027-13-01`, `2027-1-1`, `0000-01-01` y timestamps (`…T00:00:00Z`) se
+    rechazan con error tipado; nada se normaliza ni se trunca.
+  - [x] Rango `[start, end)`: cero noches (`EMPTY_RANGE`) e invertido (`INVERTED_RANGE`) son inválidos, igual que
+    el `check` de `calendar_blocks`; check-out = check-in de otro no es solape (sí adyacencia).
+  - [x] `blockedDatesInMonth`: recorta al mes, ordena y deduplica rangos solapados/duplicados/adyacentes; el día de
+    check-out no cuenta como ocupado; un rango inválido lanza en vez de omitirse.
+  - [x] "Hoy" en Lima independiente de la TZ del equipo (tests con `TZ` = UTC, Lima, Auckland, Tokio, Nueva York,
+    Kiritimati) y del reloj real (`vi.setSystemTime` alrededor de medianoche UTC/Lima).
+- **Avance**
+  - `dates.ts`: aritmética sobre conteo de días del calendario gregoriano proléptico (sin `Date`, sin offset del
+    host; evita el remapeo de años 0–99 de `Date.UTC`). Errores con `DateError.code`
+    (`INVALID_FORMAT | INVALID_DATE | INVALID_MONTH | INVALID_INTEGER | OUT_OF_RANGE | INVALID_CLOCK`). Variante sin
+    excepción para input no confiable: `parseIsoDate`. Rango soportado 0001-01-01..9999-12-31.
+    `todayInLima(now = new Date())` usa `Intl.DateTimeFormat` con `timeZone: "America/Lima"`, calendario y números
+    fijos y era explícita; el instante se puede inyectar y, si se omite, lee el reloj una vez.
+    `monthBounds("9999-12")` devuelve `endExclusive: null` porque el siguiente día está fuera del dominio;
+    clipping y días bloqueados funcionan también en ese mes. Los extremos de los rangos siguen siendo fechas
+    válidas: no se representa una noche ocupada el 9999-12-31 con un checkout en el año 10000.
+  - `availability.ts`: `dateRange`/`parseDateRange`, `nightsBetween`, `rangeContains`, `rangesOverlap`,
+    `rangesAdjacent`, `clipRangeToMonth`, `blockedDatesInMonth` (devuelve fechas ISO). No reimplementa la doble
+    reserva: eso sigue siendo del exclusion constraint.
+  - Fuera de alcance, sin tocar: pricing, finanzas, reportes/exportación y sus validadores conservan sus helpers
+    propios (`parseDate`, `nightsBetween`, `addDays`, meses y `todayInLima` con offset fijo -5). Propuesta de ticket: migrarlos a `dates.ts`
+    y eliminar la duplicación. Sin UI, DAL ni SD-303; sin dependencias nuevas (no se usó `date-fns`).
+  - Revisión independiente de Codex (2026-10-28), correcciones y evidencia: [SD-302](reviews/SD-302.md).
+    `lint`, `typecheck`, `build` con placeholders y suite completa OK: **28 archivos / 518 tests** en cada una
+    de seis TZ. `test:pricing`: **7 archivos / 299 tests**, umbrales originales ≥90 % por archivo intactos.
+    `dates.ts`: 100 % en las cuatro métricas; `availability.ts`: 97.61 % sentencias, 95.83 % ramas,
+    100 % funciones, 97.14 % líneas (queda el relanzamiento defensivo de errores ajenos al dominio).
+    Referencia UTC independiente: **3.652.059 fechas** verificadas en todo 0001–9999.
+  - Listo para continuar el flujo del ticket; sin commit, push, PR ni merge por instrucción del dueño.
+
 
 ### [ ] SD-303 · feat(dashboard): unit calendar
 `L` · Depende: SD-301, SD-302 · Review: `R`
