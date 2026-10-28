@@ -1275,7 +1275,7 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
       en él (una estadía que cruza meses cuenta en cada mes). Un costo ligado conserva su propia casa si la tiene.
     - Calcular `prepareReport` una vez por solicitud (con miles de noches reparte una tajada por noche) y no por período.
 
-### [ ] SD-805 · feat(finance): accountant Excel export
+### [x] SD-805 · feat(finance): accountant Excel export
 `M` · Depende: SD-803, SD-804 · Review: `R+S`
 - **Alcance**: route handler solo owner que genera `.xlsx` en el servidor con `exceljs` (dependencia nueva:
   fechas y números reales, sin binarios nativos). Rango: mes, año o personalizado. Hojas: Resumen (mes ×
@@ -1283,8 +1283,21 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   alquiler relacionado, comprobante sí/no), Rendimiento (mes × casa) y Por alquiler. Encabezado congelado,
   autofiltro, `#,##0.00`, fila de totales con `SUM`.
 - **Criterios**
-  - [ ] Test que relee el archivo generado: tipos de celda (fecha/número), totales y hojas esperadas.
-  - [ ] Staff y otra org reciben 404/redirect, no un archivo.
+  - [x] Test que relee el archivo generado: tipos de celda (fecha/número), totales y hojas esperadas.
+  - [x] Staff y otra org reciben 404/redirect, no un archivo.
+- **Avance**: `lib/domain/finance-export.ts` (modelo puro del libro: período desde la URL `?month=`, `?year=` o `?from=&to=`, tope 5 años,
+  cobertura ≥ 90 % exigida), `lib/finance-xlsx.ts` (escritor con `exceljs`) y `GET /app/finance/export` (solo dueño; personal y sin org
+  reciben 404 vacío, anónimo va al login; se lee siempre la org de la sesión; se niega a exportar un libro incompleto, 422).
+  Resumen, Ingresos, Egresos y Por alquiler son **por cobro**; Rendimiento es **por estadía** y lo dice en el nombre de la hoja.
+  Los textos del usuario se escriben como cadenas, nunca como fórmulas. Botones de descarga (mes, año y rango) en `/app/finance/reports`.
+  - Dependencia nueva: `exceljs@4.4.0` (+98 paquetes en el lock; solo en servidor, sin binarios nativos). Alternativas descartadas: `xlsx`
+    (SheetJS) no se publica en npm y tiene su propio historial de avisos; escribir el XML a mano es más frágil que una librería probada.
+    Riesgos aceptados: el paquete no tiene releases desde dic. 2024, y `npm audit` marca `uuid<11.1.1` (moderado, GHSA-w5hq-g745-h8pq: falta
+    de comprobación de límites en v3/v5/v6 con `buf`). No es alcanzable: `exceljs` fija `uuid@^8` y solo llama a `uuid.v4()` sin buffer
+    (`cf-rule-ext-xform.js`), y `uuid` no recibe entrada de usuario. El arreglo que ofrece `npm audit` es bajar a `exceljs@3.4.0` (peor). No se
+    probó forzar `uuid@11` con `overrides`.
+  - Un export rechazado (rango inválido, libro incompleto, datos inválidos) redirige a `/app/finance/reports?exportError=<código>` y la
+    página muestra el motivo con `role="alert"`; nunca se refleja texto de la petición.
 
 ### [ ] SD-806 · feat(finance): recurring expenses
 `S` · Depende: SD-803 · Review: `R`
