@@ -1299,12 +1299,24 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - Un export rechazado (rango inválido, libro incompleto, datos inválidos) redirige a `/app/finance/reports?exportError=<código>` y la
     página muestra el motivo con `role="alert"`; nunca se refleja texto de la petición.
 
-### [ ] SD-806 · feat(finance): recurring expenses
+### [x] SD-806 · feat(finance): recurring expenses
 `S` · Depende: SD-803 · Review: `R`
 - **Alcance**: plantillas mensuales (agua, luz, internet…) con día y monto estimado; cada mes aparecen como
   "pendientes" y se confirman con el monto real en un clic. Sin cron.
 - **Criterios**
-  - [ ] Confirmar dos veces el mismo pendiente no duplica el egreso.
+  - [x] Confirmar dos veces el mismo pendiente no duplica el egreso.
+- **Avance**: migración `finance_recurring` (plantillas) + `finance_recurring_runs` (una fila por plantilla y mes) + RPC
+  `confirm_recurring_expense` (SECURITY INVOKER; bloquea la plantilla `FOR UPDATE`, así que dos confirmaciones simultáneas del mismo mes
+  se encolan y la segunda devuelve el egreso de la primera con `created = false`). Todo **solo del dueño** (RLS; el personal no ve ni
+  confirma). Dominio puro `lib/domain/finance-recurring.ts` (pendientes por mes, meses atrasados, esquemas; cobertura ≥ 90 % exigida),
+  DAL `lib/dal/finance-recurring.ts`, acciones (re-chequean el rol y rechazan meses futuros) y pantallas `/app/finance/recurring`
+  (lista, nuevo, editar, pausar, eliminar) más la tarjeta "Gastos recurrentes pendientes de {mes}" en `/app/finance` con aviso de meses anteriores sin confirmar.
+  Si se borra el egreso confirmado, ese mes vuelve a quedar pendiente. Eliminar una plantilla conserva los egresos ya confirmados.
+  Fecha del egreso: el día de la plantilla (editable dentro del mes); moneda y tipo de cambio se fijan al confirmar.
+  - La RPC también rechaza plantillas pausadas, meses que no han empezado (hora de Lima) y una moneda distinta a la de la plantilla.
+  - Deuda menor anotada: no hay acción "omitir este mes" (un mes sin factura, o meses de una plantilla pausada y reanudada, siguen
+    apareciendo como atrasados hasta 12 meses); propuesta de ticket aparte.
+
 
 ### [ ] SD-807 · feat(finance): automatic income from bookings and calendar
 `M` · Depende: SD-305, SD-401, SD-803 · Review: `R+S`
