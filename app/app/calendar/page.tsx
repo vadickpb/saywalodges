@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireActiveOrg } from "@/lib/dal/organizations";
 import { z } from "zod";
 import { getCalendarContext, readCalendar, CALENDAR_ERROR } from "@/lib/dal/calendar";
 import { calendarMonth, CALENDAR_SOURCES, type CalendarBlock } from "@/lib/domain/calendar";
@@ -31,6 +32,7 @@ function MonthGrid({ month, blocks }: { month: string; blocks: CalendarBlock[] }
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await getCalendarContext();
   if (!ctx) return <p>No tienes una propiedad activa.</p>;
+  const { activeOrg } = await requireActiveOrg();
   const params = await searchParams;
   const month = typeof params.month === "string" && isIsoMonth(params.month) ? params.month : currentMonthInLima();
   const rawUnit = params.unit;
@@ -45,7 +47,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const bounds = calendarMonth(month);
   const href = (target: string) => `/app/calendar?${new URLSearchParams({ month: target, ...(unitId ? { unit: unitId } : {}) })}`;
   return <div className="min-w-0 space-y-6">
-    <div><h1 className="text-2xl font-semibold">Calendario</h1><p className="text-sm text-muted-foreground">Noches ocupadas · America/Lima · la fecha de salida queda libre.</p></div>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h1 className="text-2xl font-semibold">Calendario</h1><p className="text-sm text-muted-foreground">Noches ocupadas · America/Lima · la fecha de salida queda libre.</p></div>
+      {activeOrg?.role === "owner" && (
+        <Link href="/app/calendar/feeds" className="rounded border px-3 py-2 text-sm font-medium">Calendarios para Airbnb y Booking</Link>
+      )}
+    </div>
     <Card><CardHeader><CardTitle>Ocupación mensual</CardTitle></CardHeader><CardContent className="space-y-4">
       <form key={`${month}-${unitId ?? "all"}`} className="flex flex-col gap-3 sm:flex-row sm:items-end" method="get">
         <div className="space-y-2"><Label htmlFor="calendar-month">Mes</Label><input id="calendar-month" name="month" type="month" defaultValue={month} required className="h-11 w-full rounded-md border bg-background px-3" /></div>

@@ -126,6 +126,10 @@ select throws_ok($$insert into public.calendar_blocks (org_id, property_id, unit
   values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '57f914ac-3890-47c1-9d6d-1492782cf712',
   'ee204001-0000-4000-8000-000000000001', '[2027-09-01,2027-09-03)', 'manual', 'x')$$,
   '23503', null, 'A block cannot pair a unit with another property');
+-- Imported events belong to a real feed (SD-304 added the foreign key). Two channels of the same unit.
+insert into public.ical_feeds (id, org_id, unit_id, channel) values
+  ('f0000000-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'ee204001-0000-4000-8000-000000000001', 'airbnb'),
+  ('f0000000-0000-4000-8000-000000000002', 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'ee204001-0000-4000-8000-000000000001', 'booking');
 select lives_ok($$insert into public.calendar_blocks (org_id, property_id, unit_id, period, source, feed_id, external_uid)
   values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654',
   'ee204001-0000-4000-8000-000000000001', '[2027-10-01,2027-10-03)', 'ical',

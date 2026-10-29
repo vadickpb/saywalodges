@@ -135,6 +135,13 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "calendar_blocks_feed_fkey";
+            columns: ["feed_id", "unit_id"];
+            isOneToOne: false;
+            referencedRelation: "ical_feeds";
+            referencedColumns: ["id", "unit_id"];
+          },
+          {
             foreignKeyName: "calendar_blocks_org_id_fkey";
             columns: ["org_id"];
             isOneToOne: false;
@@ -567,6 +574,61 @@ export type Database = {
           },
           {
             foreignKeyName: "finance_unit_settings_unit_fkey";
+            columns: ["unit_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      ical_feeds: {
+        Row: {
+          channel: Database["public"]["Enums"]["ical_channel"];
+          created_at: string;
+          export_token: string;
+          id: string;
+          import_url: string | null;
+          last_error: string | null;
+          last_synced_at: string | null;
+          org_id: string;
+          unit_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          channel: Database["public"]["Enums"]["ical_channel"];
+          created_at?: string;
+          export_token?: string;
+          id?: string;
+          import_url?: string | null;
+          last_error?: string | null;
+          last_synced_at?: string | null;
+          org_id: string;
+          unit_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          channel?: Database["public"]["Enums"]["ical_channel"];
+          created_at?: string;
+          export_token?: string;
+          id?: string;
+          import_url?: string | null;
+          last_error?: string | null;
+          last_synced_at?: string | null;
+          org_id?: string;
+          unit_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ical_feeds_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ical_feeds_unit_fkey";
             columns: ["unit_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "units";
@@ -1152,6 +1214,11 @@ export type Database = {
         Args: { p_block_id: string; p_org_id: string };
         Returns: undefined;
       };
+      get_ical_export: { Args: { p_token: string }; Returns: Json };
+      regenerate_ical_token: {
+        Args: { p_feed_id: string; p_org_id: string };
+        Returns: string;
+      };
       reorder_amenities: {
         Args: { p_ids: string[]; p_property_id: string };
         Returns: number;
@@ -1182,6 +1249,7 @@ export type Database = {
       finance_payment_method:
         "cash" | "bank_transfer" | "yape_plin" | "card" | "platform" | "other";
       finance_source: "manual" | "booking" | "ical";
+      ical_channel: "airbnb" | "booking" | "vrbo" | "other";
       membership_role: "owner" | "staff";
       photo_role: "hero" | "gallery" | "room";
       space_category: "pool" | "rooms" | "common" | "outdoor";
@@ -1330,6 +1398,7 @@ export const Constants = {
         "other",
       ],
       finance_source: ["manual", "booking", "ical"],
+      ical_channel: ["airbnb", "booking", "vrbo", "other"],
       membership_role: ["owner", "staff"],
       photo_role: ["hero", "gallery", "room"],
       space_category: ["pool", "rooms", "common", "outdoor"],
