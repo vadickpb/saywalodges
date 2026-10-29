@@ -138,14 +138,17 @@ begin
       perform * from extensions.dblink_get_result(case i when 1 then 'sess_a' else 'sess_b' end) as t(id uuid);
       insert into race values ('won');
       perform * from extensions.dblink_get_result(case i when 1 then 'sess_a' else 'sess_b' end) as t(id uuid);
-    exception when exclusion_violation then
+    -- Simultaneous GiST inserts can deadlock before the exclusion recheck;
+    -- PostgreSQL aborts one transaction with 40P01. This is also a safe loser.
+    -- Scenarios 1/2 above still require 23P01 when the first writer is fixed.
+    exception when exclusion_violation or deadlock_detected then
       insert into race values ('lost');
       perform * from extensions.dblink_get_result(case i when 1 then 'sess_a' else 'sess_b' end, false) as t(id uuid);
     end;
   end loop;
 end $$;
 select is((select count(*)::int from race where outcome = 'won'), 1, 'Racing attempts: exactly one wins');
-select is((select count(*)::int from race where outcome = 'lost'), 1, 'Racing attempts: the other gets 23P01');
+select is((select count(*)::int from race where outcome = 'lost'), 1, 'Racing attempts: the other is rejected with 23P01 or 40P01');
 select is((select count(*)::int from public.calendar_blocks where unit_id = 'ee301002-0000-4000-8000-000000000001'
   and note = 'race'), 1, 'Racing attempts: exactly one block stored');
 

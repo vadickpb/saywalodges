@@ -1,0 +1,2 @@
+# Keep RFC 5545 fixture CRLF bytes and treat CR as part of the line ending.
+lib/ical/fixtures/*.ics -text whitespace=cr-at-eol
