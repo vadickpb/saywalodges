@@ -1212,6 +1212,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      begin_ical_sync: {
+        Args: { p_feed_id: string; p_org_id: string };
+        Returns: Json;
+      };
       confirm_recurring_expense: {
         Args: {
           p_amount_cents: number;
@@ -1266,10 +1270,6 @@ export type Database = {
         Args: { p_block_id: string; p_org_id: string };
         Returns: undefined;
       };
-      begin_ical_sync: {
-        Args: { p_feed_id: string; p_org_id: string };
-        Returns: Json;
-      };
       finish_ical_sync: {
         Args: {
           p_error?: string;
@@ -1281,6 +1281,18 @@ export type Database = {
         Returns: boolean;
       };
       get_ical_export: { Args: { p_token: string }; Returns: Json };
+      get_public_unit_availability: {
+        Args: {
+          p_from: string;
+          p_property_id: string;
+          p_to: string;
+          p_unit_id: string;
+        };
+        Returns: {
+          end_date: string;
+          start_date: string;
+        }[];
+      };
       regenerate_ical_token: {
         Args: { p_feed_id: string; p_org_id: string };
         Returns: string;

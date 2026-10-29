@@ -1071,11 +1071,40 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Sin el secreto → 401.
   - [ ] Un feed que falla no detiene los demás.
 
-### [ ] SD-308 · feat(site): public availability calendar
+### [x] SD-308 · feat(site): public availability calendar
 `M` · Depende: SD-303 · Review: `R`
 - **Alcance**: reemplazar el iframe de Airbnb por calendario propio de disponibilidad (solo ocupado/libre).
 - **Criterios**
-  - [ ] No expone origen ni datos de las reservas.
+  - [x] No expone origen ni datos de las reservas.
+- **Avance** (implementado y verificado localmente; sin review independiente, sin push ni PR)
+  - La página pública no tenía iframe de Airbnb: no se inventó ni se quitó nada. Se añadió la sección
+    `components/site/availability.tsx` (id `#availability-calendar`, enlace en la navegación) entre Tarifas y Ubicación;
+    el CTA `#availability` de Tarifas queda intacto.
+  - BD: `20261029140000_public_availability.sql` crea `get_public_unit_availability(property, unit, from, to)`
+    (`stable`, `security definer`, `search_path = ''`, `execute` solo para anon/authenticated/service_role). Devuelve
+    únicamente `start_date`/`end_date` `[)` de una unidad activa de una propiedad publicada que pertenezca a esa
+    propiedad; ventana ≤ 62 días (`22023`); recorta a `[hoy Lima, hoy+731)`; unidad/propiedad desconocida, inactiva,
+    no publicada o cruzada entre tenants → `42501` genérico (nunca "todo libre"). `calendar_blocks` sigue sin SELECT para anon.
+    Un hold vencido sigue ocupando hasta que se libere (ADR 0003). Reversible con `drop function`.
+  - Dominio `lib/domain/public-availability.ts` (mes navegable: mes actual en Lima hasta +22 meses, cuadrícula lunes-primero,
+    estados free/occupied/past); DAL `lib/dal/public/availability.ts` (server-only, zod, errores genéricos).
+    La página lee `?unit=` y `?month=` como no confiables: la unidad debe ser una activa de la propiedad del host y el mes se acota.
+    Navegación con enlaces (funciona sin JS); tabla semántica con `th scope`, texto para lectores de pantalla por celda,
+    ocupado distinguido por trazo/rayado y no solo por color; es/en vía `dictionaries/`.
+  - Evidencia local (2026-10-29, solo Supabase local): `lint`, `typecheck` OK; `npm run test` **42 archivos / 687 tests**;
+    `test:pricing` **10 archivos / 337 tests**, `public-availability.ts` ≥ 90 % (umbral por archivo); el test de dominio
+    pasa también con `TZ` = UTC, Auckland y Lima; `npm run build` OK; `supabase db reset` + `supabase test db`
+    **17 archivos / 573 tests** (nuevo `0018_public_availability.test.sql`, 34 aserciones: privacidad, recorte, adyacencia,
+    ventana, multi-tenant, no publicada/inactiva, grants); concurrencia de calendario (21) e iCal (10) OK.
+  - HTTP real: `node scripts/test-public-availability-http.mjs` (tras `npm run build` con env local; puerto 3308, limpia lo que crea):
+    10 comprobaciones OK — noches `[)` con adyacencia manual+ical+hold y check-out libre, es/en, aislamiento
+    `saywa-lodges.localhost` vs `demo.localhost`, `?unit=` ajeno ignorado, host desconocido 404, HTML/RSC sin nota/uid/feed/booking/source,
+    límites de mes, marcado móvil/a11y, PostgREST anon (tabla denegada, RPC solo fechas, par cruzado `42501`),
+    propiedad no publicada 404 y sin unidades activas sin calendario.
+  - **No verificado**: render visual en móvil (el screenshot headless no llegó a la sección; solo se comprobó el marcado).
+    Sin lector de pantalla real. El script HTTP aún no está en el CI.
+  - **Gate manual para el dueño**: aplicar `20261029140000_public_availability.sql` en la BD remota antes del deploy
+    (sin ella el calendario muestra el mensaje "no disponible" en producción, el resto del sitio no se afecta).
 
 ---
 
