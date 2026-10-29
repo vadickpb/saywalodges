@@ -1647,6 +1647,18 @@ export type Database = {
         Returns: boolean;
       };
       get_ical_export: { Args: { p_token: string }; Returns: Json };
+      get_public_unit_availability: {
+        Args: {
+          p_from: string;
+          p_property_id: string;
+          p_to: string;
+          p_unit_id: string;
+        };
+        Returns: {
+          end_date: string;
+          start_date: string;
+        }[];
+      };
       regenerate_ical_token: {
         Args: { p_feed_id: string; p_org_id: string };
         Returns: string;
