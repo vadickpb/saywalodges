@@ -107,6 +107,8 @@ describe("OTA parser", () => {
     (s: string) =>
       s.replace("END:VEVENT", "RRULE:FREQ=DAILY;COUNT=999999999\r\nEND:VEVENT"),
     (s: string) =>
+      s.replace("END:VEVENT", "rrule:FREQ=DAILY;COUNT=2\r\nEND:VEVENT"),
+    (s: string) =>
       s.replace(
         "END:VEVENT",
         "RECURRENCE-ID;VALUE=DATE:20270412\r\nEND:VEVENT",

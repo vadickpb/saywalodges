@@ -184,7 +184,7 @@ export function parseCalendar(body: string): ImportedEvent[] {
     if (
       !unfolded.endsWith("END:VCALENDAR") ||
       (unfolded.match(/^BEGIN:VCALENDAR\r?$/gm) ?? []).length !== 1 ||
-      /^((RRULE|RDATE|EXDATE|RECURRENCE-ID)[;:]|BEGIN:(?!VCALENDAR|VEVENT))/m.test(
+      /^((RRULE|RDATE|EXDATE|RECURRENCE-ID)[;:]|BEGIN:(?!VCALENDAR|VEVENT))/im.test(
         unfolded,
       )
     )
