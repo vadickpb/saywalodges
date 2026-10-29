@@ -942,13 +942,35 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - Listo para continuar el flujo del ticket; sin commit, push, PR ni merge por instrucción del dueño.
 
 
-### [ ] SD-303 · feat(dashboard): unit calendar
+### [x] SD-303 · feat(dashboard): unit calendar
 `L` · Depende: SD-301, SD-302 · Review: `R`
 - **Alcance**: vista mensual por unidad (y vista compacta de todas), color por origen (directa, Airbnb, Booking,
   manual); crear/eliminar bloqueos manuales con nota.
 - **Criterios**
-  - [ ] Intentar bloquear fechas ocupadas muestra un error claro (del constraint, no de validación previa).
-  - [ ] Usable en móvil.
+  - [x] Intentar bloquear fechas ocupadas muestra un error claro (del constraint, no de validación previa).
+  - [x] Usable en móvil.
+- **Evidencia local (2026-10-29, sin commit/PR/deploy)**:
+  - Calendario autenticado en `/app/calendar`: navegación mensual, selector de unidad, grilla mensual lunes–domingo,
+    resumen compacto de todas las unidades (incluidas inactivas), lista de bloques y estados vacíos/error.
+    DAL con `requireActiveOrg`, cliente de sesión y filtros `org_id`/`property_id`; rangos intersectados por mes,
+    paginación explícita de 1000 filas y DTO sin identificadores de reservas/feeds ni notas de fuentes no manuales.
+  - Actions con zod y RPCs de SD-301. Rangos `[inicio, salida)`, nota opcional ≤500 caracteres y hasta 366 noches
+    por bloqueo; confirmación al crear y eliminar. Sin consultar solapes antes de escribir: sólo `23P01` se
+    traduce a «Estas fechas ya están ocupadas. Elige otro rango.»; otros errores se registran en servidor y
+    reciben respuesta segura. No se agregaron dependencias ni migraciones.
+  - Colores + letras + nombres accesibles para las fuentes. SD-301 sólo guarda `booking|ical|manual` y no hay
+    metadatos de canal: `booking` se presenta como Directa y `ical` como «canal sin identificar»; Airbnb/Booking
+    tienen leyenda diferenciada, sin deducir canales de notas/UUIDs ni crear reservas/feeds ficticios.
+  - `npm ci`, lint, typecheck, 550 tests Vitest (32 nuevos de dominio/DAL/actions), build; Supabase local:
+    `db reset` y `test db` verdes (13 archivos, 424 aserciones, incluidas las 80 de SD-301).
+  - `node scripts/test-calendar-http.mjs`: nueve grupos de comprobaciones HTTP contra build local y sesión
+    del seed; creación/borrado persistidos, constraint de solape, adyacencia aceptada, notas escapadas,
+    unidad ajena y acceso anónimo rechazados, validación y borrado repetido seguros. Limpia sus propios fixtures.
+  - Chrome local: vista compacta y mensual en emulación iPhone SE (375 px), etiquetas accesibles por fecha;
+    creación con nota/confirmación, mensaje de solape y eliminación confirmada comprobados desde UI.
+    Se corrigió selector obsoleto al navegar a una unidad (formulario con key por mes/unidad).
+  - Revisiones independientes de corrección y seguridad sin hallazgos pendientes: [SD-303](reviews/SD-303.md).
+    No se accedió a producción/remoto ni `.env.local`; fuera de alcance SD-304/305/401.
 
 ### [x] SD-304 · feat(ical): per-channel calendar export
 `M` · Depende: SD-301 · Review: `R+S`
