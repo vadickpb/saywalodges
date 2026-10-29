@@ -1110,15 +1110,53 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 ## Fase 4 — Cotizador, reservas y pago manual (M4 🎯)
 
-### [ ] SD-401 · feat(db): guests, quotes, bookings and payments
+### [~] SD-401 · feat(db): guests, quotes, bookings and payments
 `L` · Depende: SD-205, SD-301 · Review: `R+S`
 - **Alcance**: tablas `guests`, `quotes`, `bookings`, `payments`; RPC `create_booking_from_quote` (transacción:
   valida quote vigente, libera holds vencidos, upsert guest, crea booking `pending_payment` + bloque con
   `expires_at`); RPCs `confirm_payment`, `reject_payment`, `cancel_booking`, `expire_holds`; datos de pago por
   propiedad (Yape/Plin, cuentas bancarias).
 - **Criterios**
-  - [ ] pgTAP: reservar fechas ocupadas falla; quote vencida falla; hold vencido libera fechas.
-  - [ ] Transiciones de estado inválidas rechazadas (p. ej. confirmar una cancelada).
+  - [x] pgTAP: reservar fechas ocupadas falla; quote vencida falla; hold vencido libera fechas.
+  - [x] Transiciones de estado inválidas rechazadas (p. ej. confirmar una cancelada).
+- **Avance** (implementado localmente; sin commit remoto, push ni PR; **sin revisión R+S**, omitida por petición del usuario)
+  - Migración `20261029185857_booking_schema.sql` (aditiva, rollback en su cabecera): `guests`, `quotes`, `bookings`,
+    `payments`, `property_payment_accounts` y `properties.booking_hold_minutes` (15–4320, por defecto 120).
+    FKs compuestas con `org_id` (unidad/propiedad, huésped, quote); `quote_id` único en `bookings` (una quote → una
+    reserva); `payments` fija la moneda de la reserva por FK; un solo pago `pending_review` por reserva. Borrar una
+    unidad, huésped o quote con reservas falla (`NO ACTION`): resuelve el borrado en cascada de bloques anotado en SD-301.
+  - Permisos: `anon` sin ningún privilegio de tabla (PII de huéspedes, cuentas de cobro). Los miembros solo **leen**
+    guests/quotes/bookings/payments; las cuentas de cobro son CRUD de miembros por RLS. Toda mutación es por RPC
+    `security definer` (`search_path = ''`) o `service_role`. Triggers `guard_booking_update`/`guard_payment_update`
+    fijan términos inmutables (importes, fechas, unidad…) y la máquina de estados incluso para escritores privilegiados:
+    `pending_payment → confirmed|cancelled|expired`, `confirmed → cancelled`, `pending_review → approved|rejected`.
+  - `create_booking_from_quote(token, nombre, email, teléfono)`: ejecutable por `anon` (el token de 32+ caracteres es la
+    capacidad; devuelve solo ids/estado, sin PII). Bloquea la quote (`FOR UPDATE`), reproduce la reserva existente si la
+    hay (idempotente), valida vigencia (`SD001`), unidad activa, aforo y moneda, libera holds vencidos de esa unidad, hace
+    upsert del huésped (nunca sobrescribe nombre/teléfono existentes) y crea reserva + bloque; los importes salen
+    **solo** de la quote guardada. Solape → `23P01` del constraint (la transacción entera revierte, incluido el huésped).
+  - `confirm_payment`/`reject_payment`/`cancel_booking(org, id, …)`: miembros de la org; orden de bloqueo reserva → pago;
+    repetir la misma operación devuelve `replayed: true`; transición inválida → `55000`; pago menor al adelanto no
+    confirma (`22023`); cancelar libera el bloque y rechaza el voucher en revisión. `expire_holds()`: solo `service_role`.
+    Una reserva con voucher `pending_review` **no** se expira (el huésped ya pagó); queda a decisión del dueño.
+  - Tests: `0019_booking_schema.test.sql` (**109 aserciones**): catálogo/grants, fecha ocupada, quote vencida/desconocida/
+    mal formada, datos inválidos, moneda y aforo, hold vencido que libera fechas, voucher que lo protege, `expire_holds`,
+    máquina de estados (RPC y triggers), idempotencia, aislamiento org A/B y cross-org, `anon` sin lecturas.
+  - Evidencia local (2026-10-29): `supabase db reset` OK; `supabase test db` **17 archivos / 648 aserciones**;
+    `scripts/test-calendar-concurrency.py` 21/21; `lint`, `typecheck`, `test` (42 archivos / 687 tests, tras integrar origin/main con SD-308) y `build`
+    (placeholders de CI, sin `.env*`) OK con Node 26.9.0 (CI usa 24). Tipos regenerados con `supabase gen types --local`
+    y formateados con prettier. **Concurrencia real (manual, dos sesiones `psql` locales, no automatizada):** A retiene su
+    transacción abierta con quote A; B (quote distinta, fechas solapadas) espera y falla con `23P01` al confirmar A; dos
+    llamadas simultáneas con la misma quote producen una sola reserva (la segunda devuelve `replayed: true`).
+  - **Pendiente / decisiones para el dueño**
+    - No hay RPC para crear quotes ni payments (los tests los insertan como propietario de la tabla): son SD-402 y
+      SD-405. Esos escritores deben bloquear primero la fila de la reserva (como las RPCs) para no competir con el barrido.
+    - `calendar_blocks.booking_id` sigue **sin FK** a `bookings`: ~27 inserciones de `source = 'booking'` en tests de
+      SD-301/303/304/305/803 usan UUID aleatorios. Añadir la FK exige reescribir esos fixtures; propuesto como ticket aparte.
+    - La prueba de concurrencia real no está en CI (extender `scripts/test-calendar-concurrency.py`).
+    - Reembolsos de pagos aprobados al cancelar y pagos parciales (suma < adelanto) quedan fuera de alcance.
+    - Sin revisión `reviewer`/`security-reviewer` (pedido explícito): obligatoria antes del PR según `CLAUDE.md`.
+    - Migración sin aplicar en remoto: aplicarla es del dueño antes de cualquier código que dependa de ella.
 
 ### [ ] SD-402 · feat(dashboard): quote builder with WhatsApp share
 `M` · Depende: SD-401 · Review: `R+S`
