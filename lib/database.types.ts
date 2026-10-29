@@ -591,6 +591,8 @@ export type Database = {
           last_error: string | null;
           last_synced_at: string | null;
           org_id: string;
+          sync_started_at: string | null;
+          sync_token: string | null;
           unit_id: string;
           updated_at: string;
         };
@@ -604,6 +606,8 @@ export type Database = {
           last_error?: string | null;
           last_synced_at?: string | null;
           org_id: string;
+          sync_started_at?: string | null;
+          sync_token?: string | null;
           unit_id: string;
           updated_at?: string;
         };
@@ -616,6 +620,8 @@ export type Database = {
           last_error?: string | null;
           last_synced_at?: string | null;
           org_id?: string;
+          sync_started_at?: string | null;
+          sync_token?: string | null;
           unit_id?: string;
           updated_at?: string;
         };
@@ -1035,6 +1041,52 @@ export type Database = {
           },
         ];
       };
+      sync_conflicts: {
+        Row: {
+          blocking_sources: Database["public"]["Enums"]["calendar_block_source"][];
+          created_at: string;
+          external_uid: string;
+          feed_id: string;
+          id: string;
+          org_id: string;
+          period: unknown;
+        };
+        ComputedFields: never;
+        Insert: {
+          blocking_sources: Database["public"]["Enums"]["calendar_block_source"][];
+          created_at?: string;
+          external_uid: string;
+          feed_id: string;
+          id?: string;
+          org_id: string;
+          period: unknown;
+        };
+        Update: {
+          blocking_sources?: Database["public"]["Enums"]["calendar_block_source"][];
+          created_at?: string;
+          external_uid?: string;
+          feed_id?: string;
+          id?: string;
+          org_id?: string;
+          period?: unknown;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sync_conflicts_feed_id_org_id_fkey";
+            columns: ["feed_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "ical_feeds";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "sync_conflicts_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       unit_rates: {
         Row: {
           created_at: string;
@@ -1213,6 +1265,20 @@ export type Database = {
       delete_manual_calendar_block: {
         Args: { p_block_id: string; p_org_id: string };
         Returns: undefined;
+      };
+      begin_ical_sync: {
+        Args: { p_feed_id: string; p_org_id: string };
+        Returns: Json;
+      };
+      finish_ical_sync: {
+        Args: {
+          p_error?: string;
+          p_events: Json;
+          p_feed_id: string;
+          p_org_id: string;
+          p_token: string;
+        };
+        Returns: boolean;
       };
       get_ical_export: { Args: { p_token: string }; Returns: Json };
       regenerate_ical_token: {

@@ -73,3 +73,6 @@ jobs:
       # Python stdlib + psql inside the already-running local Supabase container.
       - name: Calendar concurrency (pgTAP, local socket)
         run: python3 scripts/test-calendar-concurrency.py
+
+      - name: iCal sync concurrency (pgTAP, local socket)
+        run: python3 scripts/test-ical-concurrency.py

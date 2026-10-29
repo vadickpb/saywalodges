@@ -988,15 +988,73 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   y pantalla del dueño `/app/calendar/feeds` (crear enlace por casa y canal, copiar, regenerar, eliminar). Generador puro `lib/ical/export.ts` (cobertura ≥ 90 % exigida).
   Sin límite de peticiones todavía: lo cubre SD-409. La URL se muestra con el host del panel (un host de plataforma, donde `/api/*` se sirve tal cual).
 
-### [ ] SD-305 · feat(ical): feed import and sync engine
+### [x] SD-305 · feat(ical): feed import and sync engine
 `L` · Depende: SD-304 · Review: `R+S`
-- **Alcance**: `lib/ical/import.ts`: fetch solo https, allowlist de hosts (airbnb, booking, vrbo), timeout y límite de
-  tamaño; parseo (`node-ical`); upsert por `(feed_id, external_uid)`; borrar eventos desaparecidos; conflictos →
-  `sync_conflicts`; UI para añadir feeds y ver último sync/error; botón "Sincronizar ahora".
+- **Alcance**: `lib/ical/import.ts`: HTTPS con allowlist exacta Airbnb/Booking/Vrbo, DNS/IP pública
+  fijada a la conexión TLS, redirecciones revalidadas (máximo tres), deadline total de 10 s y cuerpo de 1 MiB;
+  parseo con `node-ical`; sincronización transaccional por `(feed_id, external_uid)`, eliminación de eventos
+  desaparecidos y `sync_conflicts`; gestión de URL, último sync/error y «Sincronizar ahora» solo del dueño.
 - **Criterios**
-  - [ ] Tests con fixtures reales anonimizados de Airbnb y Booking.
-  - [ ] URL a IP privada o host fuera de la allowlist → rechazada (test).
-  - [ ] Conflicto con una reserva directa queda registrado y visible en el dashboard.
+  - [x] Fixtures de exportaciones reales públicas de Airbnb y Booking, anonimizadas; procedencia en
+    `lib/ical/fixtures/README.md`. Sin cuentas OTA ni llamadas a calendarios privados.
+  - [x] URL privada/localhost/host fuera de allowlist, DNS privado/mixto y redirección insegura rechazados.
+  - [x] Conflicto con reserva directa registrado y visible en dashboard (pgTAP y smoke HTTP con sesión local real).
+- **Implementación y evidencia local (2026-10-29)**:
+  - Migración `20261029120000_ical_sync.sql`: conflictos con FK compuesta feed/org y RLS del dueño,
+    RPCs de sesión sin service-role en acciones, permisos por columna y lease de 2 minutos con bloqueo
+    de fila. Un segundo sync espera al primero y no obtiene lease mientras está activo; cambiar URL
+    invalida completaciones anteriores. Fallar descarga/parseo conserva bloques y conflictos previos.
+  - Snapshots completos de hasta 2000 eventos; fechas estrictas `[)` y UID SHA-256 (sin nombres, teléfonos,
+    descripciones ni URL del huésped en BD/logs). Recurrencias, timestamps, UID duplicados y calendarios
+    truncados se rechazan completos. Calendario válido vacío elimina solo eventos de ese feed.
+    Se retiran rangos obsoletos antes de aplicar cambios para permitir movimientos/intercambios de fechas;
+    el exclusion constraint sigue siendo la autoridad ante reservas, manuales y otros feeds.
+  - Dependencia de producción `node-ical@0.27.3` fijada (Node >=22, compatible con el proyecto >=24),
+    necesaria para interpretar ICS de los canales; no se usa su fetch. Tipos regenerados con CLI local,
+    conservando el formato previo fuera de las adiciones.
+  - pgTAP: 16 archivos / 539 aserciones (51 nuevas); pruebas de sesión/RLS, idempotencia, desapariciones,
+    conflictos directos/manuales/otro feed, reintentos, intercambio de rangos, lease, URL cambiada y errores.
+    Concurrencia real: `python3 scripts/test-calendar-concurrency.py` (21 aserciones) y
+    `python3 scripts/test-ical-concurrency.py` (10): el sync espera a una reserva directa sin commit y,
+    tras su commit, conserva únicamente la reserva y registra el conflicto. Ejecutar secuencialmente
+    sobre Supabase local; ambos runners limpian sus fixtures incluso ante errores.
+    Una ejecución de la carrera sin ganador prefijado de SD-301 produjo el abort seguro `40P01`
+    de PostgreSQL: se corrigió ese test para admitirlo junto a `23P01`, conservando las aserciones
+    de un solo ganador y una sola fila. Las carreras con ganador prefijado siguen exigiendo `23P01`.
+  - Suite completa: 40 archivos / 665 tests; parser repetido con TZ UTC, Lima, Auckland y Apia. Se corrigió
+    el desfase de VALUE=DATE en zonas positivas: se conservan las fechas civiles originales
+    validadas, incluso en fechas que una TZ del host omite. Importador: cobertura 94.65 % sentencias /
+    91.42 % ramas / 100 % funciones / 97.67 % líneas. `test:pricing`:
+    321 tests y cobertura 99.74 % sentencias / 98.12 % ramas / 100 % funciones / 99.84 % líneas;
+    umbrales originales intactos. `npm ci`, lint, typecheck, build y `supabase db reset` locales OK.
+  - Cierre HTTP: `node scripts/test-ical-http.mjs` OK con build y sesiones Supabase locales reales de dueño,
+    staff y dueño de otra org. Comprueba dashboard, configuración, sync repetido con IDs estables, conflicto
+    directo visible, desaparición de eventos/conflictos, eliminación del feed por acción HTTP, preservación
+    de otro feed/reserva directa, errores seguros e aislamiento RLS/acciones entre orgs y frente a anónimo.
+    HTTPS OTA se sustituye por fixtures solo en el proceso de prueba; no prueba conectividad con cuentas OTA
+    ni interacción visual en navegador. El 404 era `ROOT_DOMAIN=saywa.test` con requests a `localhost:3000`:
+    se corrigió el host del runner, sin cambiar proxy/auth. El runner usa `ROOT_DOMAIN`, la variable que
+    valida `lib/env.ts`; `PLATFORM_HOSTS` no existe. El smoke exige redirect de anónimo en el host de
+    plataforma y 404 en host de tenant mediante HTTP crudo (Node fetch puede sustituir el header Host).
+    También se corrigió el fixture de 302 para asignar status/Location antes del callback.
+    El cambio de CI es mínimo: añade solo `python3 scripts/test-ical-concurrency.py` al job de BD,
+    reutilizando el Supabase local ya iniciado, sin dependencias ni credenciales nuevas.
+  - Gates reejecutados en esta continuación: `npm run lint`, `npm run typecheck`,
+    `npm run test -- --coverage` OK (40 archivos / 665 tests;
+    cobertura del scope configurado 99.74 % sentencias / 98.12 % ramas / 100 % funciones / 99.84 % líneas).
+    `npm run build` con variables Supabase locales y `ROOT_DOMAIN=localhost:3000`,
+    `npx supabase db reset --local`, `npx supabase test db` (16 archivos / 539 aserciones), ambos runners
+    de concurrencia (21 + 10 aserciones) y `node scripts/test-ical-http.mjs`: todos OK.
+    Tipos regenerados con `npx supabase gen types typescript --local` y comparados mediante
+    asignabilidad TypeScript bidireccional: coinciden, conservando el formato del archivo existente.
+    Revisión focalizada del diff completo
+    por agente principal, reviewer y security-reviewer: sin hallazgos importantes pendientes en SSRF/DNS,
+    redirecciones, RLS/multi-tenant, concurrencia e idempotencia.
+    `git diff --check` y `git diff --cached --check` OK; `.gitattributes` conserva CRLF de los fixtures
+    RFC 5545 y reconoce CR como final de línea solo en esos archivos.
+    Sin producción, Supabase remoto, `.env.local`, push ni PR.
+  - Producción: aplicar la migración antes de desplegar este código (tarea del dueño). Sin cron ni alertas:
+    corresponden a SD-307. La allowlist es explícita; hosts regionales no enumerados se rechazan.
 
 ### [ ] SD-306 · chore(email): transactional email infrastructure
 `S` · Depende: SD-103 · Review: `R+S`

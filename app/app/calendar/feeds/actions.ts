@@ -1,5 +1,6 @@
 "use server";
 
+import { saveImportUrl, syncFeed } from "@/lib/dal/ical-sync";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createFeed, deleteFeed, regenerateToken } from "@/lib/dal/ical-feeds";
@@ -58,4 +59,26 @@ export async function deleteFeedAction(formData: FormData): Promise<RowResult> {
   if (!result.ok) return { ok: false, error: GENERIC_ERROR };
   revalidatePath("/app/calendar/feeds");
   return { ok: true };
+}
+
+export async function saveImportUrlAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const owner = await ownerContext();
+  if (!owner.ok) return { ok: false, formError: owner.error };
+  const input = z.object({ id: z.string().uuid(), url: z.string().max(2000) }).safeParse({ id: formData.get("id"), url: formData.get("url") });
+  if (!input.success) return { ok: false, formError: GENERIC_ERROR };
+  const ok = await saveImportUrl(owner.supabase, owner.orgId, input.data.id, input.data.url);
+  if (!ok) return { ok: false, formError: "No se pudo guardar. Usa un enlace HTTPS de Airbnb, Booking.com o Vrbo." };
+  revalidatePath("/app/calendar/feeds");
+  return { ok: true, savedAt: Date.now() };
+}
+
+export async function syncFeedAction(formData: FormData): Promise<RowResult> {
+  const owner = await ownerContext();
+  if (!owner.ok) return { ok: false, error: owner.error };
+  const id = z.string().uuid().safeParse(formData.get("id"));
+  if (!id.success) return { ok: false, error: GENERIC_ERROR };
+  const ok = await syncFeed(owner.supabase, owner.orgId, id.data);
+  revalidatePath("/app/calendar/feeds");
+  revalidatePath("/app/calendar");
+  return ok ? { ok: true } : { ok: false, error: "No se pudo sincronizar. Revisa el último error o espera si hay una sincronización en curso." };
 }
