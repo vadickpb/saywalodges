@@ -20,9 +20,14 @@ export type FeedForm = z.infer<typeof feedFormSchema>;
 const TOKEN = /^[a-f0-9]{64}$/;
 export const isExportToken = (value: string) => TOKEN.test(value);
 
-// The URL a channel is given to read the calendar. `host` is the dashboard's own
-// host (a platform host, where /api/* is served as is); local hosts use http.
-export function exportUrl(host: string, token: string): string {
+// Absolute URL on a platform host (local hosts use http).
+export function platformUrl(host: string, path: string): string {
   const local = host === "localhost" || host.startsWith("localhost:") || host.endsWith(".localhost") || host.includes(".localhost:");
-  return `${local ? "http" : "https"}://${host}/api/ical/${token}`;
+  return `${local ? "http" : "https"}://${host}${path}`;
+}
+
+// The URL a channel is given to read the calendar. `host` is the dashboard's own
+// host (a platform host, where /api/* is served as is).
+export function exportUrl(host: string, token: string): string {
+  return platformUrl(host, `/api/ical/${token}`);
 }

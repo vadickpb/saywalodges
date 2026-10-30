@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { format } from "@/lib/domain/format";
+import { ICAL_CHANNELS } from "@/lib/domain/ical-feeds";
 import { emailMessages, type EmailLang } from "./messages";
 
 // Every template is a pure function (lang, props) → EmailContent. One shared
@@ -52,6 +53,34 @@ export const templates = {
       paragraphs: [props.name ? format(m.greeting, { name: props.name }) : m.greetingAnonymous, m.body, m.note],
     };
   }),
+  // SD-307. Business data only (channel + unit name): no guest names, dates, URLs of feeds or amounts.
+  icalConflict: defineTemplate(
+    z.object({ channel: z.enum(ICAL_CHANNELS), unitName: displayName, count: z.number().int().min(1).max(100000), url: httpsUrl.optional() }),
+    (lang, props) => {
+      const m = emailMessages[lang].icalConflict;
+      const vars = { channel: emailMessages[lang].channels[props.channel], unit: props.unitName ?? "-", count: String(props.count) };
+      return {
+        subject: m.subject,
+        preheader: m.preheader,
+        heading: m.heading,
+        paragraphs: [m.greeting, format(props.count === 1 ? m.bodyOne : m.bodyMany, vars), m.note],
+        ...(props.url ? { cta: { label: m.cta, url: props.url } } : {}),
+      };
+    },
+  ),
+  icalFeedDown: defineTemplate(
+    z.object({ channel: z.enum(ICAL_CHANNELS), unitName: displayName, url: httpsUrl.optional() }),
+    (lang, props) => {
+      const m = emailMessages[lang].icalFeedDown;
+      return {
+        subject: m.subject,
+        preheader: m.preheader,
+        heading: m.heading,
+        paragraphs: [m.greeting, format(m.body, { channel: emailMessages[lang].channels[props.channel], unit: props.unitName ?? "-" }), m.note],
+        ...(props.url ? { cta: { label: m.cta, url: props.url } } : {}),
+      };
+    },
+  ),
 };
 
 export type TemplateName = keyof typeof templates;

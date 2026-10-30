@@ -1137,6 +1137,16 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [ ] Sin el secreto → 401.
   - [ ] Un feed que falla no detiene los demás.
+- **Estado (implementado en rama `feat/SD-307-scheduled-ical-sync`, apilada sobre SD-306; sin push ni PR)**: ruta
+  `app/api/cron/ical-sync` (CRON_SECRET → 401 sin secreto), lote de 25 feeds / 5 en paralelo / presupuesto de 45 s, aislamiento
+  por feed, mismo importador con protección SSRF y misma semántica transaccional que SD-305 vía núcleos privados y RPC `cron_*`
+  solo `service_role` (migración `20261030120000_ical_cron_sync.sql`); alertas por correo al owner (conflicto nuevo / feed
+  caído > 24 h) con ledger persistente `ical_alerts`, sin PII, compatibles con el modo simulación de SD-306. Detalle y pasos
+  del dueño en `docs/cron.md`. Tests Vitest (ruta, orquestación, DAL, plantillas) y pgTAP `0021` escritos; **pgTAP no se
+  pudo ejecutar localmente (sin Docker): queda para el CI del PR**.
+  - **Pendiente del dueño** (criterios no cumplidos hasta entonces): programar la llamada cada 15 min (no hay Vercel Cron Pro ni
+    scheduler configurado), aplicar la migración en remoto antes de desplegar, y dominio/clave de Resend para correos reales
+    (sin evidencia de envío real).
 
 ### [x] SD-308 · feat(site): public availability calendar
 `M` · Depende: SD-303 · Review: `R`
