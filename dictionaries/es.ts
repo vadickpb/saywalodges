@@ -45,7 +45,10 @@ const es: Dict = {
   },
   rates: {
     label: "Tarifas",
-    title: "Tarifas por temporada",
+    title: "Tarifas",
+    from: "desde {price}",
+    perNight: "por noche",
+    base: "Tarifa general",
     note: "Las tarifas varían según tus fechas, el tamaño del grupo y la duración de la estadía. Escríbenos para una cotización exacta.",
     availabilityTitle: "Consulta tus fechas",
     availabilityText: "Cuéntanos tus fechas y cuántas personas son: te respondemos con la disponibilidad y tu tarifa exacta.",
