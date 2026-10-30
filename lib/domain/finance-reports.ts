@@ -27,9 +27,12 @@ export type ReportUnit = {
   id: string;
   name: string;
   active: boolean;
-  // First civil date the house counts as available (its creation date). Nights
-  // the owner blocked are NOT subtracted until the calendar exists (SD-807).
+  // First civil date the house counts as available (its creation date).
   availableFrom: string;
+  // Nights the owner blocked by hand (calendar_blocks source = manual, [start, end)):
+  // the house was not for sale, so they leave the available nights. Imported and
+  // booking blocks are NOT listed here: those nights are sold, not unavailable.
+  blockedRanges?: readonly { start: string; end: string }[];
   // Exclusive date the house stopped operating, for an inactive house. Without
   // it an inactive house counts as operating until its last booked night.
   availableUntil?: string | null;
@@ -245,7 +248,20 @@ function availableNights(unit: ReportUnit, booked: { first: string; last: string
   }
   const start = from > p.from ? from : p.from;
   const stop = end === null || end > p.toExclusive ? p.toExclusive : end;
-  return start >= stop ? 0 : nightsBetween(start, stop);
+  if (start >= stop) return 0;
+  let blocked = 0;
+  for (const range of unit.blockedRanges ?? []) {
+    const s = range.start > start ? range.start : start;
+    const e = range.end < stop ? range.end : stop;
+    if (s < e) blocked += nightsBetween(s, e);
+  }
+  return Math.max(0, nightsBetween(start, stop) - blocked);
+}
+
+// A Postgres daterange as text ("[2027-03-01,2027-03-05)") -> its [start, end) dates.
+export function parseDateRange(text: string): { start: string; end: string } | null {
+  const m = /^\[(\d{4}-\d{2}-\d{2}),(\d{4}-\d{2}-\d{2})\)$/.exec(text);
+  return m !== null && m[1] < m[2] ? { start: m[1], end: m[2] } : null;
 }
 
 function ratio(numerator: bigint, denominator: bigint, scale: bigint): number | null {

@@ -5,7 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MetricCard } from "@/components/ui/metric-card";
 import { RowAction } from "@/components/dashboard/row-action";
 import { PendingExpenses, type PendingItemData } from "@/components/dashboard/recurring-pending";
+import { PendingRentals, type PendingRentalData } from "@/components/dashboard/ical-pending";
 import { LEDGER_LIMIT, getLastFxRate, listCategories, listEntries, listLinkedCosts, type LedgerEntry } from "@/lib/dal/finance";
+import { listRentalsToComplete } from "@/lib/dal/finance-ical";
 import { listConfirmed, listTemplates } from "@/lib/dal/finance-recurring";
 import { listUnits } from "@/lib/dal/units";
 import { rentalProfits, summarizeEntries, type FinanceEntry } from "@/lib/domain/finance";
@@ -15,6 +17,7 @@ import { addDays } from "@/lib/domain/finance-reports";
 import { currentMonth, ledgerQuery, monthLabel, monthRange, parseLedgerView, shiftMonth } from "@/lib/domain/finance-view";
 import { formatPrice } from "@/lib/domain/rates-management";
 import { deleteEntryAction } from "./actions";
+import { completeRentalAction } from "./ical-actions";
 import { confirmRecurringAction } from "./recurring/actions";
 import { getFinanceContext } from "./_lib/context";
 
@@ -100,6 +103,25 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     }
   }
 
+  // Imported Airbnb/Booking stays with no income yet (owner-only). The feed only has dates,
+  // so the owner types the amount; the suggested cleaning comes from the house's settings.
+  let pendingRentals: PendingRentalData[] = [];
+  if (ctx.isOwner) {
+    const stays = await listRentalsToComplete(ctx.supabase, ctx.orgId);
+    const usd = stays.some((r) => r.currency === "USD") ? await getLastFxRate(ctx.supabase, ctx.orgId, "USD") : null;
+    pendingRentals = stays.map((r) => ({
+      blockId: r.blockId,
+      unitName: r.unitName,
+      channelLabel: CHANNEL_LABELS[r.channel],
+      stayStart: r.stayStart,
+      stayEnd: r.stayEnd,
+      stayLabel: `${shortDate(r.stayStart)}–${shortDate(r.stayEnd)}`,
+      currency: r.currency,
+      suggestedCleaning: r.suggestedCleaningCents === null || r.suggestedCleaningCents <= 0 ? "" : centsToText(r.suggestedCleaningCents),
+      lastFxRate: r.currency === "USD" && usd !== null ? String(usd) : "",
+    }));
+  }
+
   const prev = ledgerQuery({ ...view, month: shiftMonth(view.month, -1) });
   const next = ledgerQuery({ ...view, month: shiftMonth(view.month, 1) });
 
@@ -142,6 +164,21 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
               <p className="text-xs text-muted-foreground">Confirma cada uno con el monto real: recién ahí se registra como egreso.</p>
             </div>
             <PendingExpenses action={confirmRecurringAction} items={pendingItems} />
+          </CardContent>
+        </Card>
+      )}
+
+      {pendingRentals.length > 0 && (
+        <Card>
+          <CardContent className="flex flex-col gap-3 pt-6">
+            <div>
+              <h2 className="font-medium text-foreground">Alquileres por completar</h2>
+              <p className="text-xs text-muted-foreground">
+                Estadías importadas de Airbnb o Booking. El calendario solo trae las fechas: registra lo que cobraste y, si quieres,
+                la limpieza sugerida. Recién ahí se crea el ingreso.
+              </p>
+            </div>
+            <PendingRentals action={completeRentalAction} items={pendingRentals} />
           </CardContent>
         </Card>
       )}

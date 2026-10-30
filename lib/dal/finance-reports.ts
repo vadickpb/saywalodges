@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { listAllEntries, listCategories } from "@/lib/dal/finance";
-import { prepareReport, type PreparedReport, type ReportEntry, type ReportError, type ReportUnit } from "@/lib/domain/finance-reports";
+import { parseDateRange, prepareReport, type PreparedReport, type ReportEntry, type ReportError, type ReportUnit } from "@/lib/domain/finance-reports";
 import { todayInLima } from "@/lib/domain/finance-view";
 
 // Everything a report needs, read with the SESSION client (RLS) and shaped for the
@@ -21,17 +21,28 @@ export type ReportData =
 // date opens its availability; an inactive one is taken to have stopped on the day
 // it was last edited (the deactivation, unless it was edited again afterwards).
 export async function listReportUnits(supabase: Client, orgId: string): Promise<ReportUnit[]> {
-  const { data, error } = await supabase.from("units").select("id, name, active, created_at, updated_at").eq("org_id", orgId);
-  if (error) {
-    console.error("listReportUnits failed:", error);
+  const [units, blocks] = await Promise.all([
+    supabase.from("units").select("id, name, active, created_at, updated_at").eq("org_id", orgId),
+    // Only the owner's manual blocks: they are not for sale, so they are not available nights (SD-807).
+    supabase.from("calendar_blocks").select("unit_id, period").eq("org_id", orgId).eq("source", "manual"),
+  ]);
+  if (units.error || blocks.error) {
+    console.error("listReportUnits failed:", units.error ?? blocks.error);
     throw new Error("No se pudieron cargar las casas.");
   }
-  return data.map((u) => ({
+  const blockedByUnit = new Map<string, { start: string; end: string }[]>();
+  for (const b of blocks.data) {
+    const range = typeof b.period === "string" ? parseDateRange(b.period) : null;
+    if (range === null) continue;
+    blockedByUnit.set(b.unit_id, [...(blockedByUnit.get(b.unit_id) ?? []), range]);
+  }
+  return units.data.map((u) => ({
     id: u.id,
     name: u.name,
     active: u.active,
     availableFrom: todayInLima(new Date(u.created_at)),
     availableUntil: u.active ? null : todayInLima(new Date(u.updated_at)),
+    blockedRanges: blockedByUnit.get(u.id) ?? [],
   }));
 }
 

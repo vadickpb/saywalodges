@@ -1571,8 +1571,21 @@ export type Database = {
         Args: { p_booking_id: string; p_org_id: string; p_reason?: string };
         Returns: Json;
       };
+      complete_ical_rental: {
+        Args: {
+          p_amount_cents: number;
+          p_block_id: string;
+          p_cleaning_cents?: number;
+          p_currency: Database["public"]["Enums"]["currency_code"];
+          p_fx_rate_pen?: number;
+          p_guests?: number;
+          p_occurred_on: string;
+          p_org_id: string;
+        };
+        Returns: Json;
+      };
       confirm_payment: {
-        Args: { p_org_id: string; p_payment_id: string };
+        Args: { p_fx_rate_pen?: number; p_org_id: string; p_payment_id: string };
         Returns: Json;
       };
       confirm_recurring_expense: {
@@ -1664,6 +1677,19 @@ export type Database = {
         Returns: {
           end_date: string;
           start_date: string;
+        }[];
+      };
+      list_ical_rentals_to_complete: {
+        Args: { p_org_id: string };
+        Returns: {
+          block_id: string;
+          channel: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          stay_end: string;
+          stay_start: string;
+          suggested_cleaning_cents: number;
+          unit_id: string;
+          unit_name: string;
         }[];
       };
       regenerate_ical_token: {
