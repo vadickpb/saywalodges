@@ -819,6 +819,13 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   seed la rellena, pero nada la lee. Eliminarla exige una migración destructiva (borra datos publicados);
   no se hizo. Al autorizarla: `drop table rate_tiers` en una migración, quitar sus filas del seed,
   políticas/tests pgTAP (`0001_rls_enabled`, `0003_org_isolation`) y regenerar `lib/database.types.ts`.
+- **Evidencia de aceptación (HTTP)**: `scripts/test-public-rates-http.mjs`, solo lectura, contra Supabase LOCAL
+  sembrado (puerto 3208, hosts `saywa-lodges.localhost` y `demo.localhost`, es/en). Comprueba titular y lema de
+  cada tenant, moneda (`US$` Saywa, `S/` demo), tarjeta base (`US$ 220` / `S/ 100`), temporadas del seed
+  (`US$ 300`, 16 feriados a `US$ 500`; `S/ 150`) y que ningún precio, moneda o temporada cruce de un tenant a otro.
+  Integrado en el job `db` de CI (build con el entorno del stack local). **Pendiente hasta que CI lo ejecute en
+  verde**: en la sesión de desarrollo Docker no respondía, así que no se corrió contra una BD local y no se
+  afirma resultado HTTP; solo hay `node --check`, lint, typecheck, test y build.
 
 ### [ ] SD-209 · feat(site): customizable public site template
 `L` · Depende: SD-201, SD-208 · Review: `R+S`
