@@ -100,3 +100,10 @@ jobs:
 
       - name: Site theme HTTP smoke (SD-209)
         run: node scripts/test-site-theme-http.mjs
+
+      # SD-209: Lighthouse MOBILE >= 90 (performance, accessibility) on the seeded
+      # local tenants. Uses the Chrome preinstalled on ubuntu-latest; scores only.
+      - name: Lighthouse mobile (SD-209)
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: node scripts/lighthouse-mobile.mjs
