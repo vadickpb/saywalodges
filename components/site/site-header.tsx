@@ -44,6 +44,13 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage }: Prop
   const otherLang = lang === "es" ? "en" : "es";
 
   return (
+    <>
+    <a
+      href="#main"
+      className="fixed left-4 top-4 z-50 -translate-y-24 rounded-site bg-site-primary px-4 py-2 text-sm font-semibold text-site-primary-fg focus:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent"
+    >
+      {dict.skipToContent}
+    </a>
     <header
       className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${
         transparent ? "text-white" : "border-b border-site-line bg-site-bg/95 text-site-fg backdrop-blur"
@@ -113,5 +120,6 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage }: Prop
         </div>
       )}
     </header>
+    </>
   );
 }

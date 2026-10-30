@@ -15,6 +15,7 @@ const en = {
     menu: "Open menu",
     closeMenu: "Close menu",
     switchLanguage: "Ver en español",
+    skipToContent: "Skip to content",
   },
   hero: {
     whatsapp: "Book on WhatsApp",

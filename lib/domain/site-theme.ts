@@ -110,6 +110,34 @@ export function contrastWarnings(theme: ResolvedTheme): ContrastWarning[] {
 
 const RADIUS_VALUE: Record<Radius, string> = { sharp: "0.25rem", soft: "0.75rem", round: "1.5rem" };
 
+function toRgb(color: string): [number, number, number] {
+  const n = parseInt(color.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// `weight` of `a` mixed with the rest of `b`, in sRGB — the same math as
+// CSS color-mix(in srgb), so the result is a plain #RRGGBB we can test.
+export function mixHex(a: string, b: string, weight: number): string {
+  const [ra, rb] = [toRgb(a), toRgb(b)];
+  const channels = ra.map((c, i) => Math.round(c * weight + rb[i] * (1 - weight)));
+  return `#${channels.map((c) => c.toString(16).padStart(2, "0")).join("")}`.toUpperCase();
+}
+
+// Secondary text, panel surface and hairline borders, all derived from the
+// two base colors so every theme (preset or custom hex) stays coherent.
+// Muted text falls back to full foreground when the 70% mix would drop
+// below AA on the background or on the surface it's often placed on, and the
+// surface falls back to the background when even that isn't enough.
+export function deriveTints(background: string, foreground: string) {
+  let surface = mixHex(foreground, background, 0.04);
+  let muted = mixHex(foreground, background, 0.7);
+  if (Math.min(contrastRatio(muted, background), contrastRatio(muted, surface)) < 4.5) muted = foreground;
+  // On mid-tone backgrounds even full foreground can fall under AA on a
+  // tinted panel; drop the tint rather than the legibility.
+  if (contrastRatio(muted, surface) < 4.5) surface = background;
+  return { muted, surface, line: mixHex(foreground, background, 0.12) };
+}
+
 // CSS variable names defined by next/font in app/sites/[host]/[lang]/fonts.ts.
 const FONT_VARS: Record<FontPair, { heading: string; body: string }> = {
   editorial: { heading: "var(--font-playfair)", body: "var(--font-inter)" },
@@ -119,7 +147,11 @@ const FONT_VARS: Record<FontPair, { heading: string; body: string }> = {
 
 export function themeToCssVars(theme: ResolvedTheme): Record<string, string> {
   const fonts = FONT_VARS[theme.fontPair];
+  const tints = deriveTints(theme.background, foregroundFor(theme.background));
   return {
+    "--site-muted": tints.muted,
+    "--site-surface": tints.surface,
+    "--site-line": tints.line,
     "--site-primary": theme.primary,
     "--site-primary-fg": foregroundFor(theme.primary),
     "--site-accent": theme.accent,

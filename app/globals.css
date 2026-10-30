@@ -130,15 +130,10 @@
   }
 }
 
-/* Public tenant site (SD-209). The base colors arrive as an inline style on
-   <body> (validated hex only — see themeToCssVars); these tints derive from
-   them, so every theme gets consistent secondary text/surfaces/borders.
-   Muted text at 70% of fg keeps ≥ 4.5:1 on both light and dark presets. */
+/* Public tenant site (SD-209). Every --site-* variable (base colors and the
+   derived muted/surface/line tints) arrives as an inline style on <body>,
+   computed and contrast-checked in lib/domain/site-theme.ts. */
 .site {
-  --site-muted: color-mix(in srgb, var(--site-fg) 70%, var(--site-bg));
-  --site-surface: color-mix(in srgb, var(--site-fg) 4%, var(--site-bg));
-  --site-line: color-mix(in srgb, var(--site-fg) 12%, var(--site-bg));
-
   background: var(--site-bg);
   color: var(--site-fg);
   font-family: var(--site-font-body), ui-sans-serif, system-ui, sans-serif;

@@ -850,6 +850,23 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   `dictionaries/` quedó solo con etiquetas genéricas. Fotos locales con `npm run db:seed-storage`.
   Cubre los criterios 1 y 3 y la parte de "CTA legible" del 2 (`foregroundFor`). El aviso de contraste en el
   editor, las reseñas y Lighthouse quedan para SD-210.
+- **Parte 2 (local, sin push; SD-209 sigue abierto)**: `deriveTints`/`mixHex` en `lib/domain/site-theme.ts`
+  calculan `--site-muted/surface/line` en el servidor (antes `color-mix` en CSS, sin validar): el texto atenuado
+  cae a `fg` completo si no llega a AA sobre fondo y superficie, y la superficie cae al fondo si aun así no
+  alcanza (caso real hallado por test en grises medios). Enlace «saltar al contenido» (`skipToContent`,
+  es/en) y `<main id="main">`. Tests Vitest: hex personalizado (válidos/inválidos), lista cerrada de
+  variables CSS ante intentos de inyección (incl. `__proto__`), contraste AA de botones, texto y tintes sobre
+  una malla de fondos, y marcas distintas `andino` (Saywa) / `costa` (demo) solo por tema. Smoke HTTP por
+  tenant `scripts/test-site-theme-http.mjs` (variables del tema, `theme-color`, skip link, barra CTA móvil,
+  sin colores del otro tenant), añadido al job `db` de CI.
+  - **Reseñas: no implementadas.** No existe tabla ni fuente de datos de reseñas verificables; no se inventan
+    testimonios. Requiere un ticket propio (modelo de datos + moderación).
+  - **Editor/aviso de contraste**: sigue siendo SD-210 (no duplicado).
+  - **Lighthouse móvil ≥ 90: PENDIENTE.** El sitio público necesita la BD local sembrada y Docker no respondía
+    (`Cannot connect to the Docker daemon`); sin BD la ruta responde 404, así que no se midió nada ni se afirma
+    puntaje. Medir en preview o con el stack local levantado.
+  - **Verificado**: `npm run lint`, `typecheck`, `test` (48 archivos, 743 tests) y `build` en verde. El smoke
+    HTTP solo pasó `node --check`; su ejecución real queda a cargo de CI.
 
 ### [ ] SD-210 · feat(dashboard): site appearance editor
 `M` · Depende: SD-106, SD-201, SD-209 (parte 1) · Review: `R+S`

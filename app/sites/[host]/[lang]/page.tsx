@@ -128,7 +128,7 @@ export default async function SitePage({
         links={links}
         overImage={Boolean(photos.hero)}
       />
-      <main>
+      <main id="main" tabIndex={-1} className="outline-none">
         <Hero
           dict={dict.hero}
           name={property.name}
