@@ -1,6 +1,6 @@
 # ADR 0009 · CSP con nonce por petición y headers de seguridad
 
-- Estado: aceptado (SD-701) · Fecha: 2026-10-30 · **Validación en navegador sobre sitios de tenants pendiente** (ver "Pendiente")
+- Estado: aceptado (SD-701) · Fecha: 2026-10-30 · **Chrome real en CI (carga inicial) añadido; preview report-only pendiente** (ver "Verificación en navegador" y "Pendiente")
 
 ## Contexto
 La app renderiza HTML con datos de tenants (nombre, textos, tema) y usa Supabase (Auth/Storage) desde el
@@ -61,9 +61,25 @@ El ticket que integre Mercado Pago debe, con la documentación oficial vigente e
   inexistentes del dominio de plataforma.
 - Actualizar `sonner` exige actualizar el hash (el test lo detecta).
 
-## Pendiente (criterio no verificado)
-Sin Docker/Supabase local en la implementación no se ejecutó el sitio de ningún tenant en un navegador, ni
-Lighthouse (SD-209, ≥90). Lo comprobado: tests unitarios y de proxy, build, `scripts/test-csp-http.mjs
---no-db` (plataforma) y Chrome headless sin violaciones en `/` y `/login`. Antes de dar el ticket por
-cerrado: correr en CI (job `db`: smoke CSP completo + Lighthouse) y revisar la consola en un preview con
-`CSP_REPORT_ONLY=1` sobre un tenant, el dashboard (toasts, selects, uploads) y el login contra Supabase real.
+## Verificación en navegador (Chrome real, en CI)
+`scripts/lighthouse-mobile.mjs` (job `db`, stack local sembrado, sin servicios de pago ni dependencias nuevas)
+reutiliza las cargas Lighthouse móvil de SD-209 y añade `--only-audits=errors-in-console`: no cambia las
+categorías ni los umbrales (rendimiento y accesibilidad ≥ 90, mediana de 3 cargas). Chrome reporta cada bloqueo
+CSP como error de consola; `lib/security/lighthouse-csp.ts` (pura, con test) los separa del resto y **cualquier
+violación CSP en cualquiera de las cargas falla el job**. Otros errores de consola (p. ej. un 404 de favicon)
+se imprimen como `NOTE` sin fallar, para no volver el CI frágil.
+- **Alcance exacto**: carga inicial (`/es`) de `saywa-lodges.localhost` y `demo.localhost` en producción
+  (`next start`). No ejecuta interacciones (widget de reserva, calendario), el dashboard, el login contra
+  Supabase real, ni `/en` (se puede ampliar con `LH_LANGS=es,en`).
+- **Canario anti-vacío**: antes de medir, el script sirve una página local con un CSP que bloquea su propio
+  script inline y exige que la auditoría lo detecte. Si Lighthouse cambia/renombra la auditoría, falla en
+  `NO_FCP` o no detecta el canario, el job falla en vez de pasar sin medir. Probado en Chrome 156 + Lighthouse
+  13.6.0 en local (violación detectada, página limpia sin hallazgos).
+- **No verificado en local**: el tramo con Supabase sembrado (no hay Docker en la máquina de desarrollo); lo
+  ejecuta el job `db` tras el push.
+
+## Pendiente
+- Revisar la consola en un preview con `CSP_REPORT_ONLY=1` (el modo report-only sigue disponible y sin cambios)
+  sobre: interacciones del sitio de tenant, dashboard (toasts, selects, uploads) y login contra Supabase real.
+  Nada de eso lo cubre el job de CI; hasta hacerlo, esas superficies no están validadas en navegador.
+- Tras la revisión, retirar `CSP_REPORT_ONLY` del preview; la producción nunca lo usa.

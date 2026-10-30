@@ -107,7 +107,8 @@ jobs:
         run: node scripts/test-csp-http.mjs
 
       # SD-209: Lighthouse MOBILE >= 90 (performance, accessibility) on the seeded
-      # local tenants. Uses the Chrome preinstalled on ubuntu-latest; scores only.
+      # local tenants. Uses the Chrome preinstalled on ubuntu-latest. SD-701: the same loads also fail on any
+      # CSP violation reported by Chrome (errors-in-console), after a canary proves the check detects one.
       - name: Lighthouse mobile (SD-209)
         env:
           CHROME_PATH: /usr/bin/google-chrome
