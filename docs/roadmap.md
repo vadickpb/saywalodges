@@ -868,16 +868,31 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - **Verificado**: `npm run lint`, `typecheck`, `test` (48 archivos, 743 tests) y `build` en verde. El smoke
     HTTP solo pasó `node --check`; su ejecución real queda a cargo de CI.
 
-### [ ] SD-210 · feat(dashboard): site appearance editor
+### [~] SD-210 · feat(dashboard): site appearance editor
 `M` · Depende: SD-106, SD-201, SD-209 (parte 1) · Review: `R+S`
 - **Alcance**: "Sitio → Apariencia" en el dashboard: elegir preset, colores, par tipográfico y radio, con vista
   previa en vivo y aviso de contraste (`contrastWarnings`); editar `properties.content` (textos y FAQ por idioma).
   Server action + zod con los mismos schemas de `lib/domain`; ampliar el grant de `update` de `authenticated`
   a `theme`/`content`. Sección de reseñas cuando haya fuente de datos.
 - **Criterios**
-  - [ ] Un color con contraste insuficiente muestra advertencia antes de guardar.
-  - [ ] Un miembro de otra org no puede editar el tema (test pgTAP).
-  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (medido en un deploy de preview).
+  - [x] Un color con contraste insuficiente muestra advertencia antes de guardar (`contrastWarnings` en vivo
+    en el editor; no bloquea el guardado). Verificado por tipos/build y tests de dominio; **no probado aún en
+    navegador** (ver nota).
+  - [ ] Un miembro de otra org no puede editar el tema (test pgTAP `0021_site_appearance_isolation`, escrito
+    pero **sin ejecutar**: Docker no disponible en local; lo ejecutará el job `db` de CI).
+  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (medido en un deploy de preview). **Sin medir**:
+    se sigue verificando con `scripts/lighthouse-mobile.mjs` en CI; este ticket no declara puntajes.
+- **Notas (provisional, sin push)**:
+  - Ruta `/app/site/appearance` (pestaña «Apariencia»): preset, 3 colores hex (selector + texto, validados),
+    par tipográfico, radio, vista previa con `themeToCssVars` (fuentes aproximadas con pila del sistema),
+    textos es/en, destacados y FAQ. Sin CSS libre. Reseñas: solo aviso, sigue sin fuente de datos.
+  - Server action `saveAppearance`: un único campo JSON `payload` validado por `parseAppearancePayload`
+    (`lib/domain/site-appearance.ts`, reutiliza `themeSchema`/`contentSchema`; FAQ y destacados completos en
+    ambos idiomas). La org sale de `requireActiveOrg()`, nunca del formulario; el DAL escribe con
+    `.eq("org_id")` y exige exactamente 1 fila. Mismo permiso que «Información» (cualquier miembro, vía RLS).
+  - El tema se guarda solo con las diferencias respecto del preset elegido.
+  - **Migración pendiente para el dueño**: `20261030211752_site_appearance_write_grant.sql` (aditiva:
+    `grant update (theme, content)` a `authenticated`). Debe aplicarse en producción **antes** del deploy.
 
 ---
 

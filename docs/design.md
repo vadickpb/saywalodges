@@ -85,6 +85,8 @@ Plantilla única para todos los tenants, en `components/site/*`, montada en
 
 - `properties.theme` (jsonb) → `resolveTheme()` (`lib/domain/site-theme.ts`) → `themeToCssVars()` → `style`
   del `<body class="site">`. Solo salen valores hex validados o strings fijos: no hay CSS del usuario.
+- Editor: dashboard «Sitio → Apariencia» (SD-210) escribe `theme`/`content` con los mismos schemas zod; el
+  aviso de contraste (`contrastWarnings`) se muestra antes de guardar.
 - Presets: `andino` (Saywa), `costa` (demo), `selva`, `colonial`, `noche` (oscuro). Todos pasan AA (test).
 - Tokens Tailwind: `bg-site-primary`, `text-site-primary-fg`, `bg-site-accent`, `text-site-accent-fg`,
   `bg-site-bg`, `text-site-fg`, `text-site-muted`, `bg-site-surface`, `border-site-line`, `rounded-site`,

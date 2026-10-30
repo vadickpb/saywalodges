@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { getPropertySettings, updatePropertySettings } from "./property";
+import { getPropertySettings, getSiteAppearance, updatePropertySettings, updateSiteAppearance } from "./property";
 
 const row = {
   name: "Saywa Lodges",
@@ -94,5 +94,49 @@ describe("updatePropertySettings", () => {
   it("returns not-ok on a DB error rather than throwing", async () => {
     const supabase = stubSupabase({ data: null, error: new Error("boom") });
     expect(await updatePropertySettings(supabase, "org-1", settings)).toEqual({ ok: false });
+  });
+});
+
+describe("getSiteAppearance", () => {
+  it("resolves stored theme and content", async () => {
+    const supabase = stubSupabase({
+      data: { theme: { preset: "costa", primary: "#112233" }, content: { capacity: 6 } },
+      error: null,
+    });
+    const result = await getSiteAppearance(supabase, "org-1");
+    expect(result?.theme).toMatchObject({ preset: "costa", primary: "#112233", fontPair: "modern" });
+    expect(result?.content).toEqual({ capacity: 6 });
+  });
+
+  it("falls back to the default preset and empty copy for invalid JSON", async () => {
+    const supabase = stubSupabase({ data: { theme: { primary: "red" }, content: "x" }, error: null });
+    const result = await getSiteAppearance(supabase, "org-1");
+    expect(result?.theme.preset).toBe("andino");
+    expect(result?.content).toEqual({});
+  });
+
+  it("returns null without a property or on a DB error", async () => {
+    expect(await getSiteAppearance(stubSupabase({ data: null, error: null }), "org-1")).toBeNull();
+    expect(await getSiteAppearance(stubSupabase({ data: null, error: new Error("boom") }), "org-1")).toBeNull();
+  });
+});
+
+describe("updateSiteAppearance", () => {
+  const input = { theme: { preset: "costa" }, content: { capacity: 4 } };
+
+  it("writes only theme and content, scoped to the org", async () => {
+    const supabase = stubSupabase({ data: [{ id: "p1" }], error: null });
+    expect(await updateSiteAppearance(supabase, "org-1", input)).toEqual({ ok: true });
+    const builder = vi.mocked(supabase.from).mock.results[0].value;
+    expect(builder.update).toHaveBeenCalledWith({ theme: input.theme, content: input.content });
+    expect(builder.eq).toHaveBeenCalledWith("org_id", "org-1");
+  });
+
+  it("fails when RLS filters the write to 0 rows (cross-org or no property)", async () => {
+    expect(await updateSiteAppearance(stubSupabase({ data: [], error: null }), "org-1", input)).toEqual({ ok: false });
+  });
+
+  it("fails on a DB error without throwing", async () => {
+    expect(await updateSiteAppearance(stubSupabase({ data: null, error: new Error("boom") }), "org-1", input)).toEqual({ ok: false });
   });
 });
