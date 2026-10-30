@@ -1,4 +1,4 @@
-# ADR 0008 · CSP con nonce por petición y headers de seguridad
+# ADR 0009 · CSP con nonce por petición y headers de seguridad
 
 - Estado: aceptado (SD-701) · Fecha: 2026-10-30 · **Validación en navegador sobre sitios de tenants pendiente** (ver "Pendiente")
 

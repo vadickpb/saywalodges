@@ -1,6 +1,6 @@
 // Content-Security-Policy (SD-701). Pure: no I/O and no env access, so every directive is unit-testable.
 // proxy.ts generates a fresh nonce per request and calls buildCsp(); Next reads the nonce back from the
-// request's CSP header and stamps it on its own scripts/styles (see docs/adr/0008-csp-and-security-headers.md).
+// request's CSP header and stamps it on its own scripts/styles (see docs/adr/0009-csp-and-security-headers.md).
 
 // sonner (dashboard toasts) injects ONE <style> element at import time and exposes no nonce option, so
 // style-src-elem allows exactly that stylesheet by hash. lib/security/csp.test.ts recomputes the hash from
@@ -62,7 +62,7 @@ export function buildCsp({ nonce, isDev, supabaseUrl }: CspOptions): string {
     ["style-src", isDev ? ["'self'", "'unsafe-inline'"] : ["'self'", n]],
     ["style-src-elem", isDev ? ["'self'", "'unsafe-inline'"] : ["'self'", n, `'${SONNER_STYLE_HASH}'`]],
     // style="" ATTRIBUTES (SD-209 tenant theme vars on <body>, Radix/sonner positioning) can't carry a nonce.
-    // Attribute-only: it grants no script execution and no <style> element injection. See ADR-0008.
+    // Attribute-only: it grants no script execution and no <style> element injection. See ADR-0009.
     ["style-src-attr", ["'unsafe-inline'"]],
     ["img-src", ["'self'", "data:", "blob:", supabase, ...payments.img]],
     ["font-src", ["'self'"]],
