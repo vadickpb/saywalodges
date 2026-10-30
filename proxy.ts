@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { locales, defaultLocale } from "./dictionaries";
 import { env } from "./lib/env";
+import { buildCsp, generateNonce } from "./lib/security/csp";
 
 // ─── Shared-across-tenants routes ────────────────────────────────────────────
 // Dashboard and auth pages (CLAUDE.md: dashboard is
@@ -122,8 +123,41 @@ function applySessionRefresh(
   return response;
 }
 
-// ─── Main proxy ──────────────────────────────────────────────────────────────
+// ─── CSP (SD-701) ────────────────────────────────────────────────────────────
+// Per-request nonce. Next reads it back from the CSP header of the *forwarded*
+// request and stamps it on its scripts/styles, so every NextResponse.next/rewrite
+// below must forward these headers (a redirect/error response has no render, so
+// it only needs the response header). Pure header plumbing: it decides nothing.
+const CSP_HEADER = "content-security-policy";
+const CSP_REPORT_ONLY_HEADER = "content-security-policy-report-only";
+
+function cspHeaderName() {
+  return env.CSP_REPORT_ONLY === "1" ? CSP_REPORT_ONLY_HEADER : CSP_HEADER;
+}
+
+// Built after refreshSession so the copied headers carry the refreshed
+// session cookie that request.cookies.set wrote into them.
+function forwardInit(request: NextRequest, nonce: string, csp: string) {
+  const headers = new Headers(request.headers);
+  headers.set("x-nonce", nonce);
+  headers.set(cspHeaderName(), csp);
+  return { request: { headers } };
+}
+
 export async function proxy(request: NextRequest) {
+  const nonce = generateNonce();
+  const csp = buildCsp({
+    nonce,
+    isDev: process.env.NODE_ENV === "development",
+    supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+  });
+  const response = await route(request, nonce, csp);
+  response.headers.set(cspHeaderName(), csp);
+  return response;
+}
+
+// ─── Routing ─────────────────────────────────────────────────────────────────
+async function route(request: NextRequest, nonce: string, csp: string) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get("host") ?? "";
 
@@ -150,7 +184,7 @@ export async function proxy(request: NextRequest) {
   // path on this host (/login, /forgot-password, …) already exists at
   // that exact top-level path, so it needs no rewrite at all — see step 4.
   if (host === `app.${env.ROOT_DOMAIN}` && pathname === "/") {
-    return applySessionRefresh(NextResponse.rewrite(new URL("/app", request.url)), refresh);
+    return applySessionRefresh(NextResponse.rewrite(new URL("/app", request.url), forwardInit(request, nonce, csp)), refresh);
   }
 
   // 4. Shared-across-tenants routes: no locale rewrite, no host rewrite —
@@ -158,14 +192,13 @@ export async function proxy(request: NextRequest) {
   // One shared dashboard/login/auth flow, not one per tenant — serving it
   // on a tenant's custom domain would let that tenant harvest session
   // cookies scoped to their own domain.
-  // `{ request }` forwards the request object refreshSession already
-  // mutated via request.cookies.set, so the render sees the refreshed
-  // session instead of the stale cookie it arrived with —
-  // NextResponse.next() with no argument would silently discard that
-  // mutation and forward the original, unmodified request.
+  // forwardInit copies request.headers AFTER refreshSession mutated them via
+  // request.cookies.set, so the render sees the refreshed session instead of
+  // the stale cookie it arrived with — NextResponse.next() with no argument
+  // would silently discard that mutation and forward the original request.
   if (isNoRewritePath(pathname)) {
     if (!isPlatformHost) return new NextResponse("Not found", { status: 404 });
-    return applySessionRefresh(NextResponse.next({ request }), refresh);
+    return applySessionRefresh(NextResponse.next(forwardInit(request, nonce, csp)), refresh);
   }
 
   // 5. Everything else: resolve the host, then locale-detect/redirect
@@ -177,7 +210,7 @@ export async function proxy(request: NextRequest) {
   // DB, per ADR-0001).
   const hostRoute = resolveHost(host);
   if (hostRoute.kind === "landing") {
-    return applySessionRefresh(NextResponse.next(), refresh);
+    return applySessionRefresh(NextResponse.next(forwardInit(request, nonce, csp)), refresh);
   }
 
   const matchedLocale = locales.find(
@@ -193,7 +226,7 @@ export async function proxy(request: NextRequest) {
 
   const rewriteUrl = request.nextUrl.clone();
   rewriteUrl.pathname = `/sites/${encodeURIComponent(hostRoute.siteIdentifier)}${pathname}`;
-  return applySessionRefresh(NextResponse.rewrite(rewriteUrl), refresh);
+  return applySessionRefresh(NextResponse.rewrite(rewriteUrl, forwardInit(request, nonce, csp)), refresh);
 }
 
 export const config = {

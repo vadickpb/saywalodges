@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import { Geist } from "next/font/google";
 import { SITE_URL } from "@/config/site";
 import "@/app/globals.css";
@@ -19,7 +20,11 @@ export const viewport: Viewport = {
   themeColor: "#2D4A3E",
 };
 
-export default function PlatformLayout({ children }: { children: React.ReactNode }) {
+// Nonce-based CSP (SD-701) only reaches pages rendered per request: without this, /, /login,
+// /forgot-password and /update-password would be prerendered at build time with no nonce and their
+// scripts blocked by 'strict-dynamic'.
+export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
+  await connection();
   return (
     <html lang="en" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full bg-cream text-charcoal">{children}</body>

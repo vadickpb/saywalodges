@@ -101,6 +101,11 @@ jobs:
       - name: Site theme HTTP smoke (SD-209)
         run: node scripts/test-site-theme-http.mjs
 
+      # SD-701: nonce CSP + security headers on real responses (platform, tenant sites,
+      # dashboard redirect, cron/iCal/404), every script carrying the response nonce.
+      - name: CSP and security headers HTTP smoke (SD-701)
+        run: node scripts/test-csp-http.mjs
+
       # SD-209: Lighthouse MOBILE >= 90 (performance, accessibility) on the seeded
       # local tenants. Uses the Chrome preinstalled on ubuntu-latest; scores only.
       - name: Lighthouse mobile (SD-209)
