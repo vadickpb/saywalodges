@@ -97,3 +97,6 @@ jobs:
 
       - name: Public rates HTTP smoke (SD-208)
         run: node scripts/test-public-rates-http.mjs
+
+      - name: Site theme HTTP smoke (SD-209)
+        run: node scripts/test-site-theme-http.mjs

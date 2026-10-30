@@ -13,6 +13,7 @@ const es: Dict = {
     menu: "Abrir menú",
     closeMenu: "Cerrar menú",
     switchLanguage: "View in English",
+    skipToContent: "Saltar al contenido",
   },
   hero: {
     whatsapp: "Reservar por WhatsApp",
