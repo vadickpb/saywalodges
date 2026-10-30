@@ -18,6 +18,9 @@ const envSchema = z.object({
   // "localhost:3000" dev setup CLAUDE.md documents, so local dev works
   // without a .env.local change — production still sets its real value.
   ROOT_DOMAIN: z.string().min(1).default("localhost:3000"),
+  // Server-only (SD-408). Bearer secret for /api/cron/*. Optional so dev/build work
+  // without it: when absent or shorter than 32 chars the cron route refuses every call.
+  CRON_SECRET: z.string().optional(),
 });
 
 function loadEnv() {

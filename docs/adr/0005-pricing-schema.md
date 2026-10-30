@@ -36,7 +36,9 @@ modelo numérico aislado por organización para el motor de SD-206 y el editor d
 
 ## Consecuencias
 
-- No se elimina `rate_tiers` ni se cambia la presentación pública hasta SD-208.
+- No se elimina `rate_tiers` ni se cambia la presentación pública hasta SD-208. SD-208 conectó la sección
+  pública a estos datos numéricos y dejó de leer `rate_tiers`; la tabla sigue en la BD hasta que el dueño
+  autorice una migración destructiva.
 - Este ticket no añade pantalla de tarifas ni cotizador. El motor es SD-206; el editor es SD-207.
 - La migración no crea tarifas en producción. El seed local usa las referencias antiguas USD 220/300
   para Saywa; el año 2027 es un ejemplo explícito. Importes de fin de semana/extra y mínimo de noches

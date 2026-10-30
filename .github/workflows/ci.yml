@@ -73,3 +73,37 @@ jobs:
       # Python stdlib + psql inside the already-running local Supabase container.
       - name: Calendar concurrency (pgTAP, local socket)
         run: python3 scripts/test-calendar-concurrency.py
+
+      - name: iCal sync concurrency (pgTAP, local socket)
+        run: python3 scripts/test-ical-concurrency.py
+
+      # SD-208: read-only HTTP smoke of the public Rates section against the
+      # seeded LOCAL stack (no remote secrets, no paid services). The build
+      # needs the local API URL/keys, so it is separate from the `app` job.
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build with local Supabase env
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          set -a; . "$RUNNER_TEMP/supabase.env"; set +a
+          NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" \
+          SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+          ROOT_DOMAIN="localhost:3208" npm run build
+
+      - name: Public rates HTTP smoke (SD-208)
+        run: node scripts/test-public-rates-http.mjs
+
+      - name: Site theme HTTP smoke (SD-209)
+        run: node scripts/test-site-theme-http.mjs
+
+      # SD-209: Lighthouse MOBILE >= 90 (performance, accessibility) on the seeded
+      # local tenants. Uses the Chrome preinstalled on ubuntu-latest; scores only.
+      - name: Lighthouse mobile (SD-209)
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: node scripts/lighthouse-mobile.mjs

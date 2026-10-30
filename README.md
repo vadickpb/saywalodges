@@ -33,7 +33,8 @@ de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura
   el motor puro está en `lib/domain/pricing.ts`. El dashboard **Tarifas** (`/app/rates`, SD-207) permite
   editar temporadas, precios por unidad y cargos; el simulador recalcula con los importes guardados en el servidor.
   El adelanto del simulador es un escenario de prueba: no guarda una política ni crea reservas.
-  La sección pública todavía usa `rate_tiers`; se conectará al nuevo modelo en SD-208.
+  La sección pública **Tarifas** (SD-208) muestra «desde {moneda} X» calculado en cada petición desde las
+  tarifas numéricas de las unidades activas del tenant (`lib/domain/public-rates.ts`); la tabla `rate_tiers` ya no se lee.
 - Las decisiones sobre dominios, RLS, prevención de dobles reservas y pagos están en los ADRs 0001–0004;
   consulta el roadmap para distinguir lo implementado de lo previsto.
 

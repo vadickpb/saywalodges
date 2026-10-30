@@ -1,3 +1,5 @@
+import { IcalImportForm } from "@/components/dashboard/ical-import-form";
+import { listSyncConflicts, SYNC_ERRORS } from "@/lib/dal/ical-sync";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -10,14 +12,14 @@ import { requireActiveOrg } from "@/lib/dal/organizations";
 import { listUnits } from "@/lib/dal/units";
 import { ICAL_CHANNEL_LABELS, exportUrl } from "@/lib/domain/ical-feeds";
 import { createClient } from "@/lib/supabase/server";
-import { createFeedAction, deleteFeedAction, regenerateFeedAction } from "./actions";
+import { createFeedAction, deleteFeedAction, regenerateFeedAction, saveImportUrlAction, syncFeedAction } from "./actions";
 
 export default async function CalendarFeedsPage() {
   const { activeOrg } = await requireActiveOrg();
   // Owner-only: the links are secrets that expose the occupied dates.
   if (!activeOrg || activeOrg.role !== "owner") notFound();
   const supabase = await createClient();
-  const [feeds, units] = await Promise.all([listFeeds(supabase, activeOrg.id), listUnits(supabase, activeOrg.id)]);
+  const [feeds, units, conflicts] = await Promise.all([listFeeds(supabase, activeOrg.id), listUnits(supabase, activeOrg.id), listSyncConflicts(supabase, activeOrg.id)]);
   const host = (await headers()).get("host") ?? "";
   const unitName = new Map(units.map((u) => [u.id, u.name]));
 
@@ -60,7 +62,15 @@ export default async function CalendarFeedsPage() {
                       />
                       <CopyButton text={url} label={`Copiar el enlace de ${label}`} />
                     </div>
+                    <IcalImportForm id={f.id} url={f.importUrl} action={saveImportUrlAction} />
+                    <p className="text-sm">Última sincronización: {f.lastSyncedAt ? new Intl.DateTimeFormat("es-PE", { dateStyle: "short", timeStyle: "short", timeZone: "America/Lima" }).format(new Date(f.lastSyncedAt)) : "Nunca"}</p>
+                    {f.lastError && <p role="alert" className="text-sm text-destructive">{SYNC_ERRORS[f.lastError] ?? "No se pudo sincronizar el calendario."}</p>}
+                    <p className="text-sm font-medium">Conflictos: {conflicts.filter((c) => c.feedId === f.id).length}</p>
+                    <ul className="text-sm text-destructive">
+                      {conflicts.filter((c) => c.feedId === f.id).map((c) => <li key={c.id}>Entrada {c.start} · Salida {c.end} · Solape con {c.sources.map((source) => source === "booking" ? "reserva directa" : source === "manual" ? "bloqueo manual" : "otro evento importado").join(", ")}. Revisa los canales para resolverlo.</li>)}
+                    </ul>
                     <div className="flex flex-wrap items-center gap-2">
+                      {f.importUrl && <RowAction action={syncFeedAction} fields={{ id: f.id }} label="Sincronizar ahora" successMessage="Calendario sincronizado" />}
                       <RowAction
                         action={regenerateFeedAction}
                         fields={{ id: f.id }}

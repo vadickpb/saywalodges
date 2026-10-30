@@ -12,7 +12,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:pricing": "vitest run lib/domain/pricing.test.ts lib/domain/rates-management.test.ts lib/domain/finance.test.ts lib/domain/finance-reports.test.ts lib/domain/finance-export.test.ts lib/domain/finance-recurring.test.ts lib/domain/dates.test.ts lib/domain/availability.test.ts lib/ical/export.test.ts --coverage",
+    "test:pricing": "vitest run lib/domain/pricing.test.ts lib/domain/rates-management.test.ts lib/domain/finance.test.ts lib/domain/finance-reports.test.ts lib/domain/finance-export.test.ts lib/domain/finance-recurring.test.ts lib/domain/dates.test.ts lib/domain/availability.test.ts lib/domain/public-availability.test.ts lib/ical/export.test.ts --coverage",
     "db:seed-storage": "node scripts/seed-local-storage.mjs"
   },
   "dependencies": {
@@ -24,6 +24,7 @@
     "exceljs": "4.4.0",
     "lucide-react": "^1.59.0",
     "next": "16.4.3",
+    "node-ical": "0.27.3",
     "radix-ui": "^1.8.1",
     "react": "19.2.4",
     "react-day-picker": "^10.0.2",

@@ -801,14 +801,31 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     el marcado refleja implementación y verificación local. La sección pública de tarifas sigue usando
     `rate_tiers` hasta SD-208; el simulador no comprueba disponibilidad ni crea reservas.
 
-### [ ] SD-208 · feat(site): data-driven rates section and theming
+### [x] SD-208 · feat(site): data-driven rates section and theming
 `M` · Depende: SD-207 · Review: `R`
 - **Alcance**: sección Tarifas con "desde S/ X" derivado de datos numéricos; eliminar `rate_tiers`; componentes
   públicos movidos a `components/site`; textos de UI genéricos (sin copy de Saywa en `dictionaries/`).
   El tema por tenant (colores, tipografía) se hace en SD-209.
 - **Criterios**
-  - [ ] El tenant `demo` muestra sus propios textos y tarifas.
-  - [ ] Ningún texto específico de Saywa queda en código.
+  - [x] El tenant `demo` muestra sus propios textos y tarifas.
+  - [x] Ningún texto específico de Saywa queda en código.
+- **Implementación (local, sin push)**: `lib/domain/public-rates.ts` calcula las tarjetas (tarifa general +
+  temporadas vigentes) como el mínimo por noche entre unidades activas; `lib/dal/public/rates.ts` lee con la clave
+  anon bajo RLS, por petición y por propiedad (sin caché compartida entre tenants). La moneda sale de
+  `properties.currency` (`S/` o `US$`). Sin tarifa para una temporada no se muestra tarjeta; sin ninguna tarifa
+  se oculta la sección (el CTA de disponibilidad y el calendario SD-308 se conservan). La barra móvil muestra
+  «desde X». El diccionario ya era genérico desde SD-209 parte 1.
+- **Limpieza futura (requiere autorización explícita del dueño)**: la tabla `rate_tiers` sigue existiendo y el
+  seed la rellena, pero nada la lee. Eliminarla exige una migración destructiva (borra datos publicados);
+  no se hizo. Al autorizarla: `drop table rate_tiers` en una migración, quitar sus filas del seed,
+  políticas/tests pgTAP (`0001_rls_enabled`, `0003_org_isolation`) y regenerar `lib/database.types.ts`.
+- **Evidencia de aceptación (HTTP)**: `scripts/test-public-rates-http.mjs`, solo lectura, contra Supabase LOCAL
+  sembrado (puerto 3208, hosts `saywa-lodges.localhost` y `demo.localhost`, es/en). Comprueba titular y lema de
+  cada tenant, moneda (`US$` Saywa, `S/` demo), tarjeta base (`US$ 220` / `S/ 100`), temporadas del seed
+  (`US$ 300`, 16 feriados a `US$ 500`; `S/ 150`) y que ningún precio, moneda o temporada cruce de un tenant a otro.
+  Integrado en el job `db` de CI (build con el entorno del stack local). **Pendiente hasta que CI lo ejecute en
+  verde**: en la sesión de desarrollo Docker no respondía, así que no se corrió contra una BD local y no se
+  afirma resultado HTTP; solo hay `node --check`, lint, typecheck, test y build.
 
 ### [ ] SD-209 · feat(site): customizable public site template
 `L` · Depende: SD-201, SD-208 · Review: `R+S`
@@ -833,6 +850,23 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   `dictionaries/` quedó solo con etiquetas genéricas. Fotos locales con `npm run db:seed-storage`.
   Cubre los criterios 1 y 3 y la parte de "CTA legible" del 2 (`foregroundFor`). El aviso de contraste en el
   editor, las reseñas y Lighthouse quedan para SD-210.
+- **Parte 2 (local, sin push; SD-209 sigue abierto)**: `deriveTints`/`mixHex` en `lib/domain/site-theme.ts`
+  calculan `--site-muted/surface/line` en el servidor (antes `color-mix` en CSS, sin validar): el texto atenuado
+  cae a `fg` completo si no llega a AA sobre fondo y superficie, y la superficie cae al fondo si aun así no
+  alcanza (caso real hallado por test en grises medios). Enlace «saltar al contenido» (`skipToContent`,
+  es/en) y `<main id="main">`. Tests Vitest: hex personalizado (válidos/inválidos), lista cerrada de
+  variables CSS ante intentos de inyección (incl. `__proto__`), contraste AA de botones, texto y tintes sobre
+  una malla de fondos, y marcas distintas `andino` (Saywa) / `costa` (demo) solo por tema. Smoke HTTP por
+  tenant `scripts/test-site-theme-http.mjs` (variables del tema, `theme-color`, skip link, barra CTA móvil,
+  sin colores del otro tenant), añadido al job `db` de CI.
+  - **Reseñas: no implementadas.** No existe tabla ni fuente de datos de reseñas verificables; no se inventan
+    testimonios. Requiere un ticket propio (modelo de datos + moderación).
+  - **Editor/aviso de contraste**: sigue siendo SD-210 (no duplicado).
+  - **Lighthouse móvil ≥ 90: PENDIENTE.** El sitio público necesita la BD local sembrada y Docker no respondía
+    (`Cannot connect to the Docker daemon`); sin BD la ruta responde 404, así que no se midió nada ni se afirma
+    puntaje. Medir en preview o con el stack local levantado.
+  - **Verificado**: `npm run lint`, `typecheck`, `test` (48 archivos, 743 tests) y `build` en verde. El smoke
+    HTTP solo pasó `node --check`; su ejecución real queda a cargo de CI.
 
 ### [ ] SD-210 · feat(dashboard): site appearance editor
 `M` · Depende: SD-106, SD-201, SD-209 (parte 1) · Review: `R+S`
@@ -988,15 +1022,73 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   y pantalla del dueño `/app/calendar/feeds` (crear enlace por casa y canal, copiar, regenerar, eliminar). Generador puro `lib/ical/export.ts` (cobertura ≥ 90 % exigida).
   Sin límite de peticiones todavía: lo cubre SD-409. La URL se muestra con el host del panel (un host de plataforma, donde `/api/*` se sirve tal cual).
 
-### [ ] SD-305 · feat(ical): feed import and sync engine
+### [x] SD-305 · feat(ical): feed import and sync engine
 `L` · Depende: SD-304 · Review: `R+S`
-- **Alcance**: `lib/ical/import.ts`: fetch solo https, allowlist de hosts (airbnb, booking, vrbo), timeout y límite de
-  tamaño; parseo (`node-ical`); upsert por `(feed_id, external_uid)`; borrar eventos desaparecidos; conflictos →
-  `sync_conflicts`; UI para añadir feeds y ver último sync/error; botón "Sincronizar ahora".
+- **Alcance**: `lib/ical/import.ts`: HTTPS con allowlist exacta Airbnb/Booking/Vrbo, DNS/IP pública
+  fijada a la conexión TLS, redirecciones revalidadas (máximo tres), deadline total de 10 s y cuerpo de 1 MiB;
+  parseo con `node-ical`; sincronización transaccional por `(feed_id, external_uid)`, eliminación de eventos
+  desaparecidos y `sync_conflicts`; gestión de URL, último sync/error y «Sincronizar ahora» solo del dueño.
 - **Criterios**
-  - [ ] Tests con fixtures reales anonimizados de Airbnb y Booking.
-  - [ ] URL a IP privada o host fuera de la allowlist → rechazada (test).
-  - [ ] Conflicto con una reserva directa queda registrado y visible en el dashboard.
+  - [x] Fixtures de exportaciones reales públicas de Airbnb y Booking, anonimizadas; procedencia en
+    `lib/ical/fixtures/README.md`. Sin cuentas OTA ni llamadas a calendarios privados.
+  - [x] URL privada/localhost/host fuera de allowlist, DNS privado/mixto y redirección insegura rechazados.
+  - [x] Conflicto con reserva directa registrado y visible en dashboard (pgTAP y smoke HTTP con sesión local real).
+- **Implementación y evidencia local (2026-10-29)**:
+  - Migración `20261029120000_ical_sync.sql`: conflictos con FK compuesta feed/org y RLS del dueño,
+    RPCs de sesión sin service-role en acciones, permisos por columna y lease de 2 minutos con bloqueo
+    de fila. Un segundo sync espera al primero y no obtiene lease mientras está activo; cambiar URL
+    invalida completaciones anteriores. Fallar descarga/parseo conserva bloques y conflictos previos.
+  - Snapshots completos de hasta 2000 eventos; fechas estrictas `[)` y UID SHA-256 (sin nombres, teléfonos,
+    descripciones ni URL del huésped en BD/logs). Recurrencias, timestamps, UID duplicados y calendarios
+    truncados se rechazan completos. Calendario válido vacío elimina solo eventos de ese feed.
+    Se retiran rangos obsoletos antes de aplicar cambios para permitir movimientos/intercambios de fechas;
+    el exclusion constraint sigue siendo la autoridad ante reservas, manuales y otros feeds.
+  - Dependencia de producción `node-ical@0.27.3` fijada (Node >=22, compatible con el proyecto >=24),
+    necesaria para interpretar ICS de los canales; no se usa su fetch. Tipos regenerados con CLI local,
+    conservando el formato previo fuera de las adiciones.
+  - pgTAP: 16 archivos / 539 aserciones (51 nuevas); pruebas de sesión/RLS, idempotencia, desapariciones,
+    conflictos directos/manuales/otro feed, reintentos, intercambio de rangos, lease, URL cambiada y errores.
+    Concurrencia real: `python3 scripts/test-calendar-concurrency.py` (21 aserciones) y
+    `python3 scripts/test-ical-concurrency.py` (10): el sync espera a una reserva directa sin commit y,
+    tras su commit, conserva únicamente la reserva y registra el conflicto. Ejecutar secuencialmente
+    sobre Supabase local; ambos runners limpian sus fixtures incluso ante errores.
+    Una ejecución de la carrera sin ganador prefijado de SD-301 produjo el abort seguro `40P01`
+    de PostgreSQL: se corrigió ese test para admitirlo junto a `23P01`, conservando las aserciones
+    de un solo ganador y una sola fila. Las carreras con ganador prefijado siguen exigiendo `23P01`.
+  - Suite completa: 40 archivos / 665 tests; parser repetido con TZ UTC, Lima, Auckland y Apia. Se corrigió
+    el desfase de VALUE=DATE en zonas positivas: se conservan las fechas civiles originales
+    validadas, incluso en fechas que una TZ del host omite. Importador: cobertura 94.65 % sentencias /
+    91.42 % ramas / 100 % funciones / 97.67 % líneas. `test:pricing`:
+    321 tests y cobertura 99.74 % sentencias / 98.12 % ramas / 100 % funciones / 99.84 % líneas;
+    umbrales originales intactos. `npm ci`, lint, typecheck, build y `supabase db reset` locales OK.
+  - Cierre HTTP: `node scripts/test-ical-http.mjs` OK con build y sesiones Supabase locales reales de dueño,
+    staff y dueño de otra org. Comprueba dashboard, configuración, sync repetido con IDs estables, conflicto
+    directo visible, desaparición de eventos/conflictos, eliminación del feed por acción HTTP, preservación
+    de otro feed/reserva directa, errores seguros e aislamiento RLS/acciones entre orgs y frente a anónimo.
+    HTTPS OTA se sustituye por fixtures solo en el proceso de prueba; no prueba conectividad con cuentas OTA
+    ni interacción visual en navegador. El 404 era `ROOT_DOMAIN=saywa.test` con requests a `localhost:3000`:
+    se corrigió el host del runner, sin cambiar proxy/auth. El runner usa `ROOT_DOMAIN`, la variable que
+    valida `lib/env.ts`; `PLATFORM_HOSTS` no existe. El smoke exige redirect de anónimo en el host de
+    plataforma y 404 en host de tenant mediante HTTP crudo (Node fetch puede sustituir el header Host).
+    También se corrigió el fixture de 302 para asignar status/Location antes del callback.
+    El cambio de CI es mínimo: añade solo `python3 scripts/test-ical-concurrency.py` al job de BD,
+    reutilizando el Supabase local ya iniciado, sin dependencias ni credenciales nuevas.
+  - Gates reejecutados en esta continuación: `npm run lint`, `npm run typecheck`,
+    `npm run test -- --coverage` OK (40 archivos / 665 tests;
+    cobertura del scope configurado 99.74 % sentencias / 98.12 % ramas / 100 % funciones / 99.84 % líneas).
+    `npm run build` con variables Supabase locales y `ROOT_DOMAIN=localhost:3000`,
+    `npx supabase db reset --local`, `npx supabase test db` (16 archivos / 539 aserciones), ambos runners
+    de concurrencia (21 + 10 aserciones) y `node scripts/test-ical-http.mjs`: todos OK.
+    Tipos regenerados con `npx supabase gen types typescript --local` y comparados mediante
+    asignabilidad TypeScript bidireccional: coinciden, conservando el formato del archivo existente.
+    Revisión focalizada del diff completo
+    por agente principal, reviewer y security-reviewer: sin hallazgos importantes pendientes en SSRF/DNS,
+    redirecciones, RLS/multi-tenant, concurrencia e idempotencia.
+    `git diff --check` y `git diff --cached --check` OK; `.gitattributes` conserva CRLF de los fixtures
+    RFC 5545 y reconoce CR como final de línea solo en esos archivos.
+    Sin producción, Supabase remoto, `.env.local`, push ni PR.
+  - Producción: aplicar la migración antes de desplegar este código (tarea del dueño). Sin cron ni alertas:
+    corresponden a SD-307. La allowlist es explícita; hosts regionales no enumerados se rechazan.
 
 ### [ ] SD-306 · chore(email): transactional email infrastructure
 `S` · Depende: SD-103 · Review: `R+S`
@@ -1043,25 +1135,92 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] Sin el secreto → 401.
   - [ ] Un feed que falla no detiene los demás.
 
-### [ ] SD-308 · feat(site): public availability calendar
+### [x] SD-308 · feat(site): public availability calendar
 `M` · Depende: SD-303 · Review: `R`
 - **Alcance**: reemplazar el iframe de Airbnb por calendario propio de disponibilidad (solo ocupado/libre).
 - **Criterios**
-  - [ ] No expone origen ni datos de las reservas.
+  - [x] No expone origen ni datos de las reservas.
+- **Avance** (implementado y verificado localmente; sin review independiente, sin push ni PR)
+  - La página pública no tenía iframe de Airbnb: no se inventó ni se quitó nada. Se añadió la sección
+    `components/site/availability.tsx` (id `#availability-calendar`, enlace en la navegación) entre Tarifas y Ubicación;
+    el CTA `#availability` de Tarifas queda intacto.
+  - BD: `20261029140000_public_availability.sql` crea `get_public_unit_availability(property, unit, from, to)`
+    (`stable`, `security definer`, `search_path = ''`, `execute` solo para anon/authenticated/service_role). Devuelve
+    únicamente `start_date`/`end_date` `[)` de una unidad activa de una propiedad publicada que pertenezca a esa
+    propiedad; ventana ≤ 62 días (`22023`); recorta a `[hoy Lima, hoy+731)`; unidad/propiedad desconocida, inactiva,
+    no publicada o cruzada entre tenants → `42501` genérico (nunca "todo libre"). `calendar_blocks` sigue sin SELECT para anon.
+    Un hold vencido sigue ocupando hasta que se libere (ADR 0003). Reversible con `drop function`.
+  - Dominio `lib/domain/public-availability.ts` (mes navegable: mes actual en Lima hasta +22 meses, cuadrícula lunes-primero,
+    estados free/occupied/past); DAL `lib/dal/public/availability.ts` (server-only, zod, errores genéricos).
+    La página lee `?unit=` y `?month=` como no confiables: la unidad debe ser una activa de la propiedad del host y el mes se acota.
+    Navegación con enlaces (funciona sin JS); tabla semántica con `th scope`, texto para lectores de pantalla por celda,
+    ocupado distinguido por trazo/rayado y no solo por color; es/en vía `dictionaries/`.
+  - Evidencia local (2026-10-29, solo Supabase local): `lint`, `typecheck` OK; `npm run test` **42 archivos / 687 tests**;
+    `test:pricing` **10 archivos / 337 tests**, `public-availability.ts` ≥ 90 % (umbral por archivo); el test de dominio
+    pasa también con `TZ` = UTC, Auckland y Lima; `npm run build` OK; `supabase db reset` + `supabase test db`
+    **17 archivos / 573 tests** (nuevo `0018_public_availability.test.sql`, 34 aserciones: privacidad, recorte, adyacencia,
+    ventana, multi-tenant, no publicada/inactiva, grants); concurrencia de calendario (21) e iCal (10) OK.
+  - HTTP real: `node scripts/test-public-availability-http.mjs` (tras `npm run build` con env local; puerto 3308, limpia lo que crea):
+    10 comprobaciones OK — noches `[)` con adyacencia manual+ical+hold y check-out libre, es/en, aislamiento
+    `saywa-lodges.localhost` vs `demo.localhost`, `?unit=` ajeno ignorado, host desconocido 404, HTML/RSC sin nota/uid/feed/booking/source,
+    límites de mes, marcado móvil/a11y, PostgREST anon (tabla denegada, RPC solo fechas, par cruzado `42501`),
+    propiedad no publicada 404 y sin unidades activas sin calendario.
+  - **No verificado**: render visual en móvil (el screenshot headless no llegó a la sección; solo se comprobó el marcado).
+    Sin lector de pantalla real. El script HTTP aún no está en el CI.
+  - **Gate manual para el dueño**: aplicar `20261029140000_public_availability.sql` en la BD remota antes del deploy
+    (sin ella el calendario muestra el mensaje "no disponible" en producción, el resto del sitio no se afecta).
 
 ---
 
 ## Fase 4 — Cotizador, reservas y pago manual (M4 🎯)
 
-### [ ] SD-401 · feat(db): guests, quotes, bookings and payments
+### [~] SD-401 · feat(db): guests, quotes, bookings and payments
 `L` · Depende: SD-205, SD-301 · Review: `R+S`
 - **Alcance**: tablas `guests`, `quotes`, `bookings`, `payments`; RPC `create_booking_from_quote` (transacción:
   valida quote vigente, libera holds vencidos, upsert guest, crea booking `pending_payment` + bloque con
   `expires_at`); RPCs `confirm_payment`, `reject_payment`, `cancel_booking`, `expire_holds`; datos de pago por
   propiedad (Yape/Plin, cuentas bancarias).
 - **Criterios**
-  - [ ] pgTAP: reservar fechas ocupadas falla; quote vencida falla; hold vencido libera fechas.
-  - [ ] Transiciones de estado inválidas rechazadas (p. ej. confirmar una cancelada).
+  - [x] pgTAP: reservar fechas ocupadas falla; quote vencida falla; hold vencido libera fechas.
+  - [x] Transiciones de estado inválidas rechazadas (p. ej. confirmar una cancelada).
+- **Avance** (implementado localmente; sin commit remoto, push ni PR; **sin revisión R+S**, omitida por petición del usuario)
+  - Migración `20261029185857_booking_schema.sql` (aditiva, rollback en su cabecera): `guests`, `quotes`, `bookings`,
+    `payments`, `property_payment_accounts` y `properties.booking_hold_minutes` (15–4320, por defecto 120).
+    FKs compuestas con `org_id` (unidad/propiedad, huésped, quote); `quote_id` único en `bookings` (una quote → una
+    reserva); `payments` fija la moneda de la reserva por FK; un solo pago `pending_review` por reserva. Borrar una
+    unidad, huésped o quote con reservas falla (`NO ACTION`): resuelve el borrado en cascada de bloques anotado en SD-301.
+  - Permisos: `anon` sin ningún privilegio de tabla (PII de huéspedes, cuentas de cobro). Los miembros solo **leen**
+    guests/quotes/bookings/payments; las cuentas de cobro son CRUD de miembros por RLS. Toda mutación es por RPC
+    `security definer` (`search_path = ''`) o `service_role`. Triggers `guard_booking_update`/`guard_payment_update`
+    fijan términos inmutables (importes, fechas, unidad…) y la máquina de estados incluso para escritores privilegiados:
+    `pending_payment → confirmed|cancelled|expired`, `confirmed → cancelled`, `pending_review → approved|rejected`.
+  - `create_booking_from_quote(token, nombre, email, teléfono)`: ejecutable por `anon` (el token de 32+ caracteres es la
+    capacidad; devuelve solo ids/estado, sin PII). Bloquea la quote (`FOR UPDATE`), reproduce la reserva existente si la
+    hay (idempotente), valida vigencia (`SD001`), unidad activa, aforo y moneda, libera holds vencidos de esa unidad, hace
+    upsert del huésped (nunca sobrescribe nombre/teléfono existentes) y crea reserva + bloque; los importes salen
+    **solo** de la quote guardada. Solape → `23P01` del constraint (la transacción entera revierte, incluido el huésped).
+  - `confirm_payment`/`reject_payment`/`cancel_booking(org, id, …)`: miembros de la org; orden de bloqueo reserva → pago;
+    repetir la misma operación devuelve `replayed: true`; transición inválida → `55000`; pago menor al adelanto no
+    confirma (`22023`); cancelar libera el bloque y rechaza el voucher en revisión. `expire_holds()`: solo `service_role`.
+    Una reserva con voucher `pending_review` **no** se expira (el huésped ya pagó); queda a decisión del dueño.
+  - Tests: `0019_booking_schema.test.sql` (**109 aserciones**): catálogo/grants, fecha ocupada, quote vencida/desconocida/
+    mal formada, datos inválidos, moneda y aforo, hold vencido que libera fechas, voucher que lo protege, `expire_holds`,
+    máquina de estados (RPC y triggers), idempotencia, aislamiento org A/B y cross-org, `anon` sin lecturas.
+  - Evidencia local (2026-10-29): `supabase db reset` OK; `supabase test db` **17 archivos / 648 aserciones**;
+    `scripts/test-calendar-concurrency.py` 21/21; `lint`, `typecheck`, `test` (42 archivos / 687 tests, tras integrar origin/main con SD-308) y `build`
+    (placeholders de CI, sin `.env*`) OK con Node 26.9.0 (CI usa 24). Tipos regenerados con `supabase gen types --local`
+    y formateados con prettier. **Concurrencia real (manual, dos sesiones `psql` locales, no automatizada):** A retiene su
+    transacción abierta con quote A; B (quote distinta, fechas solapadas) espera y falla con `23P01` al confirmar A; dos
+    llamadas simultáneas con la misma quote producen una sola reserva (la segunda devuelve `replayed: true`).
+  - **Pendiente / decisiones para el dueño**
+    - No hay RPC para crear quotes ni payments (los tests los insertan como propietario de la tabla): son SD-402 y
+      SD-405. Esos escritores deben bloquear primero la fila de la reserva (como las RPCs) para no competir con el barrido.
+    - `calendar_blocks.booking_id` sigue **sin FK** a `bookings`: ~27 inserciones de `source = 'booking'` en tests de
+      SD-301/303/304/305/803 usan UUID aleatorios. Añadir la FK exige reescribir esos fixtures; propuesto como ticket aparte.
+    - La prueba de concurrencia real no está en CI (extender `scripts/test-calendar-concurrency.py`).
+    - Reembolsos de pagos aprobados al cancelar y pagos parciales (suma < adelanto) quedan fuera de alcance.
+    - Sin revisión `reviewer`/`security-reviewer` (pedido explícito): obligatoria antes del PR según `CLAUDE.md`.
+    - Migración sin aplicar en remoto: aplicarla es del dueño antes de cualquier código que dependa de ella.
 
 ### [ ] SD-402 · feat(dashboard): quote builder with WhatsApp share
 `M` · Depende: SD-401 · Review: `R+S`
@@ -1108,11 +1267,11 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [ ] Idioma según la reserva; sin enviar dos veces el mismo email (idempotencia por evento).
 
-### [ ] SD-408 · feat: hold expiration job and booking status page
+### [x] SD-408 · feat: hold expiration job and booking status page
 `S` · Depende: SD-401 · Review: `R+S`
 - **Alcance**: cron que ejecuta `expire_holds`; página `/[lang]/reserva/[public_token]` con estado y siguiente paso.
 - **Criterios**
-  - [ ] Hold vencido pasa la reserva a `expired` y libera fechas.
+  - [x] Hold vencido pasa la reserva a `expired` y libera fechas.
 
 ### [ ] SD-409 · security: abuse protection on public actions
 `S` · Depende: SD-403 · Review: `R+S`
@@ -1188,6 +1347,8 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 ### [ ] SD-606 · chore(obs): error monitoring and structured logs
 `S` · Depende: — · Review: `R`
 - **Alcance**: monitoreo de errores y logs estructurados sin PII; alertas de fallo de cron/webhook.
+- **Estado**: logs estructurados + `onRequestError` + cron/iCal hechos (`docs/observability.md`). Falta la alerta remota:
+  requiere elegir y configurar un servicio externo (decisión del dueño); el ticket sigue abierto.
 
 ---
 

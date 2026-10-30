@@ -86,6 +86,105 @@ export type Database = {
           },
         ];
       };
+      bookings: {
+        Row: {
+          cancel_reason: string | null;
+          cancelled_at: string | null;
+          check_in: string;
+          check_out: string;
+          confirmed_at: string | null;
+          created_at: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          deposit_cents: number;
+          expires_at: string | null;
+          guest_id: string;
+          guests: number;
+          id: string;
+          org_id: string;
+          property_id: string;
+          public_token: string;
+          quote_id: string;
+          status: Database["public"]["Enums"]["booking_status"];
+          total_cents: number;
+          unit_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cancel_reason?: string | null;
+          cancelled_at?: string | null;
+          check_in: string;
+          check_out: string;
+          confirmed_at?: string | null;
+          created_at?: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          deposit_cents: number;
+          expires_at?: string | null;
+          guest_id: string;
+          guests: number;
+          id?: string;
+          org_id: string;
+          property_id: string;
+          public_token?: string;
+          quote_id: string;
+          status?: Database["public"]["Enums"]["booking_status"];
+          total_cents: number;
+          unit_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          cancel_reason?: string | null;
+          cancelled_at?: string | null;
+          check_in?: string;
+          check_out?: string;
+          confirmed_at?: string | null;
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          deposit_cents?: number;
+          expires_at?: string | null;
+          guest_id?: string;
+          guests?: number;
+          id?: string;
+          org_id?: string;
+          property_id?: string;
+          public_token?: string;
+          quote_id?: string;
+          status?: Database["public"]["Enums"]["booking_status"];
+          total_cents?: number;
+          unit_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bookings_guest_fkey";
+            columns: ["guest_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "guests";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "bookings_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bookings_quote_fkey";
+            columns: ["quote_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "quotes";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "bookings_unit_scope_fkey";
+            columns: ["unit_id", "property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "property_id", "org_id"];
+          },
+        ];
+      };
       calendar_blocks: {
         Row: {
           booking_id: string | null;
@@ -581,6 +680,45 @@ export type Database = {
           },
         ];
       };
+      guests: {
+        Row: {
+          created_at: string;
+          email: string;
+          id: string;
+          name: string;
+          org_id: string;
+          phone: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          email: string;
+          id?: string;
+          name: string;
+          org_id: string;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          id?: string;
+          name?: string;
+          org_id?: string;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "guests_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ical_feeds: {
         Row: {
           channel: Database["public"]["Enums"]["ical_channel"];
@@ -591,6 +729,8 @@ export type Database = {
           last_error: string | null;
           last_synced_at: string | null;
           org_id: string;
+          sync_started_at: string | null;
+          sync_token: string | null;
           unit_id: string;
           updated_at: string;
         };
@@ -604,6 +744,8 @@ export type Database = {
           last_error?: string | null;
           last_synced_at?: string | null;
           org_id: string;
+          sync_started_at?: string | null;
+          sync_token?: string | null;
           unit_id: string;
           updated_at?: string;
         };
@@ -616,6 +758,8 @@ export type Database = {
           last_error?: string | null;
           last_synced_at?: string | null;
           org_id?: string;
+          sync_started_at?: string | null;
+          sync_token?: string | null;
           unit_id?: string;
           updated_at?: string;
         };
@@ -685,6 +829,73 @@ export type Database = {
         };
         Relationships: [];
       };
+      payments: {
+        Row: {
+          amount_cents: number;
+          booking_id: string;
+          created_at: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          id: string;
+          method: Database["public"]["Enums"]["payment_method"];
+          org_id: string;
+          reference: string | null;
+          reject_reason: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database["public"]["Enums"]["payment_status"];
+          updated_at: string;
+          voucher_path: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents: number;
+          booking_id: string;
+          created_at?: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          id?: string;
+          method: Database["public"]["Enums"]["payment_method"];
+          org_id: string;
+          reference?: string | null;
+          reject_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["payment_status"];
+          updated_at?: string;
+          voucher_path?: string | null;
+        };
+        Update: {
+          amount_cents?: number;
+          booking_id?: string;
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          id?: string;
+          method?: Database["public"]["Enums"]["payment_method"];
+          org_id?: string;
+          reference?: string | null;
+          reject_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["payment_status"];
+          updated_at?: string;
+          voucher_path?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_fkey";
+            columns: ["booking_id", "org_id", "currency"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id", "org_id", "currency"];
+          },
+          {
+            foreignKeyName: "payments_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       photos: {
         Row: {
           id: string;
@@ -744,6 +955,7 @@ export type Database = {
           address_locality: string;
           address_region: string;
           airbnb_url: string;
+          booking_hold_minutes: number;
           content: NonNullable<Json>;
           created_at: string;
           currency: Database["public"]["Enums"]["currency_code"];
@@ -780,6 +992,7 @@ export type Database = {
           address_locality?: string;
           address_region?: string;
           airbnb_url?: string;
+          booking_hold_minutes?: number;
           content?: NonNullable<Json>;
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];
@@ -815,6 +1028,7 @@ export type Database = {
           address_locality?: string;
           address_region?: string;
           airbnb_url?: string;
+          booking_hold_minutes?: number;
           content?: NonNullable<Json>;
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];
@@ -852,6 +1066,149 @@ export type Database = {
             isOneToOne: true;
             referencedRelation: "organizations";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      property_payment_accounts: {
+        Row: {
+          account_number: string | null;
+          active: boolean;
+          bank_name: string | null;
+          cci: string | null;
+          created_at: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          holder_name: string;
+          id: string;
+          instructions: string | null;
+          kind: Database["public"]["Enums"]["payment_account_kind"];
+          org_id: string;
+          phone: string | null;
+          property_id: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          account_number?: string | null;
+          active?: boolean;
+          bank_name?: string | null;
+          cci?: string | null;
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          holder_name: string;
+          id?: string;
+          instructions?: string | null;
+          kind: Database["public"]["Enums"]["payment_account_kind"];
+          org_id: string;
+          phone?: string | null;
+          property_id: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          account_number?: string | null;
+          active?: boolean;
+          bank_name?: string | null;
+          cci?: string | null;
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          holder_name?: string;
+          id?: string;
+          instructions?: string | null;
+          kind?: Database["public"]["Enums"]["payment_account_kind"];
+          org_id?: string;
+          phone?: string | null;
+          property_id?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "property_payment_accounts_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "property_payment_accounts_property_fkey";
+            columns: ["property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      quotes: {
+        Row: {
+          breakdown: NonNullable<Json>;
+          check_in: string;
+          check_out: string;
+          created_at: string;
+          created_by: string | null;
+          currency: Database["public"]["Enums"]["currency_code"];
+          deposit_cents: number;
+          expires_at: string;
+          guests: number;
+          id: string;
+          org_id: string;
+          property_id: string;
+          token: string;
+          total_cents: number;
+          unit_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          breakdown?: NonNullable<Json>;
+          check_in: string;
+          check_out: string;
+          created_at?: string;
+          created_by?: string | null;
+          currency: Database["public"]["Enums"]["currency_code"];
+          deposit_cents: number;
+          expires_at: string;
+          guests: number;
+          id?: string;
+          org_id: string;
+          property_id: string;
+          token: string;
+          total_cents: number;
+          unit_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          breakdown?: NonNullable<Json>;
+          check_in?: string;
+          check_out?: string;
+          created_at?: string;
+          created_by?: string | null;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          deposit_cents?: number;
+          expires_at?: string;
+          guests?: number;
+          id?: string;
+          org_id?: string;
+          property_id?: string;
+          token?: string;
+          total_cents?: number;
+          unit_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "quotes_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quotes_unit_scope_fkey";
+            columns: ["unit_id", "property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "property_id", "org_id"];
           },
         ];
       };
@@ -1035,6 +1392,52 @@ export type Database = {
           },
         ];
       };
+      sync_conflicts: {
+        Row: {
+          blocking_sources: Database["public"]["Enums"]["calendar_block_source"][];
+          created_at: string;
+          external_uid: string;
+          feed_id: string;
+          id: string;
+          org_id: string;
+          period: unknown;
+        };
+        ComputedFields: never;
+        Insert: {
+          blocking_sources: Database["public"]["Enums"]["calendar_block_source"][];
+          created_at?: string;
+          external_uid: string;
+          feed_id: string;
+          id?: string;
+          org_id: string;
+          period: unknown;
+        };
+        Update: {
+          blocking_sources?: Database["public"]["Enums"]["calendar_block_source"][];
+          created_at?: string;
+          external_uid?: string;
+          feed_id?: string;
+          id?: string;
+          org_id?: string;
+          period?: unknown;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sync_conflicts_feed_id_org_id_fkey";
+            columns: ["feed_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "ical_feeds";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "sync_conflicts_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       unit_rates: {
         Row: {
           created_at: string;
@@ -1160,6 +1563,18 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      begin_ical_sync: {
+        Args: { p_feed_id: string; p_org_id: string };
+        Returns: Json;
+      };
+      cancel_booking: {
+        Args: { p_booking_id: string; p_org_id: string; p_reason?: string };
+        Returns: Json;
+      };
+      confirm_payment: {
+        Args: { p_org_id: string; p_payment_id: string };
+        Returns: Json;
+      };
       confirm_recurring_expense: {
         Args: {
           p_amount_cents: number;
@@ -1174,6 +1589,15 @@ export type Database = {
           out_created: boolean;
           out_entry_id: string;
         }[];
+      };
+      create_booking_from_quote: {
+        Args: {
+          p_guest_email: string;
+          p_guest_name: string;
+          p_guest_phone?: string;
+          p_token: string;
+        };
+        Returns: Json;
       };
       create_manual_calendar_block: {
         Args: {
@@ -1214,10 +1638,41 @@ export type Database = {
         Args: { p_block_id: string; p_org_id: string };
         Returns: undefined;
       };
+      expire_holds: { Args: Record<PropertyKey, never>; Returns: number };
+      finish_ical_sync: {
+        Args: {
+          p_error?: string;
+          p_events: Json;
+          p_feed_id: string;
+          p_org_id: string;
+          p_token: string;
+        };
+        Returns: boolean;
+      };
+      get_booking_status: {
+        Args: { p_host: string; p_token: string };
+        Returns: Json;
+      };
       get_ical_export: { Args: { p_token: string }; Returns: Json };
+      get_public_unit_availability: {
+        Args: {
+          p_from: string;
+          p_property_id: string;
+          p_to: string;
+          p_unit_id: string;
+        };
+        Returns: {
+          end_date: string;
+          start_date: string;
+        }[];
+      };
       regenerate_ical_token: {
         Args: { p_feed_id: string; p_org_id: string };
         Returns: string;
+      };
+      reject_payment: {
+        Args: { p_org_id: string; p_payment_id: string; p_reason?: string };
+        Returns: Json;
       };
       reorder_amenities: {
         Args: { p_ids: string[]; p_property_id: string };
@@ -1241,6 +1696,7 @@ export type Database = {
       };
     };
     Enums: {
+      booking_status: "pending_payment" | "confirmed" | "cancelled" | "expired";
       calendar_block_source: "booking" | "ical" | "manual";
       currency_code: "PEN" | "USD";
       fee_kind: "per_stay" | "per_night" | "per_guest";
@@ -1251,6 +1707,10 @@ export type Database = {
       finance_source: "manual" | "booking" | "ical";
       ical_channel: "airbnb" | "booking" | "vrbo" | "other";
       membership_role: "owner" | "staff";
+      payment_account_kind: "yape" | "plin" | "bank_account";
+      payment_method:
+        "yape" | "plin" | "bank_transfer" | "mercado_pago" | "cash";
+      payment_status: "pending_review" | "approved" | "rejected";
       photo_role: "hero" | "gallery" | "room";
       space_category: "pool" | "rooms" | "common" | "outdoor";
       unit_kind: "entire_place" | "room";
@@ -1384,6 +1844,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      booking_status: ["pending_payment", "confirmed", "cancelled", "expired"],
       calendar_block_source: ["booking", "ical", "manual"],
       currency_code: ["PEN", "USD"],
       fee_kind: ["per_stay", "per_night", "per_guest"],
@@ -1400,6 +1861,9 @@ export const Constants = {
       finance_source: ["manual", "booking", "ical"],
       ical_channel: ["airbnb", "booking", "vrbo", "other"],
       membership_role: ["owner", "staff"],
+      payment_account_kind: ["yape", "plin", "bank_account"],
+      payment_method: ["yape", "plin", "bank_transfer", "mercado_pago", "cash"],
+      payment_status: ["pending_review", "approved", "rejected"],
       photo_role: ["hero", "gallery", "room"],
       space_category: ["pool", "rooms", "common", "outdoor"],
       unit_kind: ["entire_place", "room"],
