@@ -47,7 +47,10 @@ const en = {
   },
   rates: {
     label: "Rates",
-    title: "Seasonal rates",
+    title: "Rates",
+    from: "from {price}",
+    perNight: "per night",
+    base: "Standard rate",
     note: "Rates vary with your dates, group size and length of stay. Message us for an exact quote.",
     availabilityTitle: "Check your dates",
     availabilityText: "Tell us your dates and group size — we'll reply with availability and your exact rate.",

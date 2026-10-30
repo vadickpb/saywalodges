@@ -32,6 +32,7 @@ export type Property = {
   starRating: number | null;
   petsAllowed: boolean;
   logoUrl: string;
+  currency: "PEN" | "USD";
   // jsonb, validated here so a malformed row degrades to defaults instead
   // of reaching the template (or CSS) unchecked.
   theme: ResolvedTheme;
@@ -44,7 +45,7 @@ export const getProperty = cache(async (slug: string): Promise<Property> => {
   const { data, error } = await getSupabaseAnon()
     .from("properties")
     .select(
-      "id, org_id, slug, name, whatsapp_number, whatsapp_message_en, whatsapp_message_es, email, maps_url, airbnb_url, site_url, address_locality, address_region, address_country, latitude, longitude, meta_title_en, meta_title_es, meta_description_en, meta_description_es, meta_keywords_en, meta_keywords_es, price_range, star_rating, pets_allowed, logo_path, theme, content"
+      "id, org_id, slug, name, whatsapp_number, whatsapp_message_en, whatsapp_message_es, email, maps_url, airbnb_url, site_url, address_locality, address_region, address_country, latitude, longitude, meta_title_en, meta_title_es, meta_description_en, meta_description_es, meta_keywords_en, meta_keywords_es, price_range, star_rating, pets_allowed, logo_path, currency, theme, content"
     )
     .eq("slug", slug)
     .single();
@@ -94,6 +95,7 @@ export const getProperty = cache(async (slug: string): Promise<Property> => {
     starRating: data.star_rating,
     petsAllowed: data.pets_allowed,
     logoUrl: data.logo_path ? getPublicPhotoUrl(data.logo_path) : "",
+    currency: data.currency,
     theme: resolveTheme(data.theme),
     content: resolveContent(data.content),
   };
@@ -102,41 +104,6 @@ export const getProperty = cache(async (slug: string): Promise<Property> => {
 export function whatsappUrl(property: Property, lang: string): string {
   const message = lang === "es" ? property.whatsappMessageEs : property.whatsappMessageEn;
   return `https://wa.me/${property.whatsappNumber}?text=${encodeURIComponent(message)}`;
-}
-
-// ─── Rate tiers ──────────────────────────────────────────────────────────────
-
-export type RateTierRow = {
-  id: string;
-  season_en: string;
-  season_es: string;
-  from_en: string;
-  from_es: string;
-  period_en: string;
-  period_es: string;
-  tag_en: string;
-  tag_es: string;
-  sort_order: number;
-};
-
-export const getRateTiers = cache(async (propertyId: string): Promise<RateTierRow[]> => {
-  const { data, error } = await getSupabaseAnon()
-    .from("rate_tiers")
-    .select("*")
-    .eq("property_id", propertyId)
-    .order("sort_order");
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
-
-export function resolveRateTier(row: RateTierRow, lang: string) {
-  const isEs = lang === "es";
-  return {
-    season: isEs ? row.season_es : row.season_en,
-    from: isEs ? row.from_es : row.from_en,
-    period: isEs ? row.period_es : row.period_en,
-    tag: isEs ? row.tag_es : row.tag_en,
-  };
 }
 
 // ─── Amenities ───────────────────────────────────────────────────────────────

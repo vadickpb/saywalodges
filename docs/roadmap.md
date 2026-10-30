@@ -801,14 +801,31 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     el marcado refleja implementación y verificación local. La sección pública de tarifas sigue usando
     `rate_tiers` hasta SD-208; el simulador no comprueba disponibilidad ni crea reservas.
 
-### [ ] SD-208 · feat(site): data-driven rates section and theming
+### [x] SD-208 · feat(site): data-driven rates section and theming
 `M` · Depende: SD-207 · Review: `R`
 - **Alcance**: sección Tarifas con "desde S/ X" derivado de datos numéricos; eliminar `rate_tiers`; componentes
   públicos movidos a `components/site`; textos de UI genéricos (sin copy de Saywa en `dictionaries/`).
   El tema por tenant (colores, tipografía) se hace en SD-209.
 - **Criterios**
-  - [ ] El tenant `demo` muestra sus propios textos y tarifas.
-  - [ ] Ningún texto específico de Saywa queda en código.
+  - [x] El tenant `demo` muestra sus propios textos y tarifas.
+  - [x] Ningún texto específico de Saywa queda en código.
+- **Implementación (local, sin push)**: `lib/domain/public-rates.ts` calcula las tarjetas (tarifa general +
+  temporadas vigentes) como el mínimo por noche entre unidades activas; `lib/dal/public/rates.ts` lee con la clave
+  anon bajo RLS, por petición y por propiedad (sin caché compartida entre tenants). La moneda sale de
+  `properties.currency` (`S/` o `US$`). Sin tarifa para una temporada no se muestra tarjeta; sin ninguna tarifa
+  se oculta la sección (el CTA de disponibilidad y el calendario SD-308 se conservan). La barra móvil muestra
+  «desde X». El diccionario ya era genérico desde SD-209 parte 1.
+- **Limpieza futura (requiere autorización explícita del dueño)**: la tabla `rate_tiers` sigue existiendo y el
+  seed la rellena, pero nada la lee. Eliminarla exige una migración destructiva (borra datos publicados);
+  no se hizo. Al autorizarla: `drop table rate_tiers` en una migración, quitar sus filas del seed,
+  políticas/tests pgTAP (`0001_rls_enabled`, `0003_org_isolation`) y regenerar `lib/database.types.ts`.
+- **Evidencia de aceptación (HTTP)**: `scripts/test-public-rates-http.mjs`, solo lectura, contra Supabase LOCAL
+  sembrado (puerto 3208, hosts `saywa-lodges.localhost` y `demo.localhost`, es/en). Comprueba titular y lema de
+  cada tenant, moneda (`US$` Saywa, `S/` demo), tarjeta base (`US$ 220` / `S/ 100`), temporadas del seed
+  (`US$ 300`, 16 feriados a `US$ 500`; `S/ 150`) y que ningún precio, moneda o temporada cruce de un tenant a otro.
+  Integrado en el job `db` de CI (build con el entorno del stack local). **Pendiente hasta que CI lo ejecute en
+  verde**: en la sesión de desarrollo Docker no respondía, así que no se corrió contra una BD local y no se
+  afirma resultado HTTP; solo hay `node --check`, lint, typecheck, test y build.
 
 ### [ ] SD-209 · feat(site): customizable public site template
 `L` · Depende: SD-201, SD-208 · Review: `R+S`
