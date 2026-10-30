@@ -8,6 +8,7 @@ Ejecuta `expire_holds()` con la service-role. Es idempotente: ejecutarla dos vec
   sin configurar (o de menos de 32 caracteres) responde `401` vacío y **no ejecuta nada**.
 - La comparación es en tiempo constante (hash SHA-256 de ambos lados + `timingSafeEqual`).
 - Un fallo interno responde `500 {"error":"internal"}`; el detalle queda solo en el log del servidor.
+- Cada llamada deja una línea de log estructurada sin datos sensibles y devuelve `x-request-id` (ver `docs/observability.md`).
 - Respuesta correcta: `200 {"expired": N}` (N = holds liberados). Siempre `Cache-Control: no-store`.
 
 ## Qué libera

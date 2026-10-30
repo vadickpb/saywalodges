@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { log } from "@/lib/log";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 // Hold sweep (SD-408). Service-role on purpose: expire_holds is granted to service_role only
@@ -9,12 +10,12 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 export async function expireHolds(): Promise<number> {
   const { data, error } = await getSupabaseAdmin().rpc("expire_holds");
   if (error) {
-    console.error("expireHolds: rpc failed:", error.code);
+    log("error", "cron.expire_holds.rpc_failed", { code: error.code });
     throw new Error("expire_holds failed");
   }
   const parsed = z.number().int().nonnegative().safeParse(data);
   if (!parsed.success) {
-    console.error("expireHolds: unexpected rpc result");
+    log("error", "cron.expire_holds.bad_result");
     throw new Error("expire_holds failed");
   }
   return parsed.data;
