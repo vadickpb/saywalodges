@@ -102,6 +102,7 @@ export type Database = {
           id: string;
           org_id: string;
           property_id: string;
+          public_token: string;
           quote_id: string;
           status: Database["public"]["Enums"]["booking_status"];
           total_cents: number;
@@ -124,6 +125,7 @@ export type Database = {
           id?: string;
           org_id: string;
           property_id: string;
+          public_token?: string;
           quote_id: string;
           status?: Database["public"]["Enums"]["booking_status"];
           total_cents: number;
@@ -145,6 +147,7 @@ export type Database = {
           id?: string;
           org_id?: string;
           property_id?: string;
+          public_token?: string;
           quote_id?: string;
           status?: Database["public"]["Enums"]["booking_status"];
           total_cents?: number;
@@ -1645,6 +1648,10 @@ export type Database = {
           p_token: string;
         };
         Returns: boolean;
+      };
+      get_booking_status: {
+        Args: { p_host: string; p_token: string };
+        Returns: Json;
       };
       get_ical_export: { Args: { p_token: string }; Returns: Json };
       get_public_unit_availability: {

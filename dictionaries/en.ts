@@ -97,6 +97,41 @@ const en = {
     rights: "All rights reserved.",
     poweredBy: "Direct booking powered by Saywa Direct",
   },
+  bookingStatus: {
+    title: "Your booking",
+    stay: "Stay",
+    dates: "{checkIn} → {checkOut}",
+    guests: "{count} guests",
+    unit: "Accommodation",
+    state: {
+      awaiting_payment: {
+        label: "Waiting for your payment",
+        next: "Pay the deposit before the hold ends and upload your payment proof. The dates are reserved for you until then.",
+      },
+      voucher_rejected: {
+        label: "Payment proof not accepted",
+        next: "Your last payment proof could not be accepted. Upload a new one before the hold ends or contact the lodge.",
+      },
+      under_review: {
+        label: "Payment under review",
+        next: "We received your payment proof and the host is reviewing it. You do not need to do anything else.",
+      },
+      confirmed: {
+        label: "Booking confirmed",
+        next: "Your dates are confirmed. The host will contact you with arrival details.",
+      },
+      expired: {
+        label: "Hold expired",
+        next: "The payment time ran out and the dates were released. You can start a new booking if they are still available.",
+      },
+      cancelled: {
+        label: "Booking cancelled",
+        next: "This booking was cancelled. Contact the lodge if you have questions.",
+      },
+    },
+    holdUntil: "Dates held until {time}",
+    backToSite: "Back to the website",
+  },
 };
 
 export type Dict = typeof en;

@@ -95,6 +95,41 @@ const es: Dict = {
     rights: "Todos los derechos reservados.",
     poweredBy: "Reservas directas con Saywa Direct",
   },
+  bookingStatus: {
+    title: "Tu reserva",
+    stay: "Estadía",
+    dates: "{checkIn} → {checkOut}",
+    guests: "{count} huéspedes",
+    unit: "Alojamiento",
+    state: {
+      awaiting_payment: {
+        label: "Esperando tu pago",
+        next: "Paga el adelanto antes de que termine la retención y sube tu comprobante. Las fechas están reservadas para ti hasta entonces.",
+      },
+      voucher_rejected: {
+        label: "Comprobante no aceptado",
+        next: "No pudimos aceptar tu último comprobante. Sube uno nuevo antes de que termine la retención o contacta al alojamiento.",
+      },
+      under_review: {
+        label: "Pago en revisión",
+        next: "Recibimos tu comprobante y el anfitrión lo está revisando. No necesitas hacer nada más.",
+      },
+      confirmed: {
+        label: "Reserva confirmada",
+        next: "Tus fechas están confirmadas. El anfitrión te contactará con los detalles de llegada.",
+      },
+      expired: {
+        label: "Retención vencida",
+        next: "Se agotó el tiempo de pago y las fechas fueron liberadas. Puedes iniciar una nueva reserva si siguen disponibles.",
+      },
+      cancelled: {
+        label: "Reserva cancelada",
+        next: "Esta reserva fue cancelada. Contacta al alojamiento si tienes dudas.",
+      },
+    },
+    holdUntil: "Fechas retenidas hasta {time}",
+    backToSite: "Volver al sitio",
+  },
 };
 
 export default es;

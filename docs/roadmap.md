@@ -1203,11 +1203,11 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [ ] Idioma según la reserva; sin enviar dos veces el mismo email (idempotencia por evento).
 
-### [ ] SD-408 · feat: hold expiration job and booking status page
+### [x] SD-408 · feat: hold expiration job and booking status page
 `S` · Depende: SD-401 · Review: `R+S`
 - **Alcance**: cron que ejecuta `expire_holds`; página `/[lang]/reserva/[public_token]` con estado y siguiente paso.
 - **Criterios**
-  - [ ] Hold vencido pasa la reserva a `expired` y libera fechas.
+  - [x] Hold vencido pasa la reserva a `expired` y libera fechas.
 
 ### [ ] SD-409 · security: abuse protection on public actions
 `S` · Depende: SD-403 · Review: `R+S`
