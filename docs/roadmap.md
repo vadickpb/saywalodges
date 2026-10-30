@@ -1332,6 +1332,8 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 ### [ ] SD-606 · chore(obs): error monitoring and structured logs
 `S` · Depende: — · Review: `R`
 - **Alcance**: monitoreo de errores y logs estructurados sin PII; alertas de fallo de cron/webhook.
+- **Estado**: logs estructurados + `onRequestError` + cron/iCal hechos (`docs/observability.md`). Falta la alerta remota:
+  requiere elegir y configurar un servicio externo (decisión del dueño); el ticket sigue abierto.
 
 ---
 

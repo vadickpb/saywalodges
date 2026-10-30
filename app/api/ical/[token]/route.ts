@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getIcalExport } from "@/lib/dal/ical-feeds";
 import { buildIcs } from "@/lib/ical/export";
+import { errorName, log, newRequestId } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 
 // Per-channel calendar export (SD-304). Public by design: the secret is the token
@@ -8,14 +9,17 @@ import { createClient } from "@/lib/supabase/server";
 // subscribe to a calendar. It answers with dates only: every event is "Reservado".
 // Unknown, malformed or regenerated tokens all get the same empty 404, so nothing
 // tells a wrong token from a revoked one.
+const ROUTE = "/api/ical/[token]";
 const notFound = () => new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
 
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const requestId = newRequestId();
   let payload;
   try {
     payload = await getIcalExport(await createClient(), token);
-  } catch {
+  } catch (error) {
+    log("error", "ical.export.failed", { requestId, route: ROUTE, status: 500, errorName: errorName(error) });
     return new NextResponse("No se pudo generar el calendario.", { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
   }
   if (payload === null) return notFound();
@@ -24,7 +28,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
   try {
     ics = buildIcs({ name: payload.unit, events: payload.blocks, now: new Date() });
   } catch (error) {
-    console.error("ical export failed:", error);
+    log("error", "ical.export.failed", { requestId, route: ROUTE, status: 500, errorName: errorName(error) });
     return new NextResponse("No se pudo generar el calendario.", { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
   }
   return new NextResponse(ics, {
