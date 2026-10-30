@@ -1104,8 +1104,11 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     (HTML + texto plano), `send.ts` (`sendEmail`, nunca lanza; devuelve `{ok,id,simulated}` o `{ok:false,reason}`).
   - **Sin dependencias nuevas**: Resend se llama por `fetch` a su API REST (con `Idempotency-Key`), y las plantillas son
     componentes React renderizados con `react-dom/server.edge` (ya incluido con React; `react-dom/server` lo bloquea Next
-    en el grafo del servidor). **Desviación del alcance**: no se usa `@react-email/components` porque no se pudo
-    instalar en esta sesión; migrar es cambiar `layout.tsx` por sus componentes sin tocar `content.ts`/`send.ts`.
+    en el grafo del servidor). **Desviación del alcance**: no se usa `@react-email/components` (1.0.12 en npm,
+    peer `react ^18 || ^19`, compatible). Se reintentó `npm install @react-email/components@^1.0.12` el 2026-10-30 y el
+    permiso de Bash para instalar no fue concedido en la sesión, por lo que no se modificó `package.json`/lockfile.
+    Migrar es instalarlo y cambiar `layout.tsx` por sus componentes (`Html`, `Body`, `Container`, `Button`…) sin tocar
+    `content.ts`/`send.ts`; `render.test.ts` cubre escape, `lang` y subject.
   - Seguridad: sin key fuera de producción → **simulación** (renderiza y registra, no entrega); en producción sin key, con
     `EMAIL_MODE=simulate` o remitente inválido → `not_configured`. Fuera de producción solo se entrega a
     `EMAIL_ALLOWED_RECIPIENTS` (lista vacía = nadie). Remitente validado (sin CR/LF). Logs con campos cerrados: nunca
