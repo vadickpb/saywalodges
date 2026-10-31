@@ -19,20 +19,20 @@ select throws_like(
   'content rejects a non-object (array)'
 );
 
--- No write path ships yet (SD-210 adds the editor and widens the grant then):
--- even a member of the owning org can't write these columns directly.
+-- SD-210 widened the column grant: a member of the owning org can write
+-- theme/content (cross-org and anon denial live in
+-- 0021_site_appearance_isolation.test.sql), but the shape check still holds.
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
 set local role authenticated;
 
 select throws_like(
-  $$update public.properties set theme = '{"preset":"noche"}'::jsonb where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
-  '%permission denied%',
-  'owner cannot write theme directly (no column grant yet)'
+  $$update public.properties set theme = '[]'::jsonb where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
+  '%properties_theme_is_object%',
+  'owner writing theme still hits the object check constraint'
 );
-select throws_like(
+select lives_ok(
   $$update public.properties set content = '{}'::jsonb where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
-  '%permission denied%',
-  'owner cannot write content directly (no column grant yet)'
+  'owner can write content through the SD-210 column grant'
 );
 
 -- Reading is public for published properties, like every other column.

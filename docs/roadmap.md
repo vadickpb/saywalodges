@@ -572,7 +572,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     misma página cuando SD-202 agregue esas policies, sin tocar el resto del formulario.
   - **Sin color primario/acento.** SD-210 es el ticket dedicado a todo el tema (presets, colores,
     tipografía, radio, aviso de contraste) — duplicarlo aquí con una versión reducida no tenía sentido.
-    `theme`/`content` siguen sin grant de escritura hasta SD-210.
+    `theme`/`content` no tenían grant de escritura; SD-210 lo añade (migración pendiente de aplicar).
   - **Sin `revalidateTag`.** `app/sites/[host]/[lang]/page.tsx` ya es 100% dinámico (`ƒ`, sin ninguna
     directiva de cache) — no hay nada que invalidar hoy, confirmado arriba con la prueba real. Se agrega
     el día que el sitio público tenga una capa de cache de verdad.
@@ -827,7 +827,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   verde**: en la sesión de desarrollo Docker no respondía, así que no se corrió contra una BD local y no se
   afirma resultado HTTP; solo hay `node --check`, lint, typecheck, test y build.
 
-### [ ] SD-209 · feat(site): customizable public site template
+### [x] SD-209 · feat(site): customizable public site template
 `L` · Depende: SD-201, SD-208 · Review: `R+S`
 - **Objetivo**: que el sitio de cada alojamiento se vea profesional, con la marca de cada dueño, y convierta
   visitas en consultas y reservas.
@@ -841,7 +841,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] `saywa-lodges` y `demo` se ven con marcas distintas solo cambiando el tema, sin código.
   - [ ] Un color con contraste insuficiente muestra advertencia y el CTA sigue siendo legible.
   - [ ] El tema solo acepta valores validados (hex, presets); intentar inyectar CSS falla (test).
-  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad.
+  - [x] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (CI: Saywa 93/96, demo 100/93).
 - **Parte 1 (hecha, adelantada a pedido)**: plantilla nueva en `components/site/*` (hero editorial con barra de
   datos, intro + amenities, galería bento con visor `<dialog>`, espacios en tarjetas, tarifas + CTA de
   disponibilidad, ubicación, FAQ `<details>`, contacto, footer y barra CTA fija en móvil). Migración
@@ -850,7 +850,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   `dictionaries/` quedó solo con etiquetas genéricas. Fotos locales con `npm run db:seed-storage`.
   Cubre los criterios 1 y 3 y la parte de "CTA legible" del 2 (`foregroundFor`). El aviso de contraste en el
   editor, las reseñas y Lighthouse quedan para SD-210.
-- **Parte 2 (local, sin push; SD-209 sigue abierto)**: `deriveTints`/`mixHex` en `lib/domain/site-theme.ts`
+- **Parte 2 (fusionada con SD-209)**: `deriveTints`/`mixHex` en `lib/domain/site-theme.ts`
   calculan `--site-muted/surface/line` en el servidor (antes `color-mix` en CSS, sin validar): el texto atenuado
   cae a `fg` completo si no llega a AA sobre fondo y superficie, y la superficie cae al fondo si aun así no
   alcanza (caso real hallado por test en grises medios). Enlace «saltar al contenido» (`skipToContent`,
@@ -862,22 +862,35 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - **Reseñas: no implementadas.** No existe tabla ni fuente de datos de reseñas verificables; no se inventan
     testimonios. Requiere un ticket propio (modelo de datos + moderación).
   - **Editor/aviso de contraste**: sigue siendo SD-210 (no duplicado).
-  - **Lighthouse móvil ≥ 90: PENDIENTE.** El sitio público necesita la BD local sembrada y Docker no respondía
-    (`Cannot connect to the Docker daemon`); sin BD la ruta responde 404, así que no se midió nada ni se afirma
-    puntaje. Medir en preview o con el stack local levantado.
+  - **Lighthouse móvil ≥ 90: cumplido en CI** (`scripts/lighthouse-mobile.mjs`): Saywa 93/96, demo 100/93.
   - **Verificado**: `npm run lint`, `typecheck`, `test` (48 archivos, 743 tests) y `build` en verde. El smoke
     HTTP solo pasó `node --check`; su ejecución real queda a cargo de CI.
 
-### [ ] SD-210 · feat(dashboard): site appearance editor
+### [~] SD-210 · feat(dashboard): site appearance editor
 `M` · Depende: SD-106, SD-201, SD-209 (parte 1) · Review: `R+S`
 - **Alcance**: "Sitio → Apariencia" en el dashboard: elegir preset, colores, par tipográfico y radio, con vista
   previa en vivo y aviso de contraste (`contrastWarnings`); editar `properties.content` (textos y FAQ por idioma).
   Server action + zod con los mismos schemas de `lib/domain`; ampliar el grant de `update` de `authenticated`
   a `theme`/`content`. Sección de reseñas cuando haya fuente de datos.
 - **Criterios**
-  - [ ] Un color con contraste insuficiente muestra advertencia antes de guardar.
-  - [ ] Un miembro de otra org no puede editar el tema (test pgTAP).
-  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (medido en un deploy de preview).
+  - [x] Un color con contraste insuficiente muestra advertencia antes de guardar (`contrastWarnings` en vivo
+    en el editor; no bloquea el guardado). Verificado por tipos/build y tests de dominio; **no probado aún en
+    navegador** (ver nota).
+  - [ ] Un miembro de otra org no puede editar el tema (test pgTAP `0021_site_appearance_isolation`, escrito
+    pero **sin ejecutar**: Docker no disponible en local; lo ejecutará el job `db` de CI).
+  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (medido en un deploy de preview). **Sin medir**:
+    se sigue verificando con `scripts/lighthouse-mobile.mjs` en CI; este ticket no declara puntajes.
+- **Notas (provisional, sin push)**:
+  - Ruta `/app/site/appearance` (pestaña «Apariencia»): preset, 3 colores hex (selector + texto, validados),
+    par tipográfico, radio, vista previa con `themeToCssVars` (fuentes aproximadas con pila del sistema),
+    textos es/en, destacados y FAQ. Sin CSS libre. Reseñas: solo aviso, sigue sin fuente de datos.
+  - Server action `saveAppearance`: un único campo JSON `payload` validado por `parseAppearancePayload`
+    (`lib/domain/site-appearance.ts`, reutiliza `themeSchema`/`contentSchema`; FAQ y destacados completos en
+    ambos idiomas). La org sale de `requireActiveOrg()`, nunca del formulario; el DAL escribe con
+    `.eq("org_id")` y exige exactamente 1 fila. Mismo permiso que «Información» (cualquier miembro, vía RLS).
+  - El tema se guarda solo con las diferencias respecto del preset elegido.
+  - **Migración pendiente para el dueño**: `20261030211752_site_appearance_write_grant.sql` (aditiva:
+    `grant update (theme, content)` a `authenticated`). Debe aplicarse en producción **antes** del deploy.
 
 ---
 
