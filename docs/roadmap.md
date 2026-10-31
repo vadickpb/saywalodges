@@ -1545,7 +1545,7 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - Global: ranking de casas, mezcla de canales y ahorro en comisiones de las reservas directas, costo promedio
     de limpieza/mantenimiento por alquiler.
   - Estado de resultados mensual/anual imprimible (CSS de impresión → PDF del navegador) con logo y período.
-  - Noches disponibles = días con la casa activa; nota visible hasta que SD-807 descuente bloqueos del dueño.
+  - Noches disponibles = días con la casa activa; SD-807 descuenta los bloqueos manuales del dueño.
 - **Criterios**
   - [x] Un alquiler que cruza meses reparte noches e ingreso por noche en "por estadía" y cae entero en la fecha
         de cobro en "por cobro" (tests de `finance-reports.test.ts`).
@@ -1635,7 +1635,23 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   = pago, idempotente). Airbnb/Booking: iCal solo trae fechas, así que cada estadía importada sin ingreso
   aparece en "Alquileres por completar" con limpieza sugerida. Ocupación de SD-804 descuenta bloqueos del dueño.
 - **Criterios**
-  - [ ] Reprocesar el mismo pago o el mismo evento iCal no duplica movimientos.
+  - [ ] Reprocesar el mismo pago o el mismo evento iCal no duplica movimientos. Implementado y probado con Vitest;
+        pgTAP `0021_finance_booking_income.test.sql` (89 asserts) **pendiente de correr en CI** (Docker local no respondió).
+- **Nota (SD-807, en revisión)**:
+  - `confirm_payment(org, pago, fx?)` aprueba el pago y escribe el ingreso (`source = booking`, `external_ref` = id del pago,
+    `created_by` nulo) en la misma transacción; el índice único `(org_id, source, external_ref)` impide un segundo ingreso.
+    Monto = lo realmente pagado (no el total), fecha de cobro = día en Lima del registro del pago. Moneda extranjera: usa el
+    tipo de cambio recibido o, si no, el último del libro de la organización; sin ninguno responde `22023` antes de cambiar
+    nada y el dueño debe indicarlo. Cancelar una reserva confirmada conserva el ingreso (no hay reembolsos aún).
+  - iCal: nada se escribe solo ni se infiere el importe. `list_ical_rentals_to_complete` (solo dueño) lista estadías Airbnb/Booking
+    ya iniciadas sin ingreso; `complete_ical_rental` registra lo que el dueño escribe (+ limpieza sugerida opcional). Clave
+    idempotente `ical:<sha256>` derivada en la BD; ni el UID ni su hash llegan al cliente. Una estadía cargada a mano con las mismas
+    fechas también cuenta como completada. Sección «Alquileres por completar» en `/app/finance` (solo dueño).
+  - Ocupación (SD-804): las noches con bloqueo manual salen de las disponibles; bloqueos de reserva/iCal no (son noches vendidas).
+  - Fuera de alcance / propuestas: descartar bloqueos de canal que no son reservas (Airbnb «Not available»), saldo restante
+    de una reserva más allá del pago aprobado, reembolsos.
+  - Despliegue: aplicar la migración antes del deploy (reemplaza la firma de `confirm_payment`; ningún código desplegado la llama aún).
+    `lib/database.types.ts` se editó a mano (sin Docker): regenerar con `npx supabase gen types` y verificar que no haya diff.
 
 
 ## Propuesta de ticket fuera del alcance actual
