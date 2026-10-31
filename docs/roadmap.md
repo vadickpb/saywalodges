@@ -1095,7 +1095,40 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Alcance**: Resend (dominio verificado), `lib/email/` con plantillas React Email es/en, envío desde servidor,
   sin PII en logs.
 - **Criterios**
-  - [ ] Email de prueba enviado en entorno de preview.
+  - [ ] Email de prueba enviado en entorno de preview. **PENDIENTE (bloqueado por el dueño)**: requiere dominio
+        verificado en Resend y una API key, que el agente no tiene ni debe usar. Sin evidencia de envío real todavía.
+- **Estado (implementado en rama `feat/SD-306-email-infrastructure`, sin push ni PR)**:
+  - `lib/email/`: `config.ts` (config perezosa y fail-closed; no está en `lib/env.ts` para no romper build/previews sin key),
+    `content.ts` (plantillas = función pura `(lang, props) → contenido`, props validadas con zod, texto saneado),
+    `messages.ts` (copy es/en), `layout.tsx` (HTML con tablas e estilos inline; React escapa todo), `render.tsx`
+    (HTML + texto plano), `send.ts` (`sendEmail`, nunca lanza; devuelve `{ok,id,simulated}` o `{ok:false,reason}`).
+  - **Sin dependencias nuevas**: Resend se llama por `fetch` a su API REST (con `Idempotency-Key`), y las plantillas son
+    componentes React renderizados con `react-dom/server.edge` (ya incluido con React; `react-dom/server` lo bloquea Next
+    en el grafo del servidor). **Desviación del alcance**: no se usa `@react-email/components` (1.0.12 en npm,
+    peer `react ^18 || ^19`, compatible). Se reintentó `npm install @react-email/components@^1.0.12` el 2026-10-30 y el
+    permiso de Bash para instalar no fue concedido en la sesión, por lo que no se modificó `package.json`/lockfile.
+    Migrar es instalarlo y cambiar `layout.tsx` por sus componentes (`Html`, `Body`, `Container`, `Button`…) sin tocar
+    `content.ts`/`send.ts`; `render.test.ts` cubre escape, `lang` y subject.
+  - Seguridad: sin key fuera de producción → **simulación** (renderiza y registra, no entrega); en producción sin key, con
+    `EMAIL_MODE=simulate` o remitente inválido → `not_configured`. Fuera de producción solo se entrega a
+    `EMAIL_ALLOWED_RECIPIENTS` (lista vacía = nadie). Remitente validado (sin CR/LF). Logs con campos cerrados: nunca
+    destinatario, asunto, cuerpo, props, key ni texto de error del proveedor.
+  - Reintentos: 3 intentos con backoff 300/600 ms ante red, timeout (10 s), 429, 5xx y 409 `concurrent_idempotent_requests`;
+    misma `Idempotency-Key` en todos los intentos; un 2xx nunca se reintenta; 4xx → `rejected`.
+  - `POST /api/email/test` (humo para el dueño): 404 salvo fuera de producción y con `EMAIL_TEST_SECRET` (≥ 16 car.);
+    Bearer comparado en tiempo constante; destinatario sujeto a la allow-list.
+  - Tests (Vitest, deterministas, sin red): config, idiomas es/en, escapado, control chars, PII en logs, reintentos,
+    idempotencia, ruta de prueba.
+  - **Pasos del dueño para cerrar el criterio** (el agente no los hace):
+    1. En Resend: verificar un dominio/subdominio (SPF + DKIM en el DNS) y crear una API key de envío.
+    2. En Vercel → entorno **Preview** (no Production): `RESEND_API_KEY`, `EMAIL_FROM` (en el dominio verificado),
+       `EMAIL_ALLOWED_RECIPIENTS` (tu correo), `EMAIL_TEST_SECRET` (aleatorio, ≥ 16 car.). `ROOT_DOMAIN` del preview debe
+       coincidir con el host usado, porque `proxy.ts` solo sirve `/api/*` en hosts de plataforma.
+    3. Tras el deploy del preview: `curl -X POST https://<host-preview>/api/email/test -H "Authorization: Bearer $EMAIL_TEST_SECRET" -H "Content-Type: application/json" -d '{"to":"<tu correo>","lang":"es"}'`
+       → `{"ok":true,"simulated":false,"id":"..."}` y llega el correo (revisar también `lang:"en"`).
+    4. Registrar aquí la evidencia (id del mensaje, fecha) y marcar el criterio. Antes de producción: configurar las mismas
+       variables en Production **sin** `EMAIL_ALLOWED_RECIPIENTS`/`EMAIL_TEST_SECRET`.
+  - Fuera de alcance / propuesta: límite de peticiones a la ruta de prueba (SD-409); plantillas de reservas (SD-407).
 
 ### [ ] SD-307 · feat(ical): scheduled sync and conflict alerts
 `M` · Depende: SD-305, SD-306 · Review: `R+S`
