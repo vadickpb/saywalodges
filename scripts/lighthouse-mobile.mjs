@@ -6,6 +6,10 @@
 // Robustness: every Lighthouse run is its own process group with a hard timeout; on timeout the whole group
 // (npx, node, Chrome) is killed. Only INFRASTRUCTURE failures (timeout, crash, runtimeError) are retried, a
 // bounded number of times; a run that produced a score is never discarded, so low scores are always counted.
+// SD-701: the same page loads also gate on CSP. `errors-in-console` is added with --only-audits (no extra
+// category, scores unchanged) and any CSP violation Chrome reports fails the run (lib/security/lighthouse-csp.ts).
+// A canary page that really violates a CSP must be detected first, so a silently broken check cannot pass.
+// Scope: the initial load of each tenant home page, not interactions (booking widget, dashboard).
 // Only the scores are printed; the raw JSON goes to a temp dir and is deleted.
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
@@ -14,7 +18,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createServer } from "node:http";
 import { setTimeout as sleep } from "node:timers/promises";
+import { readConsoleReport } from "../lib/security/lighthouse-csp.ts";
 
 for (const file of [".env", ".env.local", ".env.production", ".env.production.local"])
   assert.ok(!existsSync(file), `Must not load ${file}`);
@@ -49,10 +55,13 @@ const probe = (host) => new Promise((resolve, reject) => {
   req.on("error", reject); req.end();
 });
 // Default Lighthouse config = mobile emulation (Moto G Power, simulated slow 4G, 4x CPU slowdown).
-const lighthouseArgs = (url, out) => ["--yes", "--prefer-offline", LIGHTHOUSE, url, "--form-factor=mobile", "--only-categories=performance,accessibility", "--output=json", `--output-path=${out}`, "--quiet", `--chrome-flags=${CHROME_FLAGS}`];
+const lighthouseArgs = (url, out, scope) => ["--yes", "--prefer-offline", LIGHTHOUSE, url, "--form-factor=mobile", ...scope, "--output=json", `--output-path=${out}`, "--quiet", `--chrome-flags=${CHROME_FLAGS}`];
 
-async function runLighthouse(url, out) {
-  const child = spawn("npx", lighthouseArgs(url, out), { env: { ...process.env, CHROME_PATH: chromePath }, stdio: ["ignore", "inherit", "inherit"], detached: true });
+const SCORED = ["--only-categories=performance,accessibility", "--only-audits=errors-in-console"];
+const CONSOLE_ONLY = ["--only-audits=errors-in-console"];
+
+async function runLighthouse(url, out, scope = SCORED) {
+  const child = spawn("npx", lighthouseArgs(url, out, scope), { env: { ...process.env, CHROME_PATH: chromePath }, stdio: ["ignore", "inherit", "inherit"], detached: true });
   const killGroup = () => { try { process.kill(-child.pid, "SIGKILL"); } catch {} };
   const timer = setTimeout(killGroup, RUN_TIMEOUT_MS);
   try {
@@ -86,11 +95,36 @@ try {
     }
   }
 
+  // Canary: a page whose own CSP blocks its inline script. The gate must see it, or it is not measuring anything.
+  const canary = createServer((req, res) => {
+    res.writeHead(200, { "content-type": "text/html", "content-security-policy": "script-src 'self'; default-src 'self'" });
+    res.end("<!doctype html><title>csp canary</title><h1>csp canary</h1><script>window.x = 1</script>");
+  });
+  canary.listen(0, "127.0.0.1");
+  await once(canary, "listening");
+  try {
+    const canaryOut = join(outDir, "canary.json");
+    let lhr;
+    for (let attempt = 1; !lhr; attempt++) {
+      try { lhr = await runLighthouse(`http://127.0.0.1:${canary.address().port}/`, canaryOut, CONSOLE_ONLY); } catch (error) {
+        console.error(`Lighthouse infrastructure failure for the canary: ${error.message}`);
+        if (attempt > MAX_INFRA_RETRIES) throw new Error("canary: too many infrastructure failures", { cause: error });
+      }
+    }
+    const detected = readConsoleReport(lhr);
+    assert.ok(detected.cspViolations.length > 0, "Canary CSP violation was NOT detected: the console check is broken");
+    console.log(`PASS canary: deliberate CSP violation detected (${detected.cspViolations.length})`);
+  } finally {
+    canary.close();
+  }
+
   for (const { host, lang } of targets) {
     const url = `http://${host}:${PORT}/${lang}`;
     let infraRetries = 0;
     const perf = [];
     const a11y = [];
+    const cspViolations = [];
+    const otherErrors = new Set();
     for (let run = 0; run < RUNS; run++) {
       const out = join(outDir, `${host}-${lang}-${run}.json`);
       let lhr;
@@ -105,10 +139,16 @@ try {
       }
       perf.push(Math.round(lhr.categories.performance.score * 100));
       a11y.push(Math.round(lhr.categories.accessibility.score * 100));
+      const consoleReport = readConsoleReport(lhr);
+      cspViolations.push(...consoleReport.cspViolations.map((v) => v.description));
+      for (const e of consoleReport.otherErrors) otherErrors.add(`${e.source}: ${e.description}`);
     }
     const p = median(perf);
     const a = median(a11y);
     console.log(`${p >= THRESHOLD && a >= THRESHOLD ? "PASS" : "FAIL"} ${url} mobile performance=${p} (runs ${perf.join(",")}) accessibility=${a} (runs ${a11y.join(",")})`);
+    for (const e of otherErrors) console.log(`NOTE ${url} non-CSP console error (not fatal): ${e.slice(0, 300)}`);
+    console.log(`${cspViolations.length === 0 ? "PASS" : "FAIL"} ${url} CSP console violations=${cspViolations.length} over ${RUNS} loads`);
+    for (const v of new Set(cspViolations)) failures.push(`${url} CSP violation: ${v.slice(0, 400)}`);
     if (p < THRESHOLD) failures.push(`${url} performance ${p}`);
     if (a < THRESHOLD) failures.push(`${url} accessibility ${a}`);
   }

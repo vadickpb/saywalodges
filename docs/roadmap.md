@@ -1371,6 +1371,11 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 `M` · Depende: SD-105 · Review: `R+S`
 - **Alcance**: CSP con nonce (ver `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`),
   compatible con Mercado Pago.
+- **Estado (provisional)**: implementado en ADR 0009 (`lib/security/csp.ts`, `proxy.ts`). Verificado: unit/proxy
+  tests, build, smoke HTTP de plataforma y Chrome headless sin violaciones. El job `db` de CI añade smoke con
+  Supabase local y Lighthouse móvil ≥ 90 que falla ante cualquier violación CSP en la carga inicial de
+  `saywa-lodges` y `demo` (ADR 0009). **Pendiente**: revisión en preview con `CSP_REPORT_ONLY=1` de interacciones,
+  dashboard y login; por eso sigue sin marcar.
 
 ### [ ] SD-702 · chore: production readiness
 `S` · Depende: M4 · Review: `R`
