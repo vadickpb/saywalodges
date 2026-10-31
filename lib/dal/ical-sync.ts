@@ -45,6 +45,20 @@ export async function saveImportUrl(
   return !error && data?.length === 1;
 }
 
+export type SyncErrorCode = "URL" | "NETWORK" | "SIZE" | "FORMAT";
+
+// Shared by the owner's manual sync and the scheduled one (SD-307): the same SSRF-guarded fetch
+// (allowlist, DNS/private-address checks, size and time limits) and the same parser. Never throws.
+export async function downloadSnapshot(
+  url: string,
+): Promise<{ events: { uid: string; start: string; end: string }[]; code?: SyncErrorCode }> {
+  try {
+    return { events: parseCalendar(await fetchCalendar(url)) };
+  } catch (error) {
+    return { events: [], code: error instanceof ImportError ? error.code : "NETWORK" };
+  }
+}
+
 export async function syncFeed(
   client: Client,
   orgId: string,
@@ -56,13 +70,7 @@ export async function syncFeed(
   });
   const lease = leaseSchema.safeParse(started.data);
   if (started.error || !lease.success) return false;
-  let events: { uid: string; start: string; end: string }[] = [];
-  let code: "URL" | "NETWORK" | "SIZE" | "FORMAT" | undefined;
-  try {
-    events = parseCalendar(await fetchCalendar(lease.data.url));
-  } catch (error) {
-    code = error instanceof ImportError ? error.code : "NETWORK";
-  }
+  const { events, code } = await downloadSnapshot(lease.data.url);
   const finished = await client.rpc("finish_ical_sync", {
     p_org_id: orgId,
     p_feed_id: id,

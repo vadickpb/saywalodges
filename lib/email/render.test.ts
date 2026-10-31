@@ -42,7 +42,7 @@ describe("renderEmail", () => {
   });
 
   it("rejects invalid props with a ZodError", () => {
-    expect(() => renderEmail({ template: "test", lang: "es", props: { name: "x".repeat(101) } })).toThrow(ZodError);
+    expect(() => renderEmail({ template: "test", lang: "es", props: { name: 42 } as never })).toThrow(ZodError);
   });
 });
 
@@ -57,5 +57,38 @@ describe("helpers", () => {
     for (const bad of ["http://example.com", "javascript:alert(1)", "not a url", "data:text/html,x"]) {
       expect(httpsUrl.safeParse(bad).success).toBe(false);
     }
+  });
+});
+
+describe("iCal alert templates (SD-307)", () => {
+  const props = { channel: "airbnb", unitName: "Casa <b>Saywa</b>", count: 2, url: "https://app.example.com/app/calendar/feeds" } as const;
+
+  it("shortens a long unit name instead of rejecting the alert", () => {
+    const long = renderEmail({ template: "icalConflict", lang: "es", props: { ...props, unitName: "Casa ".repeat(40) } });
+    expect(long.subject).toBeTruthy();
+    expect(long.html).not.toContain("Casa ".repeat(30));
+  });
+
+  it("renders the conflict alert in es and en with count, channel, unit and link", () => {
+    const es = renderEmail({ template: "icalConflict", lang: "es", props });
+    expect(es.text).toContain("2 eventos nuevos");
+    expect(es.text).toContain("Airbnb");
+    expect(es.html).toContain("https://app.example.com/app/calendar/feeds");
+    expect(es.html).not.toContain("<b>Saywa</b>");
+    const en = renderEmail({ template: "icalConflict", lang: "en", props: { ...props, count: 1 } });
+    expect(en.text).toContain("1 new event");
+    expect(en.html).toContain('<html lang="en">');
+  });
+
+  it("renders the feed-down alert and works without a link", () => {
+    const { text, html } = renderEmail({ template: "icalFeedDown", lang: "es", props: { channel: "booking" } });
+    expect(text).toContain("Booking.com");
+    expect(text).toContain("24 horas");
+    expect(html).not.toContain("<a ");
+  });
+
+  it("rejects unknown channels and non-https links", () => {
+    expect(() => renderEmail({ template: "icalFeedDown", lang: "es", props: { channel: "evil" as never } })).toThrow(ZodError);
+    expect(() => renderEmail({ template: "icalFeedDown", lang: "es", props: { channel: "vrbo", url: "http://x.example" } })).toThrow(ZodError);
   });
 });
