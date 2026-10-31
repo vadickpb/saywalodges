@@ -47,7 +47,7 @@ Reglas que sostienen el diseño:
 
 ## Una reserva, de punta a punta
 
-Leyenda: ✅ implementado · 🚧 pendiente en el roadmap.
+Leyenda: ✅ código ya mergeado en `main` (el cumplimiento de los criterios de cada ticket se sigue en el roadmap) · 🚧 pendiente.
 
 1. ✅ **Disponibilidad pública**: el sitio muestra qué fechas están libres
    (`lib/dal/public/availability.ts` → `lib/domain/public-availability.ts`).
@@ -68,7 +68,7 @@ Leyenda: ✅ implementado · 🚧 pendiente en el roadmap.
 
 ## Base de datos
 
-- Esquema versionado en `supabase/migrations/` (24 migraciones en producción a 2026-10-31).
+- Esquema versionado en `supabase/migrations/` (una migración por ticket; el estado en producción se ve en el workflow *Deploy database*).
 - **Toda tabla de negocio** tiene `org_id` y RLS habilitado, con políticas por operación que usan `is_member(org_id)`.
 - Las operaciones de varias tablas son **RPCs** (`security definer`, `set search_path = ''`) con su propio test.
 - Tests pgTAP en `supabase/tests/` (aislamiento entre organizaciones, RPCs, constraints) y pruebas de

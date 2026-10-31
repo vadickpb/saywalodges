@@ -9,7 +9,7 @@ así que ambos agentes siguen las mismas reglas. Las autorizaciones y prohibicio
 **1 ticket = 1 worktree = 1 rama = 1 PR = (como máximo) 1 migración.**
 
 - Rama: `<type>/SD-XXX-slug` (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`).
-- Siempre se parte de `origin/main` actualizado, en un worktree propio (Orca lo crea).
+- Siempre se parte de `origin/main` actualizado, en un worktree propio (Orca u otro gestor de worktrees).
 - Nunca dos agentes en el mismo worktree.
 - Para saber dónde estás: `npm run where` (rama, PR, CI, migraciones y qué toca después).
 
@@ -19,7 +19,8 @@ así que ambos agentes siguen las mismas reglas. Las autorizaciones y prohibicio
 elegir ticket (docs/roadmap.md)
   → worktree nuevo desde origin/main
   → plan corto (plan mode si toca BD, seguridad o >2 capas)
-  → migración (si aplica) → dominio → DAL → acción/ruta (zod) → UI → tests
+  → migración (si aplica; créala tras `git rebase origin/main` y edítala mientras el PR siga abierto)
+  → dominio → DAL → acción/ruta (zod) → UI → tests
   → npm run lint && npm run typecheck && npm run test && npm run build
   → si hubo migración: npx supabase db reset && npx supabase test db
   → reviewer (+ security-reviewer si CLAUDE.md lo exige)
@@ -84,6 +85,10 @@ Si falla: **no lo vuelvas a ejecutar a ciegas**. Copia el enlace de la ejecució
 migraciones que el repo no tiene. Hasta que se resuelva, el código nuevo puede estar desplegado sin su
 esquema; por eso la regla de cambios aditivos.
 
+Fallo típico: «Found local migration files to be inserted before the last migration on remote database». Significa que
+la migración tiene un timestamp anterior a otra ya aplicada (se creó antes de rebasar). Pide al agente que la
+renombre con un timestamp nuevo tras `git rebase origin/main`; no uses `--include-all` sin entenderlo.
+
 Si no apruebas: nada se rompe (el código es compatible con el esquema anterior), pero la funcionalidad nueva que
 dependa de la migración no funcionará hasta que apruebes.
 
@@ -92,10 +97,14 @@ dependa de la migración no funcionará hasta que apruebes.
 En GitHub → Settings → Environments → **New environment** `production`:
 
 1. **Required reviewers**: añádete a ti mismo. Deja *Prevent self-review* **desactivado** (eres el único dueño).
+   **Deployment branches and tags** → *Selected branches and tags* → solo `main` (imprescindible: impide que una
+   ejecución manual desde otra rama alcance los secretos).
 2. **Secrets** del entorno:
-   - `SUPABASE_ACCESS_TOKEN`: token personal en `https://supabase.com/dashboard/account/tokens`.
+   - `SUPABASE_ACCESS_TOKEN`: token personal en `https://supabase.com/dashboard/account/tokens`. Dale un nombre
+     reconocible (p. ej. `github-deploy-db`) y rótalo de vez en cuando: da acceso de gestión a tu cuenta.
+   - Créalos **solo en el environment**, nunca como secretos de repositorio (los de repositorio los lee cualquier workflow).
    - `SUPABASE_DB_PASSWORD`: contraseña de la BD (Supabase → Project Settings → Database).
-3. **Variables** del entorno: `SUPABASE_PROJECT_ID` = `gqqjaoarvpkiisikcopq`.
+3. **Variables** del entorno: `SUPABASE_PROJECT_ID` = el *Reference ID* del proyecto (Supabase → Project Settings → General).
 4. Comprobación: Actions → *Deploy database* → **Run workflow**. Debe quedar en «Waiting»; apruébalo y el
    «Dry run» debe decir que la base remota está al día (*Remote database is up to date*).
 
@@ -119,7 +128,7 @@ estable es activar *Automatically delete head branches* (Settings → General �
 
 ```bash
 # desde cualquier worktree, con el ticket ya mergeado:
-git worktree remove /Users/vadickpb/Developer/saywa-sdXXX
+git worktree remove <ruta-del-worktree>
 git branch -d <rama>        # -d falla si no está mergeada, a propósito
 git fetch --prune
 ```
@@ -130,4 +139,4 @@ git fetch --prune
 
 `~/Documents` se sincroniza con iCloud, que crea copias «archivo 2.ext» ante conflictos. Una copia así dentro de
 `supabase/migrations/` duplica una versión y rompe `db reset`/`db push`. Ubicación recomendada del repo
-principal: `~/Developer/saywa-direct` (donde ya viven los worktrees).
+principal: una carpeta fuera de `~/Documents`, `~/Desktop` e iCloud Drive (p. ej. `~/Developer/saywa-direct`).

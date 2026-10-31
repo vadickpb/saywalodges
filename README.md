@@ -34,7 +34,7 @@ the platform's first tenant. Live example: [saywalodges.vercel.app](https://sayw
   sync and conflict alerts.
 - **Bookkeeping module**: income/expense ledger, monthly and yearly reports, recurring expenses, and an
   Excel export for the accountant ([ADR 0007](docs/adr/0007-finance-ledger.md)).
-- **Security and operations**: structured logs without PII, timing-safe cron authentication, hardened
+- **Security and operations**: structured logging without PII, timing-safe cron authentication, hardened
   uploads and iCal import, and regular dependency security updates.
 
 ## Stack
@@ -65,16 +65,17 @@ repository so it is reviewable like the code: see [`AGENTS.md`](AGENTS.md), [`CL
 
 ## Status
 
-In active development, ticket by ticket ([`docs/roadmap.md`](docs/roadmap.md)).
+In active development, ticket by ticket. *Merged* means the code is in `main`; the acceptance criteria of each
+ticket are tracked in [`docs/roadmap.md`](docs/roadmap.md).
 
 | Area | State |
 |---|---|
-| Multi-tenant foundation: organizations, RLS, auth, host routing, dashboard | Done |
-| Content, bookable units, seasons, rates and pricing engine | Done |
-| Customizable public site template and appearance editor | Done |
-| Calendar with overlap protection, iCal import/export, public availability | Done |
-| Bookkeeping: ledger, reports, recurring expenses, Excel export | Done |
-| Booking schema and hold expiration job | Done |
+| Multi-tenant foundation: organizations, RLS, auth, host routing, dashboard | Merged |
+| Content, bookable units, seasons, rates and pricing engine | Merged |
+| Customizable public site template and appearance editor | Merged |
+| Calendar with overlap protection, iCal import/export, public availability | Merged |
+| Bookkeeping: ledger, reports, recurring expenses, Excel export | Merged |
+| Booking schema and hold expiration job | Merged |
 | Quote builder, booking-link checkout, manual payment | Next |
 | Online payments (Mercado Pago), guest CRM, custom domains | Planned |
 
