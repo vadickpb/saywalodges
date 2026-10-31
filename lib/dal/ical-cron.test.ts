@@ -91,6 +91,12 @@ describe("alerts", () => {
     expect(await claimAlert(feed, "conflict", client)).toBeNull();
     err.mockRestore();
   });
+  it("throws when settling fails, so the caller can retry instead of mailing twice", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "XX000" } });
+    await expect(settleAlert(feed, token, true, client)).rejects.toThrow("settle failed");
+    err.mockRestore();
+  });
   it("settles by claim id", async () => {
     rpc.mockResolvedValueOnce({ data: null, error: null });
     await settleAlert(feed, token, true, client);

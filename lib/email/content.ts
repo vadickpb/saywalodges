@@ -31,9 +31,10 @@ export const httpsUrl = z
     }
   }, "must be an https URL");
 
+// No .max(): a unit name the database accepts (up to 200 characters) must not make the
+// alert fail validation and vanish silently; it is shortened to 100 instead.
 const displayName = z
   .string()
-  .max(100)
   .transform((value) => cleanText(value, 100))
   .optional();
 

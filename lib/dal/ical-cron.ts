@@ -83,5 +83,9 @@ export async function claimAlert(feedId: string, kind: AlertKind, client: Admin 
 
 export async function settleAlert(feedId: string, claimId: string, delivered: boolean, client: Admin = getSupabaseAdmin()): Promise<void> {
   const { error } = await client.rpc("cron_settle_ical_alert", { p_feed_id: feedId, p_claim_id: claimId, p_delivered: delivered });
-  if (error) log("error", "cron.ical_sync.rpc_failed", { outcome: "settle", code: error.code });
+  if (error) {
+    log("error", "cron.ical_sync.rpc_failed", { outcome: "settle", code: error.code });
+    // Let the caller retry: an unsettled claim would expire and the alert would be mailed again.
+    throw new Error("settle failed");
+  }
 }

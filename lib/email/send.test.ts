@@ -55,7 +55,7 @@ describe("sendEmail", () => {
 
   it("still validates and renders in simulation, so template bugs surface in CI", async () => {
     const { deps } = harness([], { mode: "simulate" });
-    expect(await sendEmail({ ...input, props: { name: "x".repeat(500) } }, deps)).toEqual({ ok: false, reason: "invalid_input" });
+    expect(await sendEmail({ ...input, props: { name: 42 } as never }, deps)).toEqual({ ok: false, reason: "invalid_input" });
     expect(await sendEmail({ ...input, to: "nope" }, deps)).toEqual({ ok: false, reason: "invalid_input" });
   });
 
