@@ -2,115 +2,121 @@
 
 [![CI](https://github.com/vadickpb/saywalodges/actions/workflows/ci.yml/badge.svg)](https://github.com/vadickpb/saywalodges/actions/workflows/ci.yml)
 
-SaaS multi-tenant de reservas directas para alojamientos independientes en Perú: web con dominio
-propio, tarifas, cotizador/link de reserva, pagos, calendario sincronizado con Airbnb/Booking (iCal)
-y CRM básico de huéspedes — sin comisión por reserva.
+Multi-tenant SaaS for **direct bookings** at independent lodgings in Peru: a branded website, rates and
+seasons, a quote/booking link, calendar sync with Airbnb and Booking.com, and built-in bookkeeping —
+with no per-booking commission.
 
-Este repositorio nace de **Saywa Lodges** (un lodge real en el Valle Sagrado, Urubamba), que hoy es
-el primer tenant de la plataforma mientras evoluciona hacia multi-tenant. Roadmap completo y estado
-de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura: [`docs/adr/`](docs/adr/).
+It started as the website of **Saywa Lodges**, a real lodge in the Sacred Valley (Urubamba), which is now
+the platform's first tenant. Live example: [saywalodges.vercel.app](https://saywalodges.vercel.app).
+
+> Documentation is in Spanish (the product's market); this page is the English overview.
+> Spanish README: [`README.es.md`](README.es.md) · Architecture: [`docs/architecture.md`](docs/architecture.md)
+> · Roadmap: [`docs/roadmap.md`](docs/roadmap.md) · Decisions: [`docs/adr/`](docs/adr/)
+
+## Highlights
+
+- **Tenant isolation enforced by the database.** Every business table carries an `org_id` and has Postgres
+  Row Level Security; policies are covered by pgTAP tests that prove one organization cannot read or write
+  another's data ([ADR 0002](docs/adr/0002-rls-and-dal.md)).
+- **Double bookings are impossible by construction.** An exclusion constraint on `calendar_blocks` rejects
+  overlapping stays at the database level, verified with concurrency tests
+  ([ADR 0003](docs/adr/0003-double-booking-exclusion-constraint.md)).
+- **The server owns the money.** Prices are computed by a pure, unit-tested pricing engine
+  (`lib/domain/pricing.ts`); amounts are integers in cents plus a currency, and the client never sends a price
+  ([ADR 0005](docs/adr/0005-pricing-schema.md), [0006](docs/adr/0006-pricing-engine.md)).
+- **One data-access layer.** All reads and writes go through `lib/dal` (server-only), which checks session
+  and membership; the service-role key is limited to cron jobs, webhooks and RPCs.
+- **Atomic multi-table operations** run as Postgres RPCs (`security definer`, fixed `search_path`), e.g.
+  creating a guest, a booking and its calendar hold in one transaction.
+- **Multi-tenant routing by host** in a single Next.js app, with `proxy.ts` limited to rewriting
+  ([ADR 0001](docs/adr/0001-multi-tenant-by-host.md)).
+- **iCal sync** with Airbnb/Booking: per-channel export feeds and a hardened import engine with scheduled
+  sync and conflict alerts.
+- **Bookkeeping module**: income/expense ledger, monthly and yearly reports, recurring expenses, and an
+  Excel export for the accountant ([ADR 0007](docs/adr/0007-finance-ledger.md)).
+- **Security and operations**: structured logging without PII, timing-safe cron authentication, hardened
+  uploads and iCal import, and regular dependency security updates.
 
 ## Stack
 
-- **Next.js 16** (App Router, `proxy.ts`), **React 19**, TypeScript estricto, **Tailwind v4**.
-- **Supabase**: Postgres (con RLS), Storage, Auth (desde Fase 1).
-- **Vercel** para despliegue.
+Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui · Supabase
+(Postgres + RLS, Auth, Storage) · Zod · Vitest · pgTAP · GitHub Actions · Vercel.
 
-## Arquitectura (resumen)
+## Quality gates
 
-- Multi-tenant por host: los sitios públicos se sirven en `app/sites/[host]/[lang]`.
-  `proxy.ts` resuelve host e idioma y refresca cookies de sesión; la autorización vive en `lib/dal/`.
-- Lecturas públicas con cliente `anon` en `lib/dal/public/`; el dashboard usa el cliente de sesión
-  y comprueba membresía. RLS aísla los datos por organización.
-- La service-role queda restringida a webhooks/cron/RPCs en `lib/supabase/admin.ts`.
-- El contenido, espacios, servicios, distancias, fotos y logo se editan en `/app/site/*` con login.
-  El panel antiguo y sus APIs se retiraron en SD-203.
-- Las unidades reservables (casa completa o habitación), capacidades y estado se gestionan en
-  `/app/site/units`; las inactivas se excluyen del inventario público para el futuro cotizador.
-- Las tarifas publicadas siguen visibles, pero su edición desde la aplicación queda temporalmente
-  pendiente hasta SD-207. El nuevo modelo y motor de precios se implementan en SD-205/206.
-- El modelo de temporadas, tarifas y cargos se documenta en el [ADR 0005](docs/adr/0005-pricing-schema.md);
-  el motor puro está en `lib/domain/pricing.ts`. El dashboard **Tarifas** (`/app/rates`, SD-207) permite
-  editar temporadas, precios por unidad y cargos; el simulador recalcula con los importes guardados en el servidor.
-  El adelanto del simulador es un escenario de prueba: no guarda una política ni crea reservas.
-  La sección pública **Tarifas** (SD-208) muestra «desde {moneda} X» calculado en cada petición desde las
-  tarifas numéricas de las unidades activas del tenant (`lib/domain/public-rates.ts`); la tabla `rate_tiers` ya no se lee.
-- Las decisiones sobre dominios, RLS, prevención de dobles reservas y pagos están en los ADRs 0001–0004;
-  consulta el roadmap para distinguir lo implementado de lo previsto.
+Every change goes through a pull request with:
 
-## Desarrollo local
+- `lint`, `typecheck`, unit tests with coverage and a production `build`;
+- `supabase db reset` + the full pgTAP suite against a fresh database;
+- an automated code review and, for anything touching auth, data access, migrations or public endpoints, a
+  separate security review;
+- Conventional Commits and squash merges, one ticket per PR.
 
-### Requisitos
+Database migrations reach production through a dedicated workflow that waits for a human approval
+([`docs/workflow.md`](docs/workflow.md)).
 
-- Node.js ≥ 24 (`engines.node` en `package.json`; coincide con el runtime por defecto de Vercel). El
-  mínimo técnico real para `--env-file` y `WebSocket` nativo es Node 22, pero se fija en 24 para que
-  `@types/node` y el runtime de producción no se desalineen.
-- [Docker](https://www.docker.com/) corriendo (lo usa la CLI de Supabase para levantar Postgres
-  localmente).
-- La [CLI de Supabase](https://supabase.com/docs/guides/cli) (se invoca vía `npx supabase`, no
-  hace falta instalarla globalmente).
+## How this project is built
 
-### Setup
+Development is agent-assisted ([Claude Code](https://claude.com/claude-code) and Codex) under explicit,
+versioned rules: tickets with acceptance criteria in the roadmap, architecture decision records, review
+subagents, and permissions that keep production data out of any agent's reach. The process lives in the
+repository so it is reviewable like the code: see [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md) and
+[`docs/workflow.md`](docs/workflow.md).
+
+## Status
+
+In active development, ticket by ticket. *Merged* means the code is in `main`; the acceptance criteria of each
+ticket are tracked in [`docs/roadmap.md`](docs/roadmap.md).
+
+| Area | State |
+|---|---|
+| Multi-tenant foundation: organizations, RLS, auth, host routing, dashboard | Merged |
+| Content, bookable units, seasons, rates and pricing engine | Merged |
+| Customizable public site template and appearance editor | Merged |
+| Calendar with overlap protection, iCal import/export, public availability | Merged |
+| Bookkeeping: ledger, reports, recurring expenses, Excel export | Merged |
+| Booking schema and hold expiration job | Merged |
+| Quote builder, booking-link checkout, manual payment | Next |
+| Online payments (Mercado Pago), guest CRM, custom domains | Planned |
+
+## Run it locally
+
+Requirements: Node.js ≥ 24 and Docker (used by the Supabase CLI to run Postgres locally).
 
 ```bash
 npm install
-cp .env.example .env.local   # completar con las credenciales locales de Supabase
-npx supabase start            # levanta Postgres + Storage + Studio en Docker
-```
-
-`supabase start` imprime las credenciales locales (`API_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY`, …).
-Para desarrollar **contra Supabase local**, usa `API_URL` como `SUPABASE_URL` y
-`NEXT_PUBLIC_SUPABASE_URL`, `ANON_KEY` como `NEXT_PUBLIC_SUPABASE_ANON_KEY` y
-`SERVICE_ROLE_KEY` como `SUPABASE_SERVICE_ROLE_KEY` en `.env.local`.
-No apuntes el entorno de desarrollo a producción.
-
-```bash
+cp .env.example .env.local     # fill in the local Supabase credentials
+npx supabase start             # Postgres + Auth + Storage + Studio in Docker
+npx supabase db reset          # apply migrations and seed data
 npm run dev
 ```
 
-Abre `http://saywa-lodges.localhost:3000/es` (o `/en`) para el sitio público,
-`http://demo.localhost:3000/es` para el segundo tenant y
-`http://app.localhost:3000/login` para acceder al dashboard.
-La raíz `http://localhost:3000` corresponde a la plataforma.
+`supabase start` prints the local `API_URL`, `ANON_KEY` and `SERVICE_ROLE_KEY`; use them in `.env.local`.
+Never point a development environment at production.
 
-### Base de datos
+Then open:
 
-El esquema vive versionado en `supabase/migrations/` (nunca se edita a mano la base remota — todo
-cambio es un archivo de migración nuevo; ver `supabase/CLAUDE.md` y la skill `.claude/skills/db-migration`).
+- `http://saywa-lodges.localhost:3000/es` — the first tenant's public site (`/en` for English)
+- `http://demo.localhost:3000/es` — a second tenant, to see the isolation
+- `http://app.localhost:3000/login` — the owner dashboard
 
-```bash
-npx supabase db reset   # recrea la BD local desde las migraciones + supabase/seed.sql
-```
-
-`supabase/seed.sql` carga organizaciones de Saywa y demo, usuarios de desarrollo, espacios,
-tarifas, servicios, distancias y referencias a fotos con prefijo `{org_id}/...`.
-Para cargar los archivos de imagen en Storage local desde el historial de Git:
-
-```bash
-npm run db:seed-storage
-```
-
-Este script obtiene credenciales del stack local y rechaza destinos remotos.
-
-Tras cualquier cambio de esquema, regenerar los tipos de TypeScript:
-
-```bash
-npx supabase gen types typescript --local > lib/database.types.ts
-```
-
-## Scripts
-
-| Comando | Qué hace |
+| Command | What it does |
 |---|---|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run build` | Build de producción |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run test` | Tests unitarios (Vitest) |
-| `npm run test:pricing` | Tests del motor y validadores de tarifas con cobertura (mínimo 90 % por archivo) |
-| `npm run db:seed-storage` | Cargar imágenes en Storage local |
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run lint` · `npm run typecheck` | ESLint · TypeScript |
+| `npm run test` | Unit tests (Vitest) |
+| `npm run test:pricing` | Pricing/finance domain tests with a 90 % per-file coverage floor |
+| `npx supabase test db` | pgTAP: RLS, RPCs and constraints |
+| `npm run where` | Current branch, PR, CI state and what to do next |
 
-## Estado del proyecto
+## Repository map
 
-En desarrollo activo, siguiendo el roadmap por tickets (`SD-XXX`) en [`docs/roadmap.md`](docs/roadmap.md).
-Convenciones de código y flujo de trabajo: [`CLAUDE.md`](CLAUDE.md).
+```
+app/sites/[host]/[lang]   public site of each tenant
+app/app/                  owner dashboard (login required)
+lib/dal/                  the only way to read/write data (session + membership checks)
+lib/domain/               pure business logic: pricing, dates, availability, finance
+supabase/migrations/      versioned schema with RLS      supabase/tests/   pgTAP
+docs/                     architecture, ADRs, roadmap, workflow
+```
