@@ -1667,6 +1667,21 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
     `lib/database.types.ts` se editó a mano (sin Docker): regenerar con `npx supabase gen types` y verificar que no haya diff.
 
 
+### [~] SD-900 · chore(workflow): single dev workflow, DB deploy with approval and recruiter-ready README
+`M` · Depende: — · Review: `R+S`
+- **Objetivo**: que el dueño intervenga solo cuando es imprescindible, que las migraciones lleguen a
+  producción sin comandos manuales y que el repositorio público se lea como un proyecto profesional.
+- **Alcance**: `docs/workflow.md` como proceso único para Claude Code y Codex (referenciado desde `AGENTS.md`
+  y `CLAUDE.md`); regla de una migración por ticket y cambios aditivos; workflow `deploy-db.yml` con aprobación
+  del dueño; protocolo de cierre «Te toca a ti»; `npm run where`; `docs/architecture.md`; README en inglés
+  (el español pasa a `README.es.md`).
+- **Criterios**
+  - [x] `npm run where` indica rama, worktree, PR, CI, migraciones nuevas y siguiente paso.
+  - [x] Las reglas de migración y el cierre «Te toca a ti» están en `AGENTS.md`, `supabase/CLAUDE.md` y la skill `ticket`.
+  - [ ] Environment `production` con *Required reviewers*, secretos y variable configurados (pasos del dueño en
+        `docs/workflow.md`).
+  - [ ] Una ejecución manual de *Deploy database* queda en «Waiting» y el *Dry run* confirma que la base remota está al día.
+
 ## Propuesta de ticket fuera del alcance actual
 
 - **Mantenimiento de dependencias y revisión de avisos de seguridad** (convertido en SD-705): `npm audit` durante SD-206

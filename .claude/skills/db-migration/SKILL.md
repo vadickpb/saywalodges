@@ -10,7 +10,11 @@ que llega a producción por CI.
 
 ## Pasos
 
-1. `npx supabase migration new <slug_descriptivo>` (no crear el archivo a mano).
+0. Reglas de proceso (ver `docs/workflow.md`): una migración por ticket; mientras el PR siga abierto se **edita**
+   la misma migración en vez de crear otra; una ya mergeada a `main` no se edita; los cambios deben ser aditivos
+   (el código se despliega antes que la BD).
+1. `git fetch && git rebase origin/main`, y entonces `npx supabase migration new <slug_descriptivo>` (no crear
+   el archivo a mano; así el timestamp es posterior al de todo lo mergeado).
 2. Escribe la migración en este orden:
    1. Tipos/enums.
    2. Tablas con `id uuid primary key default gen_random_uuid()`, `org_id`, `created_at`,
