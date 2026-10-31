@@ -34,3 +34,20 @@ aplicarse antes del deploy, el agente mergea solo después de avisar y de que el
 Los patrones Bash de `.claude/settings.json` son una defensa adicional, no un analizador completo del shell.
 Las prohibiciones anteriores obligan aunque una variante no coincida con un patrón; nunca se buscan formas
 alternativas de ejecutar una operación prohibida. Esta configuración no sustituye la protección de ramas.
+
+## Flujo de trabajo y cierre de tareas (Claude Code y Codex)
+
+El proceso completo está en [`docs/workflow.md`](docs/workflow.md); léelo antes de empezar un ticket. Resumen:
+
+- 1 ticket = 1 worktree = 1 rama `<type>/SD-XXX-slug` = 1 PR = como máximo 1 migración. Parte siempre de
+  `origin/main` actualizado. `npm run where` dice en qué rama estás y qué toca después.
+- Una migración que todavía no está en `main` se **edita** (no se crea otra para corregirla); una que ya está en
+  `main` no se edita jamás. Los cambios deben ser aditivos (expand → contract). Crea la migración después de
+  `git rebase origin/main`.
+- Las migraciones llegan a producción con el workflow *Deploy database*, que espera la aprobación del dueño.
+  El agente nunca aplica migraciones a la BD remota.
+- **Toda tarea termina con un bloque «Te toca a ti»**: cada paso pendiente del dueño con qué, dónde (rama,
+  worktree, URL), comando o clic exacto, cómo verificarlo y qué pasa si no se hace; o «Nada pendiente para ti».
+  Indica siempre la rama y el worktree en los que trabajaste. El dueño solo debe intervenir cuando es imprescindible.
+- Quien escribió el diff no es el único que lo revisa: lo revisa el otro agente o los subagentes `reviewer` y
+  `security-reviewer` antes del merge.
