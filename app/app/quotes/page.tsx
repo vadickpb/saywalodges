@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getPricingData } from "@/lib/dal/rates";
 import { listOpenQuotes } from "@/lib/dal/quotes";
 import { requireActiveOrg } from "@/lib/dal/organizations";
-import { quoteLinkUrl } from "@/lib/domain/quote-builder";
+import { limaDate, quoteLinkUrl } from "@/lib/domain/quote-builder";
 import { formatPrice } from "@/lib/domain/rates-management";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CopyButton } from "./copy-button";
@@ -31,8 +31,9 @@ export default async function QuotesPage() {
                 <li key={q.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span>{q.unitName} · {q.checkIn} → {q.checkOut} · {q.guests} huésped(es)</span>
                   <span className="flex flex-wrap items-center gap-2">
-                    <span>{formatPrice(q.totalCents, q.currency)} · vence {q.expiresAt.slice(0, 10)}</span>
-                    {open.origin && <CopyButton size="sm" text={quoteLinkUrl(open.origin, "es", q.token)} label="Copiar enlace" />}
+                    <span>{formatPrice(q.totalCents, q.currency)} · vence {limaDate(q.expiresAt)}</span>
+                    {open.origin && <CopyButton size="sm" text={quoteLinkUrl(open.origin, "es", q.token)} label="Copiar enlace"
+                      ariaLabel={`Copiar enlace de ${q.unitName}, ${q.checkIn} a ${q.checkOut}`} />}
                   </span>
                 </li>
               ))}

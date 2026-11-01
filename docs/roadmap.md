@@ -1261,8 +1261,11 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Notas / decisiones** ([ADR 0009](adr/0009-quote-persistence-session-rpc.md))
   - Escritura por **RPC de sesión** `create_quote` (no service-role). Límite de confianza documentado: la base no puede
     recalcular el precio, solo validar su coherencia; la frontera es la pertenencia a la organización.
-  - Nueva política `properties.deposit_percent` (por defecto 50 %, decisión del dueño, 2026-11-01). Aún sin pantalla de
-    edición (igual que `booking_hold_minutes`).
+  - Nueva política `properties.deposit_percent` (por defecto 50 %, decisión del dueño, 2026-11-01). Solo un `owner` puede
+    cambiarla (trigger). Aún sin pantalla de edición (igual que `booking_hold_minutes`).
+  - Revisión: `reviewer` y `security-reviewer` sin críticos. Aplicado: topes por organización y desglose acotado, bloqueo
+    contra carreras, comprobación de dirección pública antes de guardar, rechazo de fechas pasadas con mensaje claro.
+    Descartado: `console.error` de `lib/dal/calendar.ts` (código anterior, fuera del alcance).
   - Enlace compartido: `/{lang}/reservar/{token}`. La página que lo atiende es SD-403: **no compartir enlaces reales hasta que SD-403 esté desplegado**.
   - Sustituye a la rama `feat/SD-402-quote-builder`, que solo traía una vista previa (sin persistir) y una copia obsoleta de SD-401.
   - **Pendiente de verificar**: `supabase db reset` + pgTAP solo corrieron en el CI (Docker no disponible en local);

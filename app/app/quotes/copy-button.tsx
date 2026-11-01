@@ -1,12 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 type CopyState = "idle" | "copied" | "failed";
 
-export function CopyButton({ text, label, size = "default" }: { text: string; label: string; size?: "default" | "sm" }) {
+export function CopyButton({
+  text,
+  label,
+  ariaLabel,
+  size = "default",
+}: {
+  text: string;
+  label: string;
+  // Several copy buttons share one label on the page; this tells a screen reader which one is which.
+  ariaLabel?: string;
+  size?: "default" | "sm";
+}) {
   const [state, setState] = useState<CopyState>("idle");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
 
   async function copy() {
     try {
@@ -15,15 +31,16 @@ export function CopyButton({ text, label, size = "default" }: { text: string; la
     } catch {
       setState("failed");
     }
-    setTimeout(() => setState("idle"), 2500);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setState("idle"), 2500);
   }
 
   return (
     <>
-      <Button type="button" variant="outline" size={size} onClick={copy}>
+      <Button type="button" variant="outline" size={size} onClick={copy} aria-label={ariaLabel}>
         {state === "copied" ? "Copiado" : state === "failed" ? "No se pudo copiar" : label}
       </Button>
-      <span className="sr-only" aria-live="polite">{state === "copied" ? "Copiado al portapapeles" : ""}</span>
+      <span className="sr-only" role="status">{state === "copied" ? "Copiado al portapapeles" : ""}</span>
     </>
   );
 }

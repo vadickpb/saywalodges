@@ -34,19 +34,19 @@ export function QuoteForm({ units }: { units: { id: string; name: string }[] }) 
         <Button type="submit" name="intent" value="preview" variant="outline" disabled={pending}>{pending ? "Calculando…" : "Calcular"}</Button>
         <Button type="submit" name="intent" value="create" disabled={pending}>{pending ? "Generando…" : "Generar cotización"}</Button>
       </div>
-      <div aria-live="polite" className="space-y-3 text-sm sm:col-span-2">
+      <div className="space-y-3 text-sm sm:col-span-2">
         {state.error && <p role="alert" className="text-destructive">{state.error}</p>}
         {p && (
-          <div className="space-y-1">
+          <div role="status" className="space-y-1">
             <p>{p.unitName} · {p.nights} noche(s) · Total <strong>{formatPrice(p.totalCents, p.currency)}</strong>
               {p.depositCents > 0 && <> · Adelanto {formatPrice(p.depositCents, p.currency)}</>}</p>
             {p.available
               ? <p className="text-muted-foreground">Fechas libres ahora. La disponibilidad definitiva se valida al reservar.</p>
-              : <p role="alert" className="text-destructive">Estas fechas no están disponibles para esta unidad: no se podrá generar el enlace.</p>}
+              : <p className="text-destructive">Estas fechas no están disponibles para esta unidad: no se podrá generar el enlace.</p>}
           </div>
         )}
         {c && (
-          <div className="space-y-2 rounded-md border p-3">
+          <div role="status" className="space-y-2 rounded-md border p-3">
             <p className="font-medium">Cotización lista para {c.unitName} · vence el {c.expiresOn}</p>
             <Textarea readOnly rows={6} value={c.message} aria-label="Mensaje para WhatsApp" />
             <div className="flex flex-wrap gap-2">

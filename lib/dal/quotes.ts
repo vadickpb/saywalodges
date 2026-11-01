@@ -70,9 +70,10 @@ const createdSchema = z.object({
 });
 
 export type CreateQuoteResult =
-  | { ok: true; token: string; expiresAt: string; unitName: string; quote: StayQuote; origin: string | null }
+  | { ok: true; token: string; expiresAt: string; unitName: string; quote: StayQuote; origin: string }
   | { ok: false; reason: "not_found" }
   | { ok: false; reason: "unavailable" }
+  | { ok: false; reason: "no_address" }
   | { ok: false; reason: "pricing"; error: PricingError };
 
 // Persists a quote through create_quote (ADR 0009). The price is recomputed here from stored pricing; the
@@ -82,6 +83,8 @@ export async function createQuote(input: QuoteRequest): Promise<CreateQuoteResul
   if (!prepared) return { ok: false, reason: "not_found" };
   if (!prepared.result.ok) return { ok: false, reason: "pricing", error: prepared.result.error };
   if (!prepared.available) return { ok: false, reason: "unavailable" };
+  // Before storing anything: a quote nobody can open would still use up the org's quota.
+  if (!prepared.origin) return { ok: false, reason: "no_address" };
   const { quote } = prepared.result;
   const { ctx } = prepared;
 

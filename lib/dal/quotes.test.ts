@@ -12,13 +12,23 @@ const ID = "2c19ef14-e784-4a6b-aafd-82af02488d42";
 const TOKEN = "a".repeat(64);
 const input = { unitId: ID, checkIn: "2027-02-01", checkOut: "2027-02-03", guests: 2 };
 
-// A query builder whose every step returns itself and which resolves to `result` when awaited.
-function builder(result: unknown) {
+// Every call made on a query builder: [table, method, args]. Tests assert on the filters, not only on the data.
+let calls: [string, string, unknown[]][] = [];
+
+// A query builder whose every step returns itself, records the call, and resolves to `result` when awaited.
+function builder(table: string, result: unknown) {
   const b: Record<string, unknown> = {};
-  for (const m of ["select", "eq", "gt", "in", "order", "overlaps", "or", "limit", "single"]) b[m] = () => b;
+  for (const m of ["select", "eq", "gt", "in", "order", "overlaps", "or", "limit", "single"]) {
+    b[m] = (...args: unknown[]) => {
+      calls.push([table, m, args]);
+      return b;
+    };
+  }
   b.then = (resolve: (v: unknown) => unknown) => resolve(result);
   return b;
 }
+const called = (table: string, method: string, ...args: unknown[]) =>
+  calls.some(([t, m, a]) => t === table && m === method && args.every((x, i) => a[i] === x));
 
 const pricing = {
   currency: "PEN",
@@ -31,13 +41,14 @@ let tables: Record<string, unknown>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  calls = [];
   tables = {
     properties: { data: { deposit_percent: 50, subdomain: "casa", custom_domain: null }, error: null },
     calendar_blocks: { data: [], error: null },
   };
   mocks.ctx.mockResolvedValue({ supabase: { from: mocks.from, rpc: mocks.rpc }, orgId: "org-1", propertyId: "prop-1" });
   mocks.pricing.mockResolvedValue(pricing);
-  mocks.from.mockImplementation((table: string) => builder(tables[table]));
+  mocks.from.mockImplementation((table: string) => builder(table, tables[table]));
   mocks.rpc.mockResolvedValue({ data: { quote_id: ID, token: TOKEN, expires_at: "2027-01-10T15:00:00.000Z" }, error: null });
 });
 
@@ -53,6 +64,22 @@ describe("createQuote", () => {
     });
     expect(args.p_breakdown).toMatchObject({ accommodationCents: 20000, feesCents: 5000, totalCents: 25000, depositPercent: 50 });
     expect(Object.keys(args)).not.toContain("p_currency");
+  });
+  it("scopes every read to the verified org, property and unit, and ignores expired holds", async () => {
+    await createQuote(input);
+    expect(called("properties", "eq", "org_id", "org-1")).toBe(true);
+    expect(called("properties", "eq", "id", "prop-1")).toBe(true);
+    expect(called("calendar_blocks", "eq", "org_id", "org-1")).toBe(true);
+    expect(called("calendar_blocks", "eq", "property_id", "prop-1")).toBe(true);
+    expect(called("calendar_blocks", "eq", "unit_id", ID)).toBe(true);
+    expect(called("calendar_blocks", "overlaps", "period", "[2027-02-01,2027-02-03)")).toBe(true);
+    const or = calls.find(([t, m]) => t === "calendar_blocks" && m === "or");
+    expect(String(or?.[2][0])).toMatch(/^expires_at\.is\.null,expires_at\.gt\.\d{4}-\d{2}-\d{2}T/);
+  });
+  it("does not store anything when the property has no public address", async () => {
+    tables.properties = { data: { deposit_percent: 50, subdomain: " ", custom_domain: null }, error: null };
+    expect(await createQuote(input)).toEqual({ ok: false, reason: "no_address" });
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
   it("takes the deposit from the property policy", async () => {
     tables.properties = { data: { deposit_percent: 30, subdomain: "casa", custom_domain: null }, error: null };
@@ -128,6 +155,10 @@ describe("listOpenQuotes", () => {
     expect(r.origin).toBe("https://casa.saywa.test");
     expect(r.quotes.map((q) => q.id)).toEqual(["q2"]);
     expect(r.quotes[0]).toMatchObject({ unitName: "Casa", totalCents: 25000 });
+    expect(called("quotes", "eq", "org_id", "org-1")).toBe(true);
+    expect(called("bookings", "eq", "org_id", "org-1")).toBe(true);
+    expect(called("units", "eq", "org_id", "org-1")).toBe(true);
+    expect(calls.some(([t, m, a]) => t === "quotes" && m === "gt" && a[0] === "expires_at")).toBe(true);
   });
   it("is empty without an active org", async () => {
     mocks.ctx.mockResolvedValueOnce(null);

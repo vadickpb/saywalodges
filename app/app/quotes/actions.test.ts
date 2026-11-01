@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ preview: vi.fn(), create: vi.fn(), revalidate: vi.fn() }));
 vi.mock("@/lib/dal/quotes", () => ({ previewQuote: mocks.preview, createQuote: mocks.create, QUOTES_ERROR: "Error seguro" }));
@@ -18,9 +18,13 @@ const created = { ok: true, token: "t".repeat(64), expiresAt: "2027-01-10T15:00:
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // 2026-11-01 10:00 in Lima: the stays used below (2027) are in the future, and "today" is well defined.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-01T15:00:00.000Z"));
   mocks.preview.mockResolvedValue(okResult);
   mocks.create.mockResolvedValue(created);
 });
+afterEach(() => vi.useRealTimers());
 
 describe("submitQuoteAction · preview", () => {
   it("forwards only the scenario, ignoring forged amounts/currency/org/deposit", async () => {
@@ -44,6 +48,22 @@ describe("submitQuoteAction · preview", () => {
     expect((await submitQuoteAction({}, form())).error).toContain("unidad");
     mocks.preview.mockRejectedValueOnce(new Error("pg: secret detail"));
     expect((await submitQuoteAction({}, form())).error).toBe("Error seguro");
+  });
+});
+
+describe("submitQuoteAction · past dates (Lima)", () => {
+  it("rejects a check-in before today in both intents, without touching the DAL", async () => {
+    const past = { checkIn: "2026-10-31", checkOut: "2026-11-02" };
+    expect((await submitQuoteAction({}, form(past))).error).toContain("anterior a hoy");
+    expect((await submitQuoteAction({}, form({ ...past, intent: "create" }))).error).toContain("anterior a hoy");
+    expect(mocks.preview).not.toHaveBeenCalled();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+  it("accepts today's date in Lima, even when it is already tomorrow in UTC", async () => {
+    vi.setSystemTime(new Date("2026-11-02T03:00:00.000Z")); // 22:00 of 2026-11-01 in Lima
+    const s = await submitQuoteAction({}, form({ checkIn: "2026-11-01", checkOut: "2026-11-03" }));
+    expect(s.error).toBeUndefined();
+    expect(mocks.preview).toHaveBeenCalled();
   });
 });
 
@@ -75,7 +95,7 @@ describe("submitQuoteAction · create", () => {
     expect((await submitQuoteAction({}, form({ intent: "create" }))).error).toContain("no están disponibles");
     mocks.create.mockResolvedValueOnce({ ok: false, reason: "pricing", error: { code: "MIN_NIGHTS", requiredNights: 3 } });
     expect((await submitQuoteAction({}, form({ intent: "create" }))).error).toContain("3");
-    mocks.create.mockResolvedValueOnce({ ...created, origin: null });
+    mocks.create.mockResolvedValueOnce({ ok: false, reason: "no_address" });
     expect((await submitQuoteAction({}, form({ intent: "create" }))).error).toContain("dirección pública");
     mocks.create.mockRejectedValueOnce(new Error("pg: secret detail"));
     expect((await submitQuoteAction({}, form({ intent: "create" }))).error).toBe("Error seguro");

@@ -7,7 +7,7 @@
 --         Demo  ee204001-...0002 (property 57f914ac-3890-47c1-9d6d-1492782cf712, PEN, max 4 guests)
 -- Dates are relative to today in Lima so the file does not expire.
 begin;
-select plan(37);
+select plan(43);
 
 create temp table res (k text primary key, v jsonb);
 grant all on res to anon, authenticated, service_role;
@@ -120,8 +120,8 @@ select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715
 select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715817',
   'ee204001-0000-4000-8000-000000000001', (now() at time zone 'America/Lima')::date + 30,
   (now() at time zone 'America/Lima')::date + 33, 4, 66000, 33000,
-  '{"accommodationCents":60000,"feesCents":6000,"totalCents":66000,"depositPercent":50}'::jsonb, 721)$$,
-  '22023', null, 'A validity above 720 hours is rejected');
+  '{"accommodationCents":60000,"feesCents":6000,"totalCents":66000,"depositPercent":50}'::jsonb, 169)$$,
+  '22023', null, 'A validity above 168 hours is rejected');
 select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715817',
   'ee204001-0000-4000-8000-000000000001', (now() at time zone 'America/Lima')::date + 30,
   (now() at time zone 'America/Lima')::date + 33, 4, 66001, 33001,
@@ -151,6 +151,22 @@ select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715
   (now() at time zone 'America/Lima')::date + 33, 4, 66000, 33000,
   '{"accommodationCents":60000,"feesCents":6000,"totalCents":66000,"depositPercent":50}'::jsonb)$$,
   '22004', null, 'A null argument is rejected');
+select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715817',
+  'ee204001-0000-4000-8000-000000000001', (now() at time zone 'America/Lima')::date + 30,
+  (now() at time zone 'America/Lima')::date + 33, 4, 66000, 33000,
+  '{"accommodationCents":60000,"feesCents":6000,"totalCents":66000,"depositPercent":50,"padding":"x"}'::jsonb)$$,
+  '22023', null, 'A breakdown with an unknown key is rejected');
+select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715817',
+  'ee204001-0000-4000-8000-000000000001', (now() at time zone 'America/Lima')::date + 30,
+  (now() at time zone 'America/Lima')::date + 33, 4, 66000, 33000,
+  (select jsonb_build_object('accommodationCents', 60000, 'feesCents', 6000, 'totalCents', 66000,
+    'depositPercent', 50, 'nights', jsonb_agg(i)) from generate_series(1, 367) as i))$$,
+  '22023', null, 'A breakdown with more than 366 nights is rejected');
+select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715817',
+  'ee204001-0000-4000-8000-000000000001', (now() at time zone 'America/Lima')::date + 30,
+  (now() at time zone 'America/Lima')::date + 33, 4, 66000, 33000,
+  '{"accommodationCents":59999.5,"feesCents":6000.5,"totalCents":66000,"depositPercent":50}'::jsonb)$$,
+  '22023', null, 'Fractional cents in the breakdown are rejected');
 select throws_ok($$insert into public.quotes (org_id, property_id, unit_id, token, check_in, check_out, guests, currency,
   total_cents, deposit_cents, expires_at)
   values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654',
@@ -198,13 +214,28 @@ select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715
   '{"accommodationCents":101,"feesCents":0,"totalCents":101,"depositPercent":50}'::jsonb)$$,
   '22023', null, 'Rounding the half cent down is rejected');
 
--- ─── Cap on open quotes (per org) ───────────────────────────────────────────
+-- ─── Caps per org: quotes created per day, then quotes open at the same time ─
 reset role;
 insert into public.quotes (org_id, property_id, unit_id, token, check_in, check_out, guests, currency,
-  total_cents, deposit_cents, expires_at)
+  total_cents, deposit_cents, created_at, expires_at)
+select 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654',
+  'ee204001-0000-4000-8000-000000000001', rpad('day' || i, 40, 'x'), '2031-01-01', '2031-01-02', 1, 'USD', 1000, 500,
+  now() - interval '2 hours', now() - interval '1 hour'
+from generate_series(1, 300) as i;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
+select throws_ok($$select public.create_quote('bf88f504-051f-4fdc-ab73-4fa12d715817',
+  'ee204001-0000-4000-8000-000000000001', (now() at time zone 'America/Lima')::date + 70,
+  (now() at time zone 'America/Lima')::date + 71, 1, 101, 51,
+  '{"accommodationCents":101,"feesCents":0,"totalCents":101,"depositPercent":50}'::jsonb)$$,
+  '54000', null, 'An org that created 300 quotes today cannot create more, even if none is still open');
+reset role;
+delete from public.quotes where token like 'day%';
+insert into public.quotes (org_id, property_id, unit_id, token, check_in, check_out, guests, currency,
+  total_cents, deposit_cents, created_at, expires_at)
 select 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654',
   'ee204001-0000-4000-8000-000000000001', rpad('cap' || i, 40, 'x'), '2031-01-01', '2031-01-02', 1, 'USD', 1000, 500,
-  now() + interval '1 day'
+  now() - interval '2 days', now() + interval '1 day'
 from generate_series(1, 500) as i;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
@@ -221,6 +252,16 @@ select lives_ok($$insert into res select 'demo', public.create_quote('ff24bacc-4
   'The cap is per org: another org can still create quotes');
 select ok(exists (select 1 from public.quotes q where q.id = (select (v ->> 'quote_id')::uuid from res where k = 'demo')
   and q.currency = 'PEN'), 'The currency comes from the property (PEN for Demo), not from the caller');
+reset role;
+
+-- ─── Only an owner changes the deposit policy ───────────────────────────────
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true);
+select throws_ok($$update public.properties set deposit_percent = 10 where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
+  '42501', null, 'A staff member cannot change the deposit policy');
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
+select lives_ok($$update public.properties set deposit_percent = 40 where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
+  'An owner can change the deposit policy');
 reset role;
 
 select * from finish();
