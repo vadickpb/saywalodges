@@ -1,7 +1,9 @@
 # Saywa Direct — Roadmap técnico
 
-SaaS multi-tenant para que alojamientos independientes en Perú conviertan consultas de WhatsApp/Instagram
-en reservas directas pagadas. Fuera de alcance del MVP: PMS completo, channel manager por API,
+Sistema de reservas directas que se **instala por cliente** (una instalación por alojamiento, con garantía de 3 meses
+y mantenimiento mensual; [ADR 0010](adr/0010-installation-per-client.md)) para que alojamientos independientes en Perú
+conviertan consultas de WhatsApp/Instagram en reservas directas pagadas. Internamente conserva el modelo multi-tenant
+(`org_id` + RLS) con una organización por instalación. Fuera de alcance del MVP: PMS completo, channel manager por API,
 marketplace, precios dinámicos.
 
 Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `ticket` (`.claude/skills/ticket`).
@@ -11,7 +13,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Id**: `SD-<fase><nn>` (SD-101 = Fase 1, ticket 01). Rama: `<type>/SD-101-slug`.
 - **Tamaño**: `S` ≤ 1 día · `M` 2–3 días · `L` 4–5 días. Un `L` que crece se divide.
 - **Review**: `R` = `reviewer` · `R+S` = `reviewer` + `security-reviewer`.
-- **Estado**: `[ ]` pendiente · `[~]` en curso · `[x]` hecho.
+- **Estado**: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[-]` descartado (con motivo).
 
 ### Definition of Done (todos los tickets)
 
@@ -1320,9 +1322,10 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 `S` · Depende: SD-405 · Review: `R`
 - **Alcance**: `lib/payments/provider.ts` (`createCheckout`, `handleWebhook`); adaptar pago manual. ADR 0004.
 
-### [ ] SD-502 · feat(settings): per-tenant Mercado Pago credentials
+### [ ] SD-502 · feat(settings): per-installation Mercado Pago credentials
 `M` · Depende: SD-501 · Review: `R+S`
-- **Alcance**: credenciales por org cifradas (Supabase Vault), nunca devueltas al cliente; prueba de conexión.
+- **Alcance**: credenciales de Mercado Pago **por instalación** (ADR 0010: una organización por instalación), cifradas
+  (Supabase Vault) o como variables de entorno del proyecto, nunca devueltas al cliente; prueba de conexión.
 - **Criterios**
   - [ ] Las credenciales no aparecen en respuestas, logs ni en el bundle del cliente.
 
@@ -1355,16 +1358,18 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [ ] Sin consentimiento, el huésped no aparece en exportaciones de marketing.
 
-### [ ] SD-603 · feat(platform): tenant provisioning (superadmin)
+### [-] SD-603 · feat(platform): tenant provisioning (superadmin)
 `M` · Depende: SD-105 · Review: `R+S`
-- **Alcance**: rol superadmin (tabla aparte, no en `memberships`); crear org, propiedad, subdominio e invitar owner por email.
+- **Descartado (ADR 0010)**: con una instalación por cliente no hay plataforma compartida que administrar; el alta de
+  organización, propiedad y owner la hace el script de SD-1002.
+- ~~**Alcance**: rol superadmin (tabla aparte, no en `memberships`); crear org, propiedad, subdominio e invitar owner por email.~~
 
-### [ ] SD-604 · feat(platform): custom domains
+### [-] SD-604 · feat(platform): custom domains
 `L` · Depende: SD-603 · Review: `R+S`
-- **Alcance**: alta de dominio vía Vercel Domains API, estado de verificación DNS e instrucciones en el dashboard,
-  redirección www ↔ apex.
-- **Criterios**
-  - [ ] `saywalodges.com` servido como tenant en producción.
+- **Descartado (ADR 0010)**: el dominio de cada cliente se configura una vez en su proyecto Vercel (runbook de SD-1002) y
+  el enrutado lo resuelve el modo instalación (SD-1001). Su criterio («`saywalodges.com` servido en producción») pasa a SD-1001.
+- ~~**Alcance**: alta de dominio vía Vercel Domains API, estado de verificación DNS e instrucciones en el dashboard,
+  redirección www ↔ apex.~~
 
 ### [ ] SD-605 · feat: audit log
 `S` · Depende: SD-406 · Review: `R+S`
@@ -1375,6 +1380,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Alcance**: monitoreo de errores y logs estructurados sin PII; alertas de fallo de cron/webhook.
 - **Estado**: logs estructurados + `onRequestError` + cron/iCal hechos (`docs/observability.md`). Falta la alerta remota:
   requiere elegir y configurar un servicio externo (decisión del dueño); el ticket sigue abierto.
+- **Cambia (ADR 0010)**: la alerta remota se resuelve como salud central de todas las instalaciones en SD-1004.
 
 ---
 
@@ -1389,14 +1395,19 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 `S` · Depende: M4 · Review: `R`
 - **Alcance**: Supabase Pro (sin pausa, backups), migraciones aplicadas por CI, runbook (restaurar backup,
   rotar secretos, incidente de doble reserva).
+- **Cambia (ADR 0010)**: todo se aplica **por instalación**; las migraciones llegan a cada proyecto con SD-1003.
 
 ### [ ] SD-703 · docs: portfolio polish
 `S` · Depende: M6 · Review: `R`
 - **Alcance**: diagrama de arquitectura, capturas, tenant demo público, sección "decisiones técnicas" en el README
   enlazando ADRs.
+- **Cambia (ADR 0010)**: el "tenant demo público" es la instalación demo de SD-1007.
 
 ### [ ] SD-704 · feat(marketing): Saywa Direct landing
 `M` · Depende: SD-105, SD-107 · Review: `R`
+- **Cambia (ADR 0010)**: la landing comercial no va dentro del producto (en una instalación el dominio raíz es del
+  cliente). Su trabajo (PR #45) se reutiliza en la web del vendedor, SD-1006, con la oferta de instalación + garantía +
+  mantenimiento. El PR #45 no se mergea en este repositorio.
 - **Objetivo**: atraer dueños de alojamientos (clientes del SaaS) y convertir visitas en conversaciones de venta.
 - **Alcance**: landing comercial en el dominio raíz: hero con la propuesta de valor ("Convierte tus chats de
   WhatsApp en reservas pagadas"), problema y solución, cómo funciona en 3 pasos, funcionalidades (link de reserva,
@@ -1681,6 +1692,73 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - [ ] Environment `production` con *Required reviewers*, secretos y variable configurados (pasos del dueño en
         `docs/workflow.md`).
   - [ ] Una ejecución manual de *Deploy database* queda en «Waiting» y el *Dry run* confirma que la base remota está al día.
+
+## Fase 10 — Instalación por cliente (ADR 0010)
+
+Orden: después de completar el flujo de reservas (Fase 4) para SD-1008; SD-1001 a SD-1007 pueden avanzar en paralelo.
+
+### [x] SD-1000 · docs: installation-per-client model
+`S` · Depende: — · Review: `R`
+- **Alcance**: [ADR 0010](adr/0010-installation-per-client.md); roadmap y README actualizados (SD-603 y SD-604
+  descartados; SD-502, SD-606, SD-702, SD-703 y SD-704 ajustados; esta fase añadida).
+
+### [ ] SD-1001 · feat(routing): installation mode
+`S` · Depende: — · Review: `R+S`
+- **Alcance**: `DEPLOYMENT_MODE=installation` hace que el dominio raíz sirva el sitio del alojamiento y `app.` el panel
+  (`proxy.ts#resolveHost`, `lib/dal/public/site.ts`, `app/sitemap.ts`, `app/robots.ts`, enlace «Ver mi sitio»,
+  `siteOrigin` del cotizador, cron de iCal). `NEXT_PUBLIC_SITE_URL` apunta al panel (redirect del reset de contraseña).
+  Sin la variable, todo se comporta como hoy.
+- **Criterios**
+  - [ ] Tests de `resolveHost` en ambos modos (raíz, `app.`, `www`, host desconocido).
+  - [ ] `saywalodges.com` servido como instalación nº 1 en producción (criterio heredado de SD-604).
+
+### [ ] SD-1002 · chore(ops): client install script and runbook
+`M` · Depende: SD-1001 · Review: `R+S`
+- **Alcance**: `scripts/install-client.mjs` + `docs/runbook-instalacion.md`: proyecto Supabase y migraciones,
+  organización, propiedad y owner (Auth + `memberships role='owner'`, invitación), proyecto Vercel con variables y
+  dominios, cron (`expire-holds`, `ical-sync`), pasos de Resend. Service-role solo en el script, nunca en la app (ADR 0002).
+- **Criterios**
+  - [ ] Una instalación de prueba se levanta desde cero solo con el script y el runbook; el owner entra al panel.
+
+### [ ] SD-1003 · ci: installation registry and multi-project DB deploy
+`S` · Depende: SD-1002 · Review: `R+S`
+- **Alcance**: `deploy/installations.json` (nombre, ref de Supabase, proyecto Vercel, dominio; sin secretos);
+  `deploy-db.yml` como *matrix* con un Environment por instalación y aprobación del dueño.
+- **Criterios**
+  - [ ] Un *dry run* contra dos instalaciones pide una aprobación por cada una.
+
+### [ ] SD-1004 · feat(ops): central installation health
+`M` · Depende: SD-1003 · Review: `R+S`
+- **Alcance**: `/api/health` protegida (versión, última migración, estado de los cron); tarea programada del vendedor
+  que consulta cada instalación y avisa por email si algo falla. Reemplaza la alerta pendiente de SD-606.
+- **Criterios**
+  - [ ] Detener el cron de una instalación de prueba genera un aviso.
+
+### [ ] SD-1005 · feat(email): per-installation branding
+`S` · Depende: SD-306 · Review: `R`
+- **Alcance**: `lib/email/messages.ts` usa el nombre de la propiedad; «Powered by Saywa Direct» opcional en el pie.
+
+### [ ] SD-1006 · feat(marketing): vendor sales site
+`M` · Depende: — · Review: `R`
+- **Alcance**: sitio comercial aparte (repo o proyecto Vercel propio) que reutiliza el trabajo del PR #45; oferta de
+  instalación + 3 meses de garantía + mantenimiento mensual; enlace a la demo (SD-1007) y CTA a WhatsApp.
+
+### [ ] SD-1007 · feat(demo): shared demo installation with nightly reset
+`M` · Depende: SD-1002 · Review: `R+S`
+- **Alcance**: instalación demo con datos ficticios (sin datos reales de Saywa), usuario de prueba con rol `staff`,
+  banner «Demo: se reinicia cada noche», seed de demo propio y reseteo programado.
+- **Criterios**
+  - [ ] Cambios hechos en la demo desaparecen tras el reseteo.
+
+### [ ] SD-1008 · feat(whatsapp): WhatsApp Business Cloud API
+`L` · Depende: SD-405, SD-406 · Review: `R+S`
+- **Alcance**: `lib/whatsapp/` con el patrón de `lib/email/` (config, envío, modo simulación); credenciales por
+  instalación en variables de entorno; plantillas aprobadas por Meta (confirmación de reserva, recordatorio del adelanto
+  antes de que venza el hold, recordatorio de llegada, post-estadía); webhook `/api/whatsapp/webhook` con verificación de
+  `X-Hub-Signature-256`; consentimiento (opt-in) del huésped; logs sin datos personales. Trámite de Meta por cliente
+  (verificación del negocio, número, plantillas): paso del dueño.
+- **Criterios**
+  - [ ] Webhook con firma inválida → 401; sin opt-in no se envía nada (tests).
 
 ## Propuesta de ticket fuera del alcance actual
 

@@ -2,9 +2,10 @@
 
 [![CI](https://github.com/vadickpb/saywalodges/actions/workflows/ci.yml/badge.svg)](https://github.com/vadickpb/saywalodges/actions/workflows/ci.yml)
 
-SaaS multi-tenant de reservas directas para alojamientos independientes en Perú: web con dominio
+Sistema de reservas directas para alojamientos independientes en Perú, **instalado por cliente**: web con dominio
 propio, tarifas, cotizador/link de reserva, pagos, calendario sincronizado con Airbnb/Booking (iCal)
-y CRM básico de huéspedes — sin comisión por reserva.
+y CRM básico de huéspedes — sin comisión por reserva. Cada alojamiento tiene su propia instalación aislada, con
+3 meses de garantía y mantenimiento mensual ([ADR 0010](docs/adr/0010-installation-per-client.md)).
 
 Este repositorio nace de **Saywa Lodges** (un lodge real en el Valle Sagrado, Urubamba), que hoy es
 el primer tenant de la plataforma mientras evoluciona hacia multi-tenant. Roadmap completo y estado
