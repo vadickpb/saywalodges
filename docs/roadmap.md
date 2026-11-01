@@ -1248,13 +1248,30 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     - Sin revisión `reviewer`/`security-reviewer` (pedido explícito): obligatoria antes del PR según `CLAUDE.md`.
     - Migración sin aplicar en remoto: aplicarla es del dueño antes de cualquier código que dependa de ella.
 
-### [ ] SD-402 · feat(dashboard): quote builder with WhatsApp share
+### [~] SD-402 · feat(dashboard): quote builder with WhatsApp share
 `M` · Depende: SD-401 · Review: `R+S`
 - **Alcance**: cotizar (unidad, fechas, huéspedes) → `quoteStay` en servidor → guardar quote con token y vencimiento;
   botón "Copiar para WhatsApp" con mensaje es/en y link; lista de cotizaciones abiertas.
 - **Criterios**
-  - [ ] El total guardado lo calcula el servidor aunque el cliente envíe otro.
-  - [ ] Cotizar fechas no disponibles muestra aviso antes de generar el link.
+  - [x] El total guardado lo calcula el servidor aunque el cliente envíe otro. El formulario solo envía unidad, fechas,
+        huéspedes e idioma (zod descarta el resto; test de la acción). La DAL recalcula con `quoteStay` y manda a la RPC
+        `create_quote` importes del servidor sin parámetro de moneda (test de la DAL). La base comprueba coherencia con el
+        desglose y con `properties.deposit_percent` (pgTAP `0022_create_quote.test.sql`).
+  - [x] Cotizar fechas no disponibles muestra aviso antes de generar el link; si siguen ocupadas al generar, no se guarda nada.
+- **Notas / decisiones** ([ADR 0009](adr/0009-quote-persistence-session-rpc.md))
+  - Escritura por **RPC de sesión** `create_quote` (no service-role). Límite de confianza documentado: la base no puede
+    recalcular el precio, solo validar su coherencia; la frontera es la pertenencia a la organización.
+  - Nueva política `properties.deposit_percent` (por defecto 50 %, decisión del dueño, 2026-11-01). Solo un `owner` puede
+    cambiarla (trigger). Aún sin pantalla de edición (igual que `booking_hold_minutes`).
+  - Revisión: `reviewer` y `security-reviewer` sin críticos. Aplicado: topes por organización y desglose acotado, bloqueo
+    contra carreras, comprobación de dirección pública antes de guardar, rechazo de fechas pasadas con mensaje claro.
+    Descartado: `console.error` de `lib/dal/calendar.ts` (código anterior, fuera del alcance).
+  - Enlace compartido: `/{lang}/reservar/{token}`. La página que lo atiende es SD-403: **no compartir enlaces reales hasta que SD-403 esté desplegado**.
+  - Sustituye a la rama `feat/SD-402-quote-builder`, que solo traía una vista previa (sin persistir) y una copia obsoleta de SD-401.
+  - **Pendiente de verificar**: `supabase db reset` + pgTAP solo corrieron en el CI (Docker no disponible en local);
+    `lib/database.types.ts` se editó a mano; prueba manual en el navegador contra Supabase local sin hacer.
+  - **Despliegue**: la migración `20261101151809_create_quote.sql` debe aplicarse antes de usar `/app/quotes`: sin ella la
+    página de cotizaciones falla (el resto del panel no depende de ella).
 
 ### [ ] SD-403 · feat(site): booking link checkout
 `L` · Depende: SD-402 · Review: `R+S`
