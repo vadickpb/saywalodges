@@ -24,7 +24,11 @@ const envSchema = z.object({
   DEPLOYMENT_MODE: z.enum(["platform", "installation"]).default("platform"),
   // Public URL of the panel (password-reset redirects, dashboard metadata). Required in production when
   // DEPLOYMENT_MODE=installation (checked below); otherwise config/site.ts keeps its historical default.
-  NEXT_PUBLIC_SITE_URL: z.string().url("NEXT_PUBLIC_SITE_URL must be a valid URL").optional(),
+  // An empty value counts as unset (config/site.ts reads it with `||`), so a blank variable in Vercel keeps working.
+  NEXT_PUBLIC_SITE_URL: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().url("NEXT_PUBLIC_SITE_URL must be a valid URL").optional(),
+  ),
   // Server-only (SD-408). Bearer secret for /api/cron/*. Optional so dev/build work
   // without it: when absent or shorter than 32 chars the cron route refuses every call.
   CRON_SECRET: z.string().optional(),
@@ -57,7 +61,8 @@ function loadEnv() {
   if (process.env.NODE_ENV === "production" && parsed.data.DEPLOYMENT_MODE === "installation") {
     const siteUrl = parsed.data.NEXT_PUBLIC_SITE_URL;
     const expectedHost = `app.${parsed.data.ROOT_DOMAIN}`;
-    if (!siteUrl || new URL(siteUrl).host !== expectedHost) {
+    const url = siteUrl ? new URL(siteUrl) : null;
+    if (!url || url.origin !== `https://${expectedHost}` || url.username || url.password) {
       throw new Error(
         `Invalid environment configuration:\n  - NEXT_PUBLIC_SITE_URL: required in production when DEPLOYMENT_MODE=installation and must be the panel URL (https://${expectedHost}).\n\nCheck .env.local against .env.example.`
       );

@@ -70,6 +70,13 @@ export function decideRoute(input: { host: string; pathname: string; rootDomain:
   return { type: "site", siteIdentifier: host };
 }
 
+// Whether the proxy should refresh the session cookie for this host. In installation mode the public site
+// (the root domain) never carries a session: login lives on app.<root>. Not touching it there keeps a session
+// cookie from ever being re-issued on the public site, even if a future change added a `Domain` attribute.
+export function shouldRefreshSession(input: { host: string; rootDomain: string; mode: DeploymentMode }): boolean {
+  return !(input.mode === "installation" && input.host === input.rootDomain);
+}
+
 // Public host of a property's website: where the "Ver mi sitio" link and shared links point.
 export function siteHostFor(input: {
   mode: DeploymentMode;

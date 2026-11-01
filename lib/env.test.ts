@@ -102,10 +102,31 @@ describe("env", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://saywalodges.com";
     await expect(import("./env")).rejects.toThrow(/app\.cliente\.pe/);
     vi.resetModules();
+    process.env.NEXT_PUBLIC_SITE_URL = "http://app.cliente.pe";
+    await expect(import("./env")).rejects.toThrow(/app\.cliente\.pe/);
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_SITE_URL = "https://user:pass@app.cliente.pe";
+    await expect(import("./env")).rejects.toThrow(/app\.cliente\.pe/);
+    vi.resetModules();
     process.env.NEXT_PUBLIC_SITE_URL = "https://app.cliente.pe";
     const { env } = await import("./env");
     expect(env.DEPLOYMENT_MODE).toBe("installation");
     vi.unstubAllEnvs();
+  });
+
+  it("treats an empty NEXT_PUBLIC_SITE_URL as unset, like config/site.ts does", async () => {
+    setValidEnv();
+    process.env.NEXT_PUBLIC_SITE_URL = "";
+    vi.stubEnv("NODE_ENV", "production");
+    const { env } = await import("./env");
+    expect(env.NEXT_PUBLIC_SITE_URL).toBeUndefined();
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects a malformed NEXT_PUBLIC_SITE_URL", async () => {
+    setValidEnv();
+    process.env.NEXT_PUBLIC_SITE_URL = "not-a-url";
+    await expect(import("./env")).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
   });
 
   it("installation mode outside production does not require NEXT_PUBLIC_SITE_URL", async () => {

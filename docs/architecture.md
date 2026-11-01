@@ -27,6 +27,9 @@ autoriza: la autorización real vive en la capa de datos. Las decisiones de enru
   `properties.custom_domain = ROOT_DOMAIN`); `app.<ROOT_DOMAIN>` sirve panel, login, auth y **todas** las rutas `/api/*`;
   cualquier otro host da 404 sin consultar la base.
 
+En ambos modos, una petición rechazada con 404 (por ejemplo `/login` en un host de sitio) ya no refresca la cookie de
+sesión, y los hosts de plataforma reenvían la petición con la sesión refrescada (`NextResponse.next({ request })`).
+
 ## Capas (de afuera hacia adentro)
 
 ```

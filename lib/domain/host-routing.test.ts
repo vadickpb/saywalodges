@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideRoute, isNoRewritePath, isValidHost, siteHostFor, type DeploymentMode } from "./host-routing";
+import { decideRoute, isNoRewritePath, isValidHost, shouldRefreshSession, siteHostFor, type DeploymentMode } from "./host-routing";
 
 const ROOT = "saywa.test";
 const decide = (host: string, pathname: string, mode: DeploymentMode) => decideRoute({ host, pathname, rootDomain: ROOT, mode });
@@ -94,6 +94,19 @@ describe("installation mode", () => {
       expect(decide(host, "/es", "installation")).toEqual({ type: "not-found" });
       expect(decide(host, "/login", "installation")).toEqual({ type: "not-found" });
     }
+  });
+});
+
+describe("shouldRefreshSession", () => {
+  const s = (host: string, mode: DeploymentMode) => shouldRefreshSession({ host, rootDomain: ROOT, mode });
+  it("never refreshes on the client's public site in installation mode", () => {
+    expect(s(ROOT, "installation")).toBe(false);
+  });
+  it("refreshes on the panel host in installation mode", () => {
+    expect(s(`app.${ROOT}`, "installation")).toBe(true);
+  });
+  it("is unchanged in platform mode", () => {
+    for (const host of [ROOT, `app.${ROOT}`, `casa.${ROOT}`, "casa.pe"]) expect(s(host, "platform")).toBe(true);
   });
 });
 

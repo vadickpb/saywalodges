@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 // The real proxy, with the database client replaced: these tests check what each host/path gets back.
@@ -19,6 +19,8 @@ const call = (host: string, path: string, headers: Record<string, string> = {}) 
   proxy(new NextRequest(`http://${/^[\w.:-]+$/.test(host) ? host : "invalid.test"}${path}`, { headers: { host, ...headers } }));
 const isNext = (r: Response) => r.headers.get("x-middleware-next") === "1";
 const rewritten = (r: Response) => r.headers.get("x-middleware-rewrite");
+
+afterEach(() => vi.restoreAllMocks());
 
 beforeEach(() => {
   mocks.getClaims.mockReset();
@@ -77,6 +79,13 @@ describe("proxy · installation mode", () => {
   it("passes sitemap.xml and robots.txt through on the site host", async () => {
     expect(isNext(await call("cliente.pe", "/sitemap.xml"))).toBe(true);
     expect(isNext(await call("cliente.pe", "/robots.txt"))).toBe(true);
+  });
+  it("does not touch the session on the public site host, but does on the panel host", async () => {
+    await call("cliente.pe", "/es");
+    await call("cliente.pe", "/sitemap.xml");
+    expect(mocks.getClaims).not.toHaveBeenCalled();
+    await call("app.cliente.pe", "/login");
+    expect(mocks.getClaims).toHaveBeenCalledTimes(1);
   });
   it("answers 404 on the site host to the panel, auth and every API route", async () => {
     for (const path of ["/app", "/login", "/auth/callback", "/update-password", "/api/cron/expire-holds", "/api/ical/abc", "/api/health"]) {

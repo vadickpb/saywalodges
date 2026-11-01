@@ -4,9 +4,10 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { locales, defaultLocale } from "./dictionaries";
 import { env } from "./lib/env";
-import { decideRoute } from "./lib/domain/host-routing";
+import { decideRoute, shouldRefreshSession } from "./lib/domain/host-routing";
 
 // Host and path decisions live in lib/domain/host-routing.ts (pure, unit-tested); this file only applies them.
+
 // ─── Locale routing ──────────────────────────────────────────────────────────
 function getLocale(request: NextRequest): string {
   const acceptLang = request.headers.get("accept-language") ?? "";
@@ -79,7 +80,9 @@ export async function proxy(request: NextRequest) {
   if (decision.type === "invalid-host") return new NextResponse("Invalid request", { status: 400 });
   if (decision.type === "not-found") return new NextResponse("Not found", { status: 404 });
 
-  const refresh = await refreshSession(request);
+  const refresh = shouldRefreshSession({ host, rootDomain: env.ROOT_DOMAIN, mode: env.DEPLOYMENT_MODE })
+    ? await refreshSession(request)
+    : { pendingCookies: [], pendingHeaders: {} };
 
   // The dashboard's own root path → the dashboard home. Every other path on that host (/login, /forgot-password,
   // …) already exists at that exact top-level path, so it needs no rewrite at all.
