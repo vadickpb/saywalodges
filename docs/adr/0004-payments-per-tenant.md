@@ -1,6 +1,6 @@
 # ADR 0004 · Pagos directos al tenant, manual + Mercado Pago
 
-- Estado: aceptado · Fecha: 2026-09-23
+- Estado: aceptado · Fecha: 2026-09-23 · Modificado parcialmente por [ADR 0010](0010-installation-per-client.md) (credenciales por instalación; sin suscripción)
 
 ## Contexto
 En Perú la mayoría de adelantos se pagan por Yape/Plin/transferencia. La propuesta de valor es
