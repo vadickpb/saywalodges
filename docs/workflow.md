@@ -99,6 +99,15 @@ En GitHub → Settings → Environments → **New environment** `supabase-produc
 No uses `production` ni modifiques el Environment `Production` que ya existe: lo crea Vercel para sus despliegues y
 GitHub no distingue mayúsculas en los nombres de Environment.
 
+Si el workflow ya se ejecutó alguna vez, GitHub pudo autocrear `supabase-production` sin protección: en ese caso no
+hay «New environment»; edita el que existe y aplica los pasos 1 a 3. Haz primero las reglas (1) y después los secretos (2),
+nunca al revés. El workflow se detiene con un error claro si faltan los secretos o la variable.
+
+Al terminar, comprueba la protección con
+`gh api repos/vadickpb/saywalodges/environments/supabase-production`: `protection_rules` debe incluir
+`required_reviewers` y `deployment_branch_policy` no debe ser `null`. Por defecto `can_admins_bypass` queda en `true`:
+con un único dueño administrador es aceptable, pero un administrador puede saltarse la aprobación.
+
 1. **Required reviewers**: añádete a ti mismo. Deja *Prevent self-review* **desactivado** (eres el único dueño).
    **Deployment branches and tags** → *Selected branches and tags* → solo `main` (imprescindible: impide que una
    ejecución manual desde otra rama alcance los secretos).
