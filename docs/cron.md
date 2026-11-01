@@ -1,6 +1,9 @@
 # Cron de expiración de holds (SD-408)
 
 Ruta: `GET` o `POST /api/cron/expire-holds` en el dominio de plataforma (`ROOT_DOMAIN`, no en un sitio de tenant).
+**En modo instalación** (`DEPLOYMENT_MODE=installation`, ADR 0010) la ruta vive en `app.<ROOT_DOMAIN>`: el dominio raíz es
+el sitio del cliente y responde 404 a cualquier `/api/*`. Los ejemplos de abajo con `https://<ROOT_DOMAIN>/api/...` deben
+usar `https://app.<ROOT_DOMAIN>/api/...` en ese modo.
 Ejecuta `expire_holds()` con la service-role. Es idempotente: ejecutarla dos veces seguidas no hace daño.
 
 ## Seguridad

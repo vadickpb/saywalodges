@@ -18,7 +18,14 @@ el código de la app sino **Postgres (RLS)**.
 | Plataforma (login, cron) | `<dominio>/login`, `/api/cron/*` | `app/(platform)`, `app/api` | Todos / cron |
 
 `proxy.ts` solo **reescribe** la petición según el host y el idioma (ADR 0001). No consulta la BD ni
-autoriza: la autorización real vive en la capa de datos.
+autoriza: la autorización real vive en la capa de datos. Las decisiones de enrutado son una función pura,
+`lib/domain/host-routing.ts`, con dos modos (`DEPLOYMENT_MODE`):
+
+- **`platform`** (por defecto): `ROOT_DOMAIN` y `app.<ROOT_DOMAIN>` son la plataforma; `<sub>.<ROOT_DOMAIN>` y cualquier otro
+  host son sitios de alojamientos.
+- **`installation`** (una instalación por cliente, ADR 0010): `ROOT_DOMAIN` es el sitio público del cliente (se busca por
+  `properties.custom_domain = ROOT_DOMAIN`); `app.<ROOT_DOMAIN>` sirve panel, login, auth y **todas** las rutas `/api/*`;
+  cualquier otro host da 404 sin consultar la base.
 
 ## Capas (de afuera hacia adentro)
 
