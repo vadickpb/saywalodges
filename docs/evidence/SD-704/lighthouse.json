@@ -1,0 +1,86 @@
+[
+  {
+    "lang": "es",
+    "run": 1,
+    "url": "http://localhost:3000/",
+    "version": "13.6.0",
+    "fetchTime": "2026-11-01T05:12:39.736Z",
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "scores": {
+      "performance": 100,
+      "accessibility": 100,
+      "seo": 100
+    }
+  },
+  {
+    "lang": "es",
+    "run": 2,
+    "url": "http://localhost:3000/",
+    "version": "13.6.0",
+    "fetchTime": "2026-11-01T05:12:52.427Z",
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "scores": {
+      "performance": 100,
+      "accessibility": 100,
+      "seo": 100
+    }
+  },
+  {
+    "lang": "es",
+    "run": 3,
+    "url": "http://localhost:3000/",
+    "version": "13.6.0",
+    "fetchTime": "2026-11-01T05:13:05.389Z",
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "scores": {
+      "performance": 100,
+      "accessibility": 100,
+      "seo": 100
+    }
+  },
+  {
+    "lang": "en",
+    "run": 1,
+    "url": "http://localhost:3000/en",
+    "version": "13.6.0",
+    "fetchTime": "2026-11-01T05:13:17.641Z",
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "scores": {
+      "performance": 100,
+      "accessibility": 100,
+      "seo": 100
+    }
+  },
+  {
+    "lang": "en",
+    "run": 2,
+    "url": "http://localhost:3000/en",
+    "version": "13.6.0",
+    "fetchTime": "2026-11-01T05:13:30.147Z",
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "scores": {
+      "performance": 100,
+      "accessibility": 100,
+      "seo": 100
+    }
+  },
+  {
+    "lang": "en",
+    "run": 3,
+    "url": "http://localhost:3000/en",
+    "version": "13.6.0",
+    "fetchTime": "2026-11-01T05:13:44.490Z",
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "scores": {
+      "performance": 100,
+      "accessibility": 100,
+      "seo": 100
+    }
+  }
+]

@@ -1405,9 +1405,14 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   Usa los mismos tokens de SD-107: cambiar la paleta en un solo lugar recolorea landing y dashboard. SEO
   (metadata, Open Graph, sitemap) y registro de clics en el CTA.
 - **Criterios**
-  - [ ] Cambiar la paleta en los tokens recolorea la landing sin tocar componentes.
-  - [ ] Lighthouse móvil ≥ 90 en rendimiento, accesibilidad y SEO.
-  - [ ] El CTA abre WhatsApp con mensaje prellenado y el clic queda registrado.
+  - [x] Cambiar la paleta en los tokens recolorea la landing sin tocar componentes.
+  - [x] Lighthouse móvil ≥ 90 en rendimiento, accesibilidad y SEO: 100/100/100 en tres mediciones por idioma.
+    Evidencia y capturas: `docs/evidence/SD-704/`.
+  - [x] El CTA abre WhatsApp con mensaje prellenado (número ficticio pendiente del dueño).
+  - [ ] Registro de clics: excluido de SD-704 por encargo explícito; seguimiento con diseño contra abuso (SD-409).
+- **Estado SD-704**: implementación verificada y revisión independiente aprobada; no mergear hasta reemplazar y aprobar los `TODO(owner)`
+  de `config/marketing-content.ts`. Caso y planes se muestran como borradores sin métricas ni precios inventados.
+  Link de reserva, checkout y pagos se presentan como próximos. Sin migraciones, acciones ni endpoints nuevos.
 
 ### [x] SD-705 · chore(deps): security update of dependencies
 `S` · Depende: — · Review: `R+S` · **Prioridad: antes de la Fase 8**

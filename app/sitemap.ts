@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
+import { env } from "@/lib/env";
+import { marketingUrls } from "@/lib/domain/marketing";
+import { marketingContent } from "@/config/marketing-content";
 import { getSiteByHost, getSiteUrl, siteIdentifierFromHost } from "@/lib/dal/public/site";
 
 // Reads the request's host (not a param — this file is a root-level
@@ -9,6 +12,13 @@ import { getSiteByHost, getSiteUrl, siteIdentifierFromHost } from "@/lib/dal/pub
 // API") — intentional, this must vary by host.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const host = (await headers()).get("host") ?? "";
+  if (host === env.ROOT_DOMAIN) {
+    const { languages } = marketingUrls(env.ROOT_DOMAIN, marketingContent.demoSubdomain, "es");
+    return Object.values(languages).map((url) => ({
+      url, changeFrequency: "monthly", priority: 1, alternates: { languages },
+    }));
+  }
+  if (host === `app.${env.ROOT_DOMAIN}`) return [];
   const site = await getSiteByHost(siteIdentifierFromHost(host));
   if (!site) return [];
 

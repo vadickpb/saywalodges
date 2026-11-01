@@ -1,7 +1,7 @@
 # Sistema de diseño del dashboard (SD-107)
 
-Guía breve para `components/ui/*`. Gobierna solo el **dashboard** (`app/app/**`, la app
-"Saywa Direct" en sí); el sitio público de cada tenant tiene su propia marca y no usa nada de esto
+Guía breve para `components/ui/*`. Gobierna el **dashboard** (`app/app/**`, la app
+"Saywa Direct" en sí) y la landing comercial de la plataforma (`components/marketing`, SD-704); el sitio público de cada tenant tiene su propia marca y no usa nada de esto
 (ver `app/globals.css`, sección pública en `:root`).
 
 Showcase en vivo (solo desarrollo): `http://localhost:3000/app/ui`.
@@ -14,8 +14,8 @@ el import a `"cn"` en vez de crear ese archivo.
 
 ## Paleta
 
-Tokens en `app/globals.css`, dentro de `.dashboard` (claro) y `.dashboard.dark` (oscuro). Para
-recolorear todo el dashboard, cambia `--primary`/`--accent` en ambos bloques — todos los
+Tokens en `app/globals.css`, dentro de `.dashboard, .marketing` (claro) y `.dashboard.dark` (oscuro). Para
+recolorear el dashboard y la landing, cambia `--primary`/`--accent` en ambos bloques — todos los
 componentes usan nombres semánticos (`bg-primary`, `text-muted-foreground`, …), nunca hex directo.
 
 | Token | Claro | Oscuro | Uso |
@@ -103,3 +103,17 @@ Plantilla única para todos los tenants, en `components/site/*`, montada en
 - Las secciones sin datos no se renderizan, y el menú solo enlaza a las que existen.
 - Íconos: las filas guardan un emoji; `SiteIcon` lo traduce a un ícono lucide (fallback: `Sparkles`).
 - Sin foto: `Photo` muestra un placeholder del tema, nunca una imagen rota.
+
+## Landing comercial (SD-704)
+
+`app/(marketing)/` sirve español en `/`; `app/(marketing-en)/en/` sirve inglés en `/en`.
+Tienen documentos raíz separados para emitir `html lang` correcto; auth conserva su layout.
+`components/marketing/landing.tsx` usa `Button`, `Badge`, `Card` y utilidades semánticas de SD-107.
+La clase `.marketing` comparte el bloque de tokens claro con `.dashboard`: no hay una segunda paleta.
+La landing no ofrece toggle oscuro. Su preview es conceptual, sin métricas de clientes.
+
+Etiquetas y copy de producto: `dictionaries/marketing.ts`. Datos y estados comerciales pendientes:
+`config/marketing-content.ts` (todos los `TODO(owner)` deben revisarse antes del merge).
+No hay tracking del CTA; requiere un ticket de seguimiento con diseño contra abuso (SD-409).
+La imagen OG es estática: después de cambiar la paleta, regenerarla con
+`node scripts/generate-marketing-og.mjs` (usa Sharp transitivo de Next, sin dependencia nueva).

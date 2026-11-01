@@ -15,6 +15,7 @@ el código de la app sino **Postgres (RLS)**.
 |---|---|---|---|
 | Sitio público del alojamiento | `saywa-lodges.<dominio>/es` | `app/sites/[host]/[lang]` | Huéspedes (sin login) |
 | Panel del dueño | `app.<dominio>/…` | `app/app/*` | Dueño/staff (con login) |
+| Landing comercial | `<dominio>/`, `<dominio>/en` | `app/(marketing)`, `app/(marketing-en)` | Todos |
 | Plataforma (login, cron) | `<dominio>/login`, `/api/cron/*` | `app/(platform)`, `app/api` | Todos / cron |
 
 `proxy.ts` solo **reescribe** la petición según el host y el idioma (ADR 0001). No consulta la BD ni

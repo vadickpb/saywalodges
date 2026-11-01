@@ -21,7 +21,7 @@
      .dashboard.dark below, never in :root, so the public tenant site above
      (which never has that class) is unaffected. These mappings just make
      the Tailwind utilities (bg-primary, text-muted-foreground, …) exist;
-     they resolve to nothing outside .dashboard. */
+     they resolve to nothing outside .dashboard/.marketing. */
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -69,8 +69,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Saywa Direct dashboard palette (SD-107) — indigo/accent violet. Change
-   --primary/--accent here (both modes) to recolor the whole dashboard. */
-.dashboard {
+   --primary/--accent here (both modes) to recolor the dashboard and landing. */
+.dashboard,
+.marketing {
   --background: #F8FAFC;
   --foreground: #0F172A;
   --card: #FFFFFF;
