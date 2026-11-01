@@ -29,12 +29,19 @@ modelo de negocio:
   migraciones a todas con aprobación del dueño (SD-1003), y salud central de las N instalaciones (SD-1004).
 - **La venta vive fuera del producto:** la web comercial (trabajo del PR #45) pasa a un sitio aparte del vendedor
   (SD-1006), y la prueba se hace en una **instalación demo compartida** que se reinicia cada noche (SD-1007).
-- **WhatsApp:** módulo `lib/whatsapp/` sobre la Cloud API, con credenciales por instalación y plantillas aprobadas por
-  Meta (SD-1008). Va después del flujo de reservas (SD-403 a SD-406), porque se engancha a sus eventos.
+- **Hosts en modo instalación:** el dominio raíz sirve solo el sitio público; el panel, la autenticación y todas las
+  rutas `/api/*` (cron, iCal, salud, webhooks) viven en `app.<dominio>`; un host desconocido da 404.
+- **Excepción a ADR 0002:** la service-role, que ADR 0002 limita a webhooks, cron y RPCs, también la usa el script de alta
+  de clientes (SD-1002). Es un script que el dueño ejecuta en su máquina, fuera de la app desplegada; la app sigue sin
+  usarla en páginas ni en acciones de usuario.
+- **WhatsApp:** cliente de la Cloud API y webhook (SD-1008), luego plantillas y consentimiento del huésped (SD-1009), con
+  credenciales por instalación. Va después del flujo de reservas (SD-403 a SD-406), porque se engancha a sus eventos.
 - **Saywa Lodges es la instalación nº 1.**
 
 ## Consecuencias
 
+- Numeración: el ADR 0009 (escritura de cotizaciones) llega con SD-402 (PR #46); este es el 0010.
+- `CLAUDE.md` todavía describe el proyecto como «SaaS multi-tenant»: su actualización queda pendiente del dueño.
 - **Descartados:** SD-603 (superadmin y aprovisionamiento en la app), porque lo reemplaza el script de alta. SD-604
   (dominios vía API de Vercel), porque el dominio de cada cliente es un paso del runbook.
 - **Simplificados:** SD-502 pasa a credenciales de Mercado Pago **por instalación**, no por organización dentro de una

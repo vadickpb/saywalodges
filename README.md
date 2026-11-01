@@ -8,7 +8,7 @@ with no per-booking commission. Each lodging gets its own isolated installation,
 monthly maintenance ([ADR 0010](docs/adr/0010-installation-per-client.md)).
 
 It started as the website of **Saywa Lodges**, a real lodge in the Sacred Valley (Urubamba), which is now
-the platform's first tenant. Live example: [saywalodges.vercel.app](https://saywalodges.vercel.app).
+its first installation. Live example: [saywalodges.vercel.app](https://saywalodges.vercel.app).
 
 > Documentation is in Spanish (the product's market); this page is the English overview.
 > Spanish README: [`README.es.md`](README.es.md) · Architecture: [`docs/architecture.md`](docs/architecture.md)
@@ -99,7 +99,7 @@ Never point a development environment at production.
 Then open:
 
 - `http://saywa-lodges.localhost:3000/es` — the first tenant's public site (`/en` for English)
-- `http://demo.localhost:3000/es` — a second tenant, to see the isolation
+- `http://demo.localhost:3000/es` — a second organization, to see the isolation enforced by RLS (local only)
 - `http://app.localhost:3000/login` — the owner dashboard
 
 | Command | What it does |

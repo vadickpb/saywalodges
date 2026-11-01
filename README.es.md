@@ -8,7 +8,7 @@ y CRM básico de huéspedes — sin comisión por reserva. Cada alojamiento tien
 3 meses de garantía y mantenimiento mensual ([ADR 0010](docs/adr/0010-installation-per-client.md)).
 
 Este repositorio nace de **Saywa Lodges** (un lodge real en el Valle Sagrado, Urubamba), que hoy es
-el primer tenant de la plataforma mientras evoluciona hacia multi-tenant. Roadmap completo y estado
+su primera instalación; internamente conserva el modelo multi-tenant (una organización por instalación). Roadmap completo y estado
 de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura: [`docs/adr/`](docs/adr/).
 
 ## Stack
@@ -70,7 +70,7 @@ npm run dev
 ```
 
 Abre `http://saywa-lodges.localhost:3000/es` (o `/en`) para el sitio público,
-`http://demo.localhost:3000/es` para el segundo tenant y
+`http://demo.localhost:3000/es` para la segunda organización (solo en local, para ver el aislamiento) y
 `http://app.localhost:3000/login` para acceder al dashboard.
 La raíz `http://localhost:3000` corresponde a la plataforma.
 

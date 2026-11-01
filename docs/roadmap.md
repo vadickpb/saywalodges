@@ -33,9 +33,10 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 | **M2 · Contenido y tarifas** | Fase 2 | Dueño edita su sitio y sus tarifas desde el dashboard |
 | **M3 · Calendario sin dobles reservas** | Fase 3 | Calendario único sincronizado con Airbnb/Booking |
 | **M4 · Primera reserva directa** 🎯 | Fase 4 | Link de reserva + pago por voucher en producción para Saywa |
-| **M5 · Pago en línea** | Fase 5 | Mercado Pago por tenant |
-| **M6 · Listo para clientes** | Fase 6–7 | CRM, check-in, dominios propios, hardening, portafolio |
+| **M5 · Pago en línea** | Fase 5 | Mercado Pago por instalación (ADR 0010) |
+| **M6 · Listo para clientes** | Fase 6–7 | CRM, check-in, hardening, portafolio |
 | **M8 · Finanzas** | Fase 8 (SD-801–805) | Ingresos, egresos, reportes estilo Airbnb y Excel para el contador |
+| **M10 · Vendible por instalación** | Fase 10 | Cliente nuevo instalado con script, actualizado y vigilado de forma central; demo pública; WhatsApp automático |
 
 ---
 
@@ -1403,11 +1404,11 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   enlazando ADRs.
 - **Cambia (ADR 0010)**: el "tenant demo público" es la instalación demo de SD-1007.
 
-### [ ] SD-704 · feat(marketing): Saywa Direct landing
+### [-] SD-704 · feat(marketing): Saywa Direct landing
 `M` · Depende: SD-105, SD-107 · Review: `R`
-- **Cambia (ADR 0010)**: la landing comercial no va dentro del producto (en una instalación el dominio raíz es del
-  cliente). Su trabajo (PR #45) se reutiliza en la web del vendedor, SD-1006, con la oferta de instalación + garantía +
-  mantenimiento. El PR #45 no se mergea en este repositorio.
+- **Reemplazado por SD-1006 (ADR 0010)**: la landing comercial no va dentro del producto (en una instalación el dominio
+  raíz es del cliente). Su trabajo (PR #45) se reutiliza en la web del vendedor, con la oferta de instalación + garantía +
+  mantenimiento. El PR #45 no se mergea en este repositorio. El texto de abajo queda como referencia histórica.
 - **Objetivo**: atraer dueños de alojamientos (clientes del SaaS) y convertir visitas en conversaciones de venta.
 - **Alcance**: landing comercial en el dominio raíz: hero con la propuesta de valor ("Convierte tus chats de
   WhatsApp en reservas pagadas"), problema y solución, cómo funciona en 3 pasos, funcionalidades (link de reserva,
@@ -1695,28 +1696,43 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
 
 ## Fase 10 — Instalación por cliente (ADR 0010)
 
-Orden: después de completar el flujo de reservas (Fase 4) para SD-1008; SD-1001 a SD-1007 pueden avanzar en paralelo.
+Orden: SD-1005 y SD-1006 son independientes. El resto sigue la cadena SD-1001 → SD-1002 → SD-1003 / SD-1007 → SD-1004.
+SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 
 ### [x] SD-1000 · docs: installation-per-client model
 `S` · Depende: — · Review: `R`
-- **Alcance**: [ADR 0010](adr/0010-installation-per-client.md); roadmap y README actualizados (SD-603 y SD-604
-  descartados; SD-502, SD-606, SD-702, SD-703 y SD-704 ajustados; esta fase añadida).
+- **Alcance**: [ADR 0010](adr/0010-installation-per-client.md); roadmap y README actualizados (SD-603, SD-604 y SD-704
+  descartados o reemplazados; SD-502, SD-606, SD-702 y SD-703 ajustados; esta fase añadida). Id `00` a propósito: es el
+  ticket documental que abre la fase y se cierra en el mismo PR.
+- **Pendiente del dueño**: `CLAUDE.md` todavía describe el proyecto como «SaaS multi-tenant»; actualizarlo es decisión del
+  dueño (es la configuración que leen los agentes).
 
 ### [ ] SD-1001 · feat(routing): installation mode
-`S` · Depende: — · Review: `R+S`
-- **Alcance**: `DEPLOYMENT_MODE=installation` hace que el dominio raíz sirva el sitio del alojamiento y `app.` el panel
-  (`proxy.ts#resolveHost`, `lib/dal/public/site.ts`, `app/sitemap.ts`, `app/robots.ts`, enlace «Ver mi sitio»,
-  `siteOrigin` del cotizador, cron de iCal). `NEXT_PUBLIC_SITE_URL` apunta al panel (redirect del reset de contraseña).
-  Sin la variable, todo se comporta como hoy.
+`M` · Depende: — · Review: `R+S`
+- **Alcance**: `DEPLOYMENT_MODE=installation` cambia qué sirve cada host:
+  - el dominio raíz del cliente sirve **solo** su sitio público (`/sites/[host]/[lang]`);
+  - `app.<dominio>` sirve el panel, `/login`, `/auth`, recuperación de contraseña **y todas las rutas `/api/*`**
+    (cron de `docs/cron.md`, `/api/ical/[token]` y las futuras `/api/health` y `/api/whatsapp/webhook`);
+  - cualquier otro host da 404, sin buscarlo en la base (hoy un host desconocido se trata como dominio propio).
+  Archivos: `proxy.ts` (`resolveHost`, `isPlatformHost`, rutas sin reescritura), `lib/dal/public/site.ts`,
+  `app/(platform)/page.tsx`, `app/sitemap.ts`, `app/robots.ts`, el enlace «Ver mi sitio» de `app/app/layout.tsx`,
+  `siteOrigin` del cotizador (`lib/domain/quote-builder.ts`, llega con SD-402 / PR #46) y el cron de iCal.
+  `NEXT_PUBLIC_SITE_URL` (`config/site.ts`, hoy con valor por defecto `https://saywalodges.com`) pasa a ser obligatoria en
+  producción y apunta al panel (`metadataBase` y redirect del reset de contraseña). `properties.custom_domain` se conserva
+  solo como dato de la instalación. Sin `DEPLOYMENT_MODE` todo se comporta como hoy.
 - **Criterios**
-  - [ ] Tests de `resolveHost` en ambos modos (raíz, `app.`, `www`, host desconocido).
+  - [ ] Tests de `resolveHost` en ambos modos: raíz, `app.`, `www`, host desconocido (404) y rutas `/api/*`.
+  - [ ] `/sites/*` sigue sin ser accesible como ruta literal, y `/login` y `/auth` no se sirven en el dominio del cliente
+        (las cookies de sesión quedan en `app.`).
+  - [ ] Arrancar en producción sin `NEXT_PUBLIC_SITE_URL` produce un error claro.
   - [ ] `saywalodges.com` servido como instalación nº 1 en producción (criterio heredado de SD-604).
 
 ### [ ] SD-1002 · chore(ops): client install script and runbook
 `M` · Depende: SD-1001 · Review: `R+S`
 - **Alcance**: `scripts/install-client.mjs` + `docs/runbook-instalacion.md`: proyecto Supabase y migraciones,
   organización, propiedad y owner (Auth + `memberships role='owner'`, invitación), proyecto Vercel con variables y
-  dominios, cron (`expire-holds`, `ical-sync`), pasos de Resend. Service-role solo en el script, nunca en la app (ADR 0002).
+  dominios, cron (`expire-holds`, `ical-sync`, con GitHub Actions como en `docs/cron.md`), pasos de Resend. La service-role
+  solo la usa este script, que ejecuta el dueño en su máquina; nunca la app (excepción registrada en ADR 0010 sobre ADR 0002).
 - **Criterios**
   - [ ] Una instalación de prueba se levanta desde cero solo con el script y el runbook; el owner entra al panel.
 
@@ -1729,36 +1745,55 @@ Orden: después de completar el flujo de reservas (Fase 4) para SD-1008; SD-1001
 
 ### [ ] SD-1004 · feat(ops): central installation health
 `M` · Depende: SD-1003 · Review: `R+S`
-- **Alcance**: `/api/health` protegida (versión, última migración, estado de los cron); tarea programada del vendedor
-  que consulta cada instalación y avisa por email si algo falla. Reemplaza la alerta pendiente de SD-606.
+- **Alcance**: `/api/health` en `app.` (SD-1001), protegida con un secreto propio (`HEALTH_SECRET`, cabecera
+  `Authorization: Bearer`, comparación en tiempo constante como `lib/cron-auth.ts`); devuelve versión, última migración y
+  estado de los cron. Sin el secreto responde `401` vacío y no revela nada. Una tarea programada del vendedor consulta
+  cada instalación del registro (SD-1003) y avisa por email si algo falla. Reemplaza la alerta pendiente de SD-606.
 - **Criterios**
+  - [ ] Sin secreto o con secreto incorrecto → `401` sin cuerpo (tests).
   - [ ] Detener el cron de una instalación de prueba genera un aviso.
 
 ### [ ] SD-1005 · feat(email): per-installation branding
 `S` · Depende: SD-306 · Review: `R`
 - **Alcance**: `lib/email/messages.ts` usa el nombre de la propiedad; «Powered by Saywa Direct» opcional en el pie.
+- **Criterios**
+  - [ ] El remitente y la cabecera muestran el nombre de la propiedad; el pie no dice «Powered by» salvo que se active (tests).
 
 ### [ ] SD-1006 · feat(marketing): vendor sales site
 `M` · Depende: — · Review: `R`
 - **Alcance**: sitio comercial aparte (repo o proyecto Vercel propio) que reutiliza el trabajo del PR #45; oferta de
   instalación + 3 meses de garantía + mantenimiento mensual; enlace a la demo (SD-1007) y CTA a WhatsApp.
+- **Criterios**
+  - [ ] Ningún precio, cifra ni testimonio publicado sin aprobación del dueño; Lighthouse móvil ≥ 90 (el PR #45 ya logra 100).
 
 ### [ ] SD-1007 · feat(demo): shared demo installation with nightly reset
-`M` · Depende: SD-1002 · Review: `R+S`
-- **Alcance**: instalación demo con datos ficticios (sin datos reales de Saywa), usuario de prueba con rol `staff`,
-  banner «Demo: se reinicia cada noche», seed de demo propio y reseteo programado.
+`M` · Depende: SD-1002, SD-1003 · Review: `R+S`
+- **Alcance**: instalación demo (una entrada más del registro de SD-1003) con datos ficticios (sin datos reales de Saywa),
+  usuario de prueba con rol `staff`, banner «Demo: se reinicia cada noche», seed de demo propio y reseteo nocturno
+  programado con GitHub Actions (como `docs/cron.md`).
 - **Criterios**
   - [ ] Cambios hechos en la demo desaparecen tras el reseteo.
 
-### [ ] SD-1008 · feat(whatsapp): WhatsApp Business Cloud API
-`L` · Depende: SD-405, SD-406 · Review: `R+S`
+### [ ] SD-1008 · feat(whatsapp): Cloud API client and webhook
+`M` · Depende: SD-1001 · Review: `R+S`
 - **Alcance**: `lib/whatsapp/` con el patrón de `lib/email/` (config, envío, modo simulación); credenciales por
-  instalación en variables de entorno; plantillas aprobadas por Meta (confirmación de reserva, recordatorio del adelanto
-  antes de que venza el hold, recordatorio de llegada, post-estadía); webhook `/api/whatsapp/webhook` con verificación de
-  `X-Hub-Signature-256`; consentimiento (opt-in) del huésped; logs sin datos personales. Trámite de Meta por cliente
-  (verificación del negocio, número, plantillas): paso del dueño.
+  instalación en variables de entorno (token, phone number id, app secret); webhook `/api/whatsapp/webhook` en `app.`
+  (SD-1001) con verificación de `X-Hub-Signature-256` y del token de suscripción; registro de estados de entrega; logs
+  sin datos personales (`lib/log.ts`).
 - **Criterios**
-  - [ ] Webhook con firma inválida → 401; sin opt-in no se envía nada (tests).
+  - [ ] Webhook con firma inválida → `401`; evento duplicado → sin efectos (tests).
+  - [ ] En modo simulación nada sale a Meta y el envío queda registrado (tests, como `lib/email`).
+
+### [ ] SD-1009 · feat(whatsapp): booking templates and guest opt-in
+`M` · Depende: SD-1008, SD-403, SD-405, SD-406 · Review: `R+S`
+- **Alcance**: plantillas aprobadas por Meta (confirmación de reserva, recordatorio del adelanto antes de que venza el hold
+  de SD-408, recordatorio de llegada, post-estadía); consentimiento (opt-in) del huésped para mensajes de WhatsApp,
+  registrado al reservar en el checkout (SD-403) y separado del consentimiento de marketing de SD-602; recordatorios
+  programados con GitHub Actions como `docs/cron.md`. Trámite de Meta por cliente (verificación del negocio, número,
+  aprobación de plantillas): paso del dueño.
+- **Criterios**
+  - [ ] Sin opt-in no se envía ningún mensaje (tests).
+  - [ ] Cada plantilla se prueba con el número de prueba de Meta.
 
 ## Propuesta de ticket fuera del alcance actual
 
