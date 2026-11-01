@@ -1,3 +1,4 @@
+import { checkoutPolicies } from "./checkout-policies";
 // Generic UI labels for the public site template (SD-209). Nothing here may
 // be specific to one lodge — per-tenant copy lives in properties.content
 // (lib/domain/site-content.ts). `{name}`-style placeholders are filled by
@@ -100,6 +101,32 @@ const en = {
     contact: "Contact",
     rights: "All rights reserved.",
     poweredBy: "Direct booking powered by Saywa Direct",
+  },
+  checkout: {
+    title: "Complete your booking",
+    unusable: "This booking link is unavailable",
+    unusableBody: "Contact the property on WhatsApp to request a new quote.",
+    contact: "Contact on WhatsApp",
+    name: "Full name",
+    email: "Email",
+    phone: "Phone (optional)",
+    terms: "I accept the terms shown above",
+    submit: "Reserve these dates",
+    pending: "Reserving…",
+    total: "Total",
+    deposit: "Deposit",
+    balance: "Remaining balance",
+    stay: "Stay",
+    guests: "Guests",
+    expires: "Quote valid until",
+    hold: "Payment hold: {minutes} minutes after booking",
+    policies: "Cancellation policy and terms",
+    fieldError: "Check this field.",
+    invalid: "Check your details or request a new quote on WhatsApp.",
+    expired: "This quote is no longer available. Request a new quote on WhatsApp.",
+    unavailable: "These dates are already occupied. Request a new quote on WhatsApp.",
+    generic: "We could not complete your booking. Please try again.",
+    policyContent: checkoutPolicies.en,
   },
   bookingStatus: {
     title: "Your booking",

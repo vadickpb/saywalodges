@@ -1275,11 +1275,13 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 ### [ ] SD-403 · feat(site): booking link checkout
 `L` · Depende: SD-402 · Review: `R+S`
-- **Alcance**: `/[lang]/reservar/q/[token]`: resumen, desglose, políticas, formulario del huésped (zod), aceptación de
+- **Alcance**: `/[lang]/reservar/[token]`: resumen de importes, políticas, formulario del huésped (zod), aceptación de
   términos → RPC → redirección a `/[lang]/reserva/[public_token]`.
 - **Criterios**
-  - [ ] Token inválido o vencido → página clara con botón de WhatsApp.
-  - [ ] Doble envío del formulario no crea dos reservas.
+  - [x] Token inválido o vencido → página clara con botón de WhatsApp.
+  - [x] Doble envío del formulario no crea dos reservas.
+
+Implementado en SD-403; pendiente de revisiones R+S y del merge de #46. Prueba y despliegue: `docs/booking-checkout.md`.
 
 ### [ ] SD-404 · feat(site): self-service quote
 `M` · Depende: SD-403 · Review: `R+S`

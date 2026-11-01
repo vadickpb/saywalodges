@@ -1,3 +1,4 @@
+import { checkoutPolicies } from "./checkout-policies";
 import type { Dict } from "./en";
 
 const es: Dict = {
@@ -98,6 +99,32 @@ const es: Dict = {
     contact: "Contacto",
     rights: "Todos los derechos reservados.",
     poweredBy: "Reservas directas con Saywa Direct",
+  },
+  checkout: {
+    title: "Completa tu reserva",
+    unusable: "Este enlace de reserva no está disponible",
+    unusableBody: "Contacta al alojamiento por WhatsApp para pedir una nueva cotización.",
+    contact: "Contactar por WhatsApp",
+    name: "Nombre completo",
+    email: "Correo electrónico",
+    phone: "Teléfono (opcional)",
+    terms: "Acepto los términos indicados arriba",
+    submit: "Reservar estas fechas",
+    pending: "Reservando…",
+    total: "Total",
+    deposit: "Adelanto",
+    balance: "Saldo pendiente",
+    stay: "Estancia",
+    guests: "Huéspedes",
+    expires: "Cotización válida hasta",
+    hold: "Retención para pagar: {minutes} minutos después de reservar",
+    policies: "Política de cancelación y términos",
+    fieldError: "Revisa este campo.",
+    invalid: "Revisa tus datos o pide una nueva cotización por WhatsApp.",
+    expired: "Esta cotización ya no está disponible. Pide una nueva por WhatsApp.",
+    unavailable: "Estas fechas ya están ocupadas. Pide otra cotización por WhatsApp.",
+    generic: "No pudimos completar la reserva. Inténtalo de nuevo.",
+    policyContent: checkoutPolicies.es,
   },
   bookingStatus: {
     title: "Tu reserva",
