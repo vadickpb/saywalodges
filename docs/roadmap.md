@@ -1690,7 +1690,7 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
 - **Criterios**
   - [x] `npm run where` indica rama, worktree, PR, CI, migraciones nuevas y siguiente paso.
   - [x] Las reglas de migración y el cierre «Te toca a ti» están en `AGENTS.md`, `supabase/CLAUDE.md` y la skill `ticket`.
-  - [ ] Environment `production` con *Required reviewers*, secretos y variable configurados (pasos del dueño en
+  - [ ] Environment `supabase-production` con *Required reviewers*, secretos y variable configurados (pasos del dueño en
         `docs/workflow.md`).
   - [ ] Una ejecución manual de *Deploy database* queda en «Waiting» y el *Dry run* confirma que la base remota está al día.
 

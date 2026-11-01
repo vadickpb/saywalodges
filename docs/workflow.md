@@ -73,7 +73,7 @@ Cómo aprobar (≈30 segundos):
 1. Abre el correo/notificación de GitHub «Deploy database is waiting for review», o ve a
    `https://github.com/vadickpb/saywalodges/actions/workflows/deploy-db.yml`.
 2. Entra en la ejecución más reciente (estado amarillo «Waiting»).
-3. Pulsa **Review deployments** → marca `production` → **Approve and deploy**.
+3. Pulsa **Review deployments** → marca `supabase-production` → **Approve and deploy**.
 4. Espera a que el job termine en verde. En el paso «Migrations after» verás la migración nueva con su
    versión en las columnas *Local* y *Remote*.
 
@@ -94,7 +94,10 @@ dependa de la migración no funcionará hasta que apruebes.
 
 ### Configuración única (una vez, ≈10 minutos)
 
-En GitHub → Settings → Environments → **New environment** `production`:
+En GitHub → Settings → Environments → **New environment** `supabase-production`.
+
+No uses `production` ni modifiques el Environment `Production` que ya existe: lo crea Vercel para sus despliegues y
+GitHub no distingue mayúsculas en los nombres de Environment.
 
 1. **Required reviewers**: añádete a ti mismo. Deja *Prevent self-review* **desactivado** (eres el único dueño).
    **Deployment branches and tags** → *Selected branches and tags* → solo `main` (imprescindible: impide que una

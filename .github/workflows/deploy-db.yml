@@ -1,14 +1,16 @@
 name: Deploy database
 
 # Applies the migrations that were merged to main to the production Supabase
-# project. It never runs on its own: the `production` environment must have
+# project. It never runs on its own: the `supabase-production` environment must have
 # "Required reviewers" enabled, so GitHub pauses the job until the owner clicks
 # "Approve" (see docs/workflow.md → "Despliegue a producción").
 #
 # Agents never touch the remote database: this workflow is the only path.
 #
 # Required manual setup (docs/workflow.md → "Configuración única"):
-#   * environment `production`: Required reviewers + "Deployment branches" = main only
+#   * environment `supabase-production`: Required reviewers + "Deployment branches" = main only
+#   * NOT `production`: GitHub environment names are case-insensitive and Vercel already
+#     owns `Production` for its own deployments; sharing it would mix the two gates
 #   * the two secrets below live ONLY in that environment, never at repo level
 
 on:
@@ -35,7 +37,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production
+    environment: supabase-production
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
