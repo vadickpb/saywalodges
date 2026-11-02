@@ -96,6 +96,9 @@ nombres de job de Actions son públicos y no deben revelar quiénes son tus clie
 Para que el mantenimiento sea demostrable y te llegue un correo si algo se cae. Pasos exactos en [`health.md`](health.md)
 (`HEALTH_SECRET` ya lo cargó el script en Vercel; falta crear el Environment `health-<id>` con los secretos `HEALTH_URL` y `HEALTH_SECRET` y la variable `INSTALLATION_ID`).
 
+## Demo
+La instalación demo compartida se crea con `"demo": true` y sin el paso `seed`: ver [`demo.md`](demo.md).
+
 ## Verificación rápida
 - `https://<dominio>` muestra el sitio (tras publicar) y `https://app.<dominio>/login` el acceso.
 - Cualquier otro host da 404; `https://<dominio>/login` también (las sesiones viven solo en `app.`).

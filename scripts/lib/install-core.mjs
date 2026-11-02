@@ -36,6 +36,8 @@ export const installConfigSchema = z
       teamId: z.string().trim().regex(/^team_[A-Za-z0-9]+$/).optional(),
       repo: z.string().trim().regex(/^[\w.-]+\/[\w.-]+$/).default("vadickpb/saywalodges"),
     }),
+    // The shared demo (SD-1007): shows the "resets every night" banner and never sends e-mail (no Resend key).
+    demo: z.boolean().default(false),
     email: z
       .object({
         // "Name <user@domain>" or a bare address; no control characters (header injection).
@@ -94,7 +96,9 @@ export function buildVercelEnv(cfg, secrets) {
   if (cfg.email.from) vars.push(["EMAIL_FROM", cfg.email.from, false]);
   if (cfg.email.replyTo) vars.push(["EMAIL_REPLY_TO", cfg.email.replyTo, false]);
   if (cfg.email.poweredBy) vars.push(["EMAIL_POWERED_BY", "true", false]);
-  if (secrets.resendApiKey) vars.push(["RESEND_API_KEY", secrets.resendApiKey, true]);
+  if (cfg.demo) vars.push(["DEMO_MODE", "true", false]);
+  // A demo never gets a Resend key: without one, production refuses to send, so no real address can be mailed.
+  if (secrets.resendApiKey && !cfg.demo) vars.push(["RESEND_API_KEY", secrets.resendApiKey, true]);
   return vars.map(([key, value, secret]) => ({
     key,
     value,

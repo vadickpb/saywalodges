@@ -1,0 +1,49 @@
+name: Demo reset
+
+# Nightly reset of the shared demo installation (SD-1007, ADR 0010). 03:30 in Lima (UTC-5) = 08:30 UTC.
+# DESTRUCTIVE by design, so scripts/demo-reset.mjs refuses to run unless the target project holds no
+# organization other than the demo's. The credentials live ONLY in the `demo-reset` Environment (no required
+# reviewers, otherwise the schedule would wait for a click; restricted to `main`): see docs/demo.md.
+
+on:
+  schedule:
+    - cron: "30 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-reset
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    name: reset the demo
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: demo-reset
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 24
+
+      # Not configured yet is a warning, not a failure (same convention as the health monitor).
+      - name: Reset
+        env:
+          DEMO_SUPABASE_URL: ${{ secrets.DEMO_SUPABASE_URL }}
+          DEMO_SERVICE_ROLE_KEY: ${{ secrets.DEMO_SERVICE_ROLE_KEY }}
+          DEMO_ROOT_DOMAIN: ${{ secrets.DEMO_ROOT_DOMAIN }}
+        run: |
+          if [ -z "$DEMO_SUPABASE_URL" ] || [ -z "$DEMO_SERVICE_ROLE_KEY" ]; then
+            echo "::warning::The demo-reset environment has no DEMO_SUPABASE_URL / DEMO_SERVICE_ROLE_KEY: demo NOT reset."
+            exit 0
+          fi
+          # Never --init here: the very first run is manual (docs/demo.md), so a mistaken credential for an empty
+          # client project is refused instead of populated.
+          node scripts/demo-reset.mjs --apply

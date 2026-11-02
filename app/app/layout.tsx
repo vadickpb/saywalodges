@@ -107,6 +107,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <DashboardNav />
 
           <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
+            {env.DEMO_MODE === "true" && (
+              <p className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-950 print:hidden">
+                Demo: los datos se reinician cada noche. Puedes probar con libertad; no uses datos reales.
+              </p>
+            )}
             <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 print:hidden md:px-6">
               {orgs.length > 1 ? (
                 <OrgSwitcher orgs={orgs} activeOrgId={activeOrg.id} />
