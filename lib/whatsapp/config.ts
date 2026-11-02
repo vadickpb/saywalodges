@@ -1,3 +1,5 @@
+import "server-only";
+
 // WhatsApp Business Cloud API configuration (SD-1008, ADR 0010). Same shape as lib/email/config.ts, and for the
 // same reason NOT part of lib/env.ts: a missing credential must never break `next build`, previews or unrelated
 // pages; it fails *closed* at send time. One WhatsApp number per installation; the Meta business verification,
@@ -6,7 +8,7 @@
 export type WhatsappConfig =
   | { mode: "simulate" }
   | { mode: "live"; accessToken: string; phoneNumberId: string; apiVersion: string }
-  | { mode: "disabled"; reason: "missing_credentials" | "invalid_phone_number_id" | "invalid_api_version" | "simulate_in_production" };
+  | { mode: "disabled"; reason: "missing_credentials" | "invalid_phone_number_id" | "missing_api_version" | "invalid_api_version" | "simulate_in_production" };
 
 export type WebhookConfig = { appSecret: string; verifyToken: string };
 
@@ -22,16 +24,18 @@ function isProduction(source: EnvSource): boolean {
   return vercelEnv ? vercelEnv === "production" : read(source, "NODE_ENV") === "production";
 }
 
-// Meta's Graph API version is a deployment setting, not a constant: versions are retired over time. Verify the
-// default in docs/whatsapp.md before the first live send.
-export const DEFAULT_API_VERSION = "v21.0";
+// Meta retires Graph API versions about two years after release, so there is deliberately NO default: live mode requires
+// WHATSAPP_API_VERSION to be set (look up the current one in Meta's changelog), and fails closed without it.
 
 export function parseWhatsappConfig(source: EnvSource = process.env): WhatsappConfig {
   const production = isProduction(source);
   const token = read(source, "WHATSAPP_ACCESS_TOKEN");
   const phoneNumberId = read(source, "WHATSAPP_PHONE_NUMBER_ID");
   const requested = read(source, "WHATSAPP_MODE");
-  const mode = requested === "simulate" || requested === "live" ? requested : token || production ? "live" : "simulate";
+  // A preview deployment never sends for real by accident, even if the token was loaded for "all environments":
+  // it must be asked for explicitly with WHATSAPP_MODE=live.
+  const preview = read(source, "VERCEL_ENV") === "preview";
+  const mode = requested === "simulate" || requested === "live" ? requested : (token || production) && !preview ? "live" : "simulate";
 
   if (mode === "simulate") {
     // Simulating in production would silently swallow guest messages.
@@ -42,7 +46,8 @@ export function parseWhatsappConfig(source: EnvSource = process.env): WhatsappCo
     return production ? { mode: "disabled", reason: "missing_credentials" } : { mode: "simulate" };
   }
   if (!/^[0-9]{5,30}$/.test(phoneNumberId)) return { mode: "disabled", reason: "invalid_phone_number_id" };
-  const apiVersion = read(source, "WHATSAPP_API_VERSION") ?? DEFAULT_API_VERSION;
+  const apiVersion = read(source, "WHATSAPP_API_VERSION");
+  if (!apiVersion) return { mode: "disabled", reason: "missing_api_version" };
   if (!/^v[0-9]{1,2}\.[0-9]$/.test(apiVersion)) return { mode: "disabled", reason: "invalid_api_version" };
   return { mode: "live", accessToken: token, phoneNumberId, apiVersion };
 }

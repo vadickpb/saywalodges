@@ -13,11 +13,14 @@ export function safeEqual(a: string, b: string): boolean {
 /**
  * Verifies `X-Hub-Signature-256: sha256=<hex>` = HMAC-SHA256(app secret, raw body). The RAW body, not re-serialised JSON.
  */
-export function verifySignature(rawBody: string, header: string | null, appSecret: string): boolean {
+export function verifySignature(rawBody: string | Uint8Array, header: string | null, appSecret: string): boolean {
   if (!header) return false;
   const match = /^sha256=([0-9a-f]{64})$/i.exec(header);
   if (!match) return false;
-  const expected = createHmac("sha256", appSecret).update(rawBody, "utf8").digest();
+  const hmac = createHmac("sha256", appSecret);
+  if (typeof rawBody === "string") hmac.update(rawBody, "utf8");
+  else hmac.update(rawBody);
+  const expected = hmac.digest();
   return timingSafeEqual(Buffer.from(match[1], "hex"), expected);
 }
 
@@ -43,8 +46,11 @@ const statusSchema = z.object({
   timestamp: z.string().regex(/^[0-9]{1,12}$/).optional(),
   errors: z.array(z.object({ code: z.union([z.number(), z.string()]).optional() })).optional(),
 });
+const valueSchema = z.object({ statuses: z.array(statusSchema).optional() });
+// `value` is parsed per change: another subscribed field, or a shape Meta adds later, must be ignored (200), never answered with
+// a 400 that would make Meta retry it for days.
 const payloadSchema = z.object({
-  entry: z.array(z.object({ changes: z.array(z.object({ value: z.object({ statuses: z.array(statusSchema).optional() }) })).optional() })).optional(),
+  entry: z.array(z.object({ changes: z.array(z.object({ value: z.unknown().optional() })).optional() })).optional(),
 });
 
 /**
@@ -58,7 +64,9 @@ export function parseStatusEvents(payload: unknown): StatusEvent[] | null {
   const events: StatusEvent[] = [];
   for (const entry of parsed.data.entry ?? []) {
     for (const change of entry.changes ?? []) {
-      for (const s of change.value.statuses ?? []) {
+      const value = valueSchema.safeParse(change.value);
+      if (!value.success) continue;
+      for (const s of value.data.statuses ?? []) {
         if (!(DELIVERY_STATUSES as readonly string[]).includes(s.status)) continue;
         const code = s.errors?.[0]?.code;
         const errorCode = code !== undefined && /^[0-9A-Za-z_.-]{1,40}$/.test(String(code)) ? String(code) : null;

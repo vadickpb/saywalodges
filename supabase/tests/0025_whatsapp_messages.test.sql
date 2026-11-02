@@ -1,7 +1,7 @@
 -- SD-1008: whatsapp_messages ledger and its two service_role RPCs.
 -- Ids from supabase/seed.sql: org Saywa bf88f504-...
 begin;
-select plan(22);
+select plan(25);
 
 -- ─── Catalog and grants ─────────────────────────────────────────────────────
 select ok((select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc where oid in (
@@ -33,6 +33,8 @@ select is((select status from public.whatsapp_messages where wamid = 'wamid.AAA'
 select is(public.log_whatsapp_message('bf88f504-051f-4fdc-ab73-4fa12d715817', 'booking_confirmed', 'es', 'wamid.AAA', 'live', null),
   (select id from ids), 'logging the same wamid again returns the same row');
 select is((select count(*)::int from public.whatsapp_messages where wamid = 'wamid.AAA'), 1, '... and does not duplicate it');
+select throws_ok($$select public.log_whatsapp_message('ff24bacc-47d2-40bc-9210-f860e98892fd', 'booking_confirmed', 'es', 'wamid.AAA', 'live', null)$$,
+  '23505', null, 'a wamid already recorded for another organization is refused, not merged');
 select throws_ok($$select public.log_whatsapp_message('bf88f504-051f-4fdc-ab73-4fa12d715817', 'booking_confirmed', 'es', 'wamid.BAD', 'live', gen_random_uuid())$$,
   '23503', null, 'a booking that does not exist (or is from another org) is refused');
 select throws_ok($$select public.log_whatsapp_message('bf88f504-051f-4fdc-ab73-4fa12d715817', 'Bad Template!', 'es', 'wamid.BAD2', 'live', null)$$,
@@ -50,6 +52,10 @@ select is((select status from public.whatsapp_messages where wamid = 'wamid.AAA'
 select public.log_whatsapp_message('bf88f504-051f-4fdc-ab73-4fa12d715817', 'booking_confirmed', 'es', 'wamid.BBB', 'live', null);
 select is(public.record_whatsapp_status('wamid.BBB', 'failed', now(), '131026'), 'updated', 'sent → failed');
 select is((select error_code from public.whatsapp_messages where wamid = 'wamid.BBB'), '131026', 'the error code is kept');
+
+-- A repeated 'sent', and anything arriving after 'failed', changes nothing
+select is(public.record_whatsapp_status('wamid.BBB', 'sent', now(), null), 'ignored', 'a late sent after failed is ignored');
+select is(public.record_whatsapp_status('wamid.BBB', 'read', now(), null), 'ignored', 'nothing moves a failed message forward');
 
 -- ─── Unknown and invalid input ──────────────────────────────────────────────
 select is(public.record_whatsapp_status('wamid.NOPE', 'delivered', now(), null), 'unknown', 'an unknown wamid is reported, not an error');

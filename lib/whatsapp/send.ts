@@ -12,7 +12,7 @@ import { parseWhatsappConfig, type WhatsappConfig } from "./config";
 // No automatic retry: the API has no idempotency key, so retrying a request whose outcome is unknown (timeout) could
 // message the guest twice. The result says "unavailable" and the caller decides.
 
-export type WhatsappFailure = "not_configured" | "invalid_input" | "rejected" | "unavailable";
+export type WhatsappFailure = "not_configured" | "invalid_input" | "unauthorized" | "rejected" | "unavailable";
 export type WhatsappResult = { ok: true; id: string; simulated: boolean } | { ok: false; reason: WhatsappFailure };
 
 export type SendTemplateInput = {
@@ -141,6 +141,11 @@ export async function sendWhatsappTemplate(input: SendTemplateInput, deps: Whats
   if (response.status >= 500 || response.status === 429) {
     log("error", "whatsapp.unavailable", fields);
     return { ok: false, reason: "unavailable" };
+  }
+  if (response.status === 401 || response.status === 403) {
+    // An expired or revoked token is an operations problem (rotate WHATSAPP_ACCESS_TOKEN), not a bad request.
+    log("error", "whatsapp.unauthorized", fields);
+    return { ok: false, reason: "unauthorized" };
   }
   log("warn", "whatsapp.rejected", fields);
   return { ok: false, reason: "rejected" };

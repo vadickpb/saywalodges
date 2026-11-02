@@ -84,6 +84,11 @@ describe("live", () => {
     expect(JSON.stringify(log.mock.calls)).toContain("132001");
     expect(JSON.stringify(log.mock.calls)).not.toContain("51999999999");
   });
+  it.each([401, 403])("maps HTTP %i (expired or revoked token) to unauthorized, not to a bad request", async (status) => {
+    const { deps, fetchMock } = mkDeps();
+    fetchMock.mockResolvedValue(jsonRes(status, { error: { code: 190 } }));
+    expect(await sendWhatsappTemplate(input, deps)).toEqual({ ok: false, reason: "unauthorized" });
+  });
   it.each([500, 503, 429])("maps HTTP %i to unavailable", async (status) => {
     const { deps, fetchMock } = mkDeps();
     fetchMock.mockResolvedValue(jsonRes(status, {}));

@@ -21,7 +21,7 @@ entonces nada llama al cliente en producción.
 
 ## Variables (por instalación; `.env.example`)
 `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` (todas sensibles salvo el id), y opcionales
-`WHATSAPP_MODE`, `WHATSAPP_API_VERSION` (por defecto `v21.0`: **verifica en Meta cuál está vigente** antes del primer envío real).
+`WHATSAPP_API_VERSION` (**obligatoria para enviar de verdad**, p. ej. `v23.0`; no hay valor por defecto porque Meta retira versiones: consulta la vigente en el *changelog* de la Graph API) y, opcional, `WHATSAPP_MODE`.
 
 ## Trámite con Meta (lo haces tú, por cliente; tarda días)
 1. <https://business.facebook.com> → crea o usa el **Business portfolio** del cliente (a su nombre) y completa la **verificación del negocio**
@@ -34,7 +34,8 @@ entonces nada llama al cliente en producción.
 5. **App secret**: App settings → Basic → *App secret* → **Show**.
 6. **Webhook**: WhatsApp → Configuration → *Webhook* → **Edit**: URL `https://app.<dominio>/api/whatsapp/webhook` y *Verify token* = el valor de
    `WHATSAPP_VERIFY_TOKEN` (ya cargado en Vercel y redesplegado **antes**, porque Meta hace el GET en ese momento). Después suscríbete al campo **messages**.
-7. **Plantillas**: WhatsApp → Message templates → créalas y espera la aprobación (SD-1009 define cuáles).
+7. Para recibir webhooks de números **reales** la app de Meta debe estar en modo **Live** (App settings → arriba, interruptor *App Mode*); con números de prueba basta el modo desarrollo.
+8. **Plantillas**: WhatsApp → Message templates → créalas y espera la aprobación (SD-1009 define cuáles).
 
 ## Probar sin gastar mensajes
 - Local: sin variables, el cliente simula. Para el webhook, exporta `WHATSAPP_APP_SECRET` y `WHATSAPP_VERIFY_TOKEN` y firma tus propias peticiones
@@ -43,5 +44,8 @@ entonces nada llama al cliente en producción.
 
 ## Límites conocidos
 - La versión de la Graph API y los códigos de error de Meta cambian con el tiempo; el cliente solo conserva el código numérico en los logs.
+- Solo se envían plantillas con cuerpo (`body`) y variables posicionales; encabezados, botones y variables con nombre no están soportados todavía (SD-1009 decide qué plantillas se necesitan).
+- Un evento de estado puede llegar antes de que se guarde el mensaje al que se refiere: si es reciente (menos de 60 s) y el mensaje aún no existe, el webhook responde `500` para que Meta lo reenvíe; si es más antiguo se da por ajeno y se confirma.
+- Un `401/403` al enviar (token caducado o revocado) se informa como `unauthorized`, distinto de `rejected` (petición inválida): rota `WHATSAPP_ACCESS_TOKEN`.
 - Nada impide hoy que un desarrollador llame a `sendWhatsappTemplate` sin consentimiento real (solo el tipo `optIn: true`); SD-1009 añade el registro de opt-in
   y la comprobación.

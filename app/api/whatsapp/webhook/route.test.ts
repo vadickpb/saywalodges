@@ -92,6 +92,20 @@ describe("POST", () => {
     const bad = JSON.stringify({ entry: "x" });
     expect((await POST(post(bad, sign(bad)))).status).toBe(400);
   });
+  it("asks Meta to redeliver a FRESH event whose message is not recorded yet, but acknowledges an old unknown one", async () => {
+    recordWhatsappStatus.mockResolvedValue("unknown");
+    const fresh = payload([{ id: "wamid.RACE", status: "delivered", timestamp: String(Math.floor(Date.now() / 1000)) }]);
+    expect((await POST(post(fresh, sign(fresh)))).status).toBe(500);
+    const old = payload([{ id: "wamid.FOREIGN", status: "delivered", timestamp: "1700000000" }]);
+    expect((await POST(post(old, sign(old)))).status).toBe(200);
+  });
+  it("answers 413 when a chunked body exceeds the cap even without Content-Length", async () => {
+    const big = "x".repeat(300 * 1024);
+    const stream = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(big)); c.close(); } });
+    const req = new Request("http://app.localhost:3000/api/whatsapp/webhook", { method: "POST", body: stream, duplex: "half" } as RequestInit);
+    expect((await POST(req)).status).toBe(413);
+    expect(recordWhatsappStatus).not.toHaveBeenCalled();
+  });
   it("answers 413 for an oversized declared body without reading it", async () => {
     const req = new Request("http://app.localhost:3000/api/whatsapp/webhook", { method: "POST", body: "{}", headers: { "content-length": String(300 * 1024) } });
     expect((await POST(req)).status).toBe(413);

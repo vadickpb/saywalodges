@@ -38,14 +38,23 @@ revoke all on public.whatsapp_messages from public, anon, authenticated;
 create function public.log_whatsapp_message(
   p_org_id uuid, p_template text, p_language text, p_wamid text, p_mode text, p_booking_id uuid default null
 ) returns uuid
-language sql
+language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_id uuid;
+begin
+  -- Idempotent for the SAME organization; a wamid already recorded for another one is an error, never a silent merge.
   insert into public.whatsapp_messages (org_id, booking_id, template, language, wamid, mode)
   values (p_org_id, p_booking_id, p_template, p_language, p_wamid, p_mode)
-  on conflict (wamid) do update set wamid = excluded.wamid
-  returning id;
+  on conflict (wamid) do update set wamid = excluded.wamid where public.whatsapp_messages.org_id = excluded.org_id
+  returning id into v_id;
+  if v_id is null then
+    raise exception 'wamid already recorded for another organization' using errcode = '23505';
+  end if;
+  return v_id;
+end;
 $$;
 revoke all on function public.log_whatsapp_message(uuid, text, text, text, text, uuid) from public, anon, authenticated;
 grant execute on function public.log_whatsapp_message(uuid, text, text, text, text, uuid) to service_role;

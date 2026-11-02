@@ -1892,7 +1892,7 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   `app/api/whatsapp/webhook/route.ts`, migración `20261103120000_whatsapp_messages.sql` (tabla sin acceso para anon/authenticated y dos RPC solo
   para service_role; el estado solo avanza), `docs/whatsapp.md`. Decisiones: solo plantillas (no texto libre); **sin reintento** (no hay clave de
   idempotencia); el registro **no guarda teléfonos**; no se procesan mensajes entrantes; el consentimiento lo exige el tipo (`optIn: true`) y su
-  registro/comprobación real es SD-1009. La versión de la Graph API (`v21.0`) es configurable y debe verificarse antes del primer envío real.
+  registro/comprobación real es SD-1009. No hay versión de la Graph API por defecto: `WHATSAPP_API_VERSION` es obligatoria para enviar de verdad (Meta retira versiones).
 
 ### [ ] SD-1009 · feat(whatsapp): booking templates and guest opt-in
 `M` · Depende: SD-1008, SD-403, SD-405, SD-406 · Review: `R+S`
@@ -1903,6 +1903,9 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   aprobación de plantillas): paso del dueño.
 - **Criterios**
   - [ ] Sin opt-in no se envía ningún mensaje (tests).
+  - [ ] `orgId` y `bookingId` salen siempre del servidor (de la reserva cargada), nunca de un formulario, y el envío no vive en una server action de usuario
+        (service-role solo en cron/webhook/RPC). Plazo de retención o purga de `whatsapp_messages` (`wamid` + reserva es dato personal indirecto, Ley 29733),
+        mención en el aviso de privacidad de la transferencia a Meta y registro del opt-in con evidencia (fecha, texto mostrado).
   - [ ] Cada plantilla se prueba con el número de prueba de Meta.
 
 ## Propuesta de ticket fuera del alcance actual

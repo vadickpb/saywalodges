@@ -18,6 +18,12 @@ describe("verifySignature", () => {
       expect(verifySignature(body, h, SECRET)).toBe(false);
     }
   });
+  it("signs the raw bytes: a body that is not valid UTF-8 still verifies", () => {
+    const bytes = Buffer.from([0x7b, 0xff, 0xfe, 0x7d]);
+    const header = `sha256=${createHmac("sha256", SECRET).update(bytes).digest("hex")}`;
+    expect(verifySignature(bytes, header, SECRET)).toBe(true);
+    expect(verifySignature(Buffer.from([0x7b, 0xff, 0x7d]), header, SECRET)).toBe(false);
+  });
   it("is case-insensitive on the hex digits only", () => {
     expect(verifySignature(body, sign(body).toUpperCase().replace("SHA256=", "sha256="), SECRET)).toBe(true);
   });
@@ -65,7 +71,11 @@ describe("parseStatusEvents", () => {
   it("returns null when the body is not the expected envelope", () => {
     expect(parseStatusEvents("nope")).toBeNull();
     expect(parseStatusEvents({ entry: "x" })).toBeNull();
-    expect(parseStatusEvents({ entry: [{ changes: [{ value: { statuses: [{ status: "sent" }] } }] }] })).toBeNull();
+  });
+  it("skips a change it cannot read instead of failing the whole payload (no 400 retry storms)", () => {
+    expect(parseStatusEvents({ entry: [{ changes: [{ field: "other", value: "text" }, { field: "x" }, { value: { statuses: [{ status: "sent" }] } }] }] })).toEqual([]);
+    const events = parseStatusEvents({ entry: [{ changes: [{ value: 5 }, { value: { statuses: [{ id: "wamid.A", status: "read" }] } }] }] });
+    expect(events).toEqual([{ wamid: "wamid.A", status: "read", at: null, errorCode: null }]);
   });
   it("an empty object is a valid envelope with no events", () => {
     expect(parseStatusEvents({})).toEqual([]);

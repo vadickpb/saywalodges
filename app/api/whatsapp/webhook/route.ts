@@ -13,6 +13,29 @@ import { parseStatusEvents, verifyHandshake, verifySignature } from "@/lib/whats
 // are not processed or stored.
 const ROUTE = "/api/whatsapp/webhook";
 const MAX_BODY_BYTES = 256 * 1024;
+// A status event can arrive before the sender has recorded the message it refers to (the ledger row is written right after
+// Meta answers). Such a fresh event for an unknown wamid is answered with a 500 so Meta redelivers it a bit later; once it is
+// older than this the wamid is simply not ours and the event is acknowledged.
+const UNKNOWN_RETRY_WINDOW_MS = 60_000;
+
+// Reads at most MAX_BODY_BYTES: Content-Length can be absent (chunked) or wrong, so the cap is enforced on the stream itself.
+async function readCapped(request: Request): Promise<Buffer | null> {
+  if (!request.body) return Buffer.alloc(0);
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
 
 export async function GET(request: Request) {
   const config = parseWebhookConfig();
@@ -31,15 +54,19 @@ export async function POST(request: Request) {
     log("warn", "whatsapp.webhook.too_large", { requestId, route: ROUTE, status: 413 });
     return new NextResponse(null, { status: 413, headers });
   }
-  const raw = await request.text();
-  if (!config || raw.length > MAX_BODY_BYTES || !verifySignature(raw, request.headers.get("x-hub-signature-256"), config.appSecret)) {
+  const raw = await readCapped(request);
+  if (raw === null) {
+    log("warn", "whatsapp.webhook.too_large", { requestId, route: ROUTE, status: 413 });
+    return new NextResponse(null, { status: 413, headers });
+  }
+  if (!config || !verifySignature(raw, request.headers.get("x-hub-signature-256"), config.appSecret)) {
     log("warn", "whatsapp.webhook.unauthorized", { requestId, route: ROUTE, method: request.method, status: 401 });
     return new NextResponse(null, { status: 401, headers });
   }
 
   let payload: unknown;
   try {
-    payload = JSON.parse(raw);
+    payload = JSON.parse(raw.toString("utf8"));
   } catch {
     log("warn", "whatsapp.webhook.bad_json", { requestId, route: ROUTE, status: 400 });
     return new NextResponse(null, { status: 400, headers });
@@ -52,8 +79,15 @@ export async function POST(request: Request) {
 
   try {
     let updated = 0;
+    let retry = false;
     for (const event of events) {
-      if ((await recordWhatsappStatus(event)) === "updated") updated += 1;
+      const outcome = await recordWhatsappStatus(event);
+      if (outcome === "updated") updated += 1;
+      if (outcome === "unknown" && event.at && Date.now() - event.at.getTime() < UNKNOWN_RETRY_WINDOW_MS) retry = true;
+    }
+    if (retry) {
+      log("warn", "whatsapp.webhook.retry_unknown", { requestId, route: ROUTE, status: 500, count: events.length });
+      return new NextResponse(null, { status: 500, headers });
     }
     log("info", "whatsapp.webhook.processed", { requestId, route: ROUTE, status: 200, count: events.length, outcome: updated > 0 ? "updated" : "no_change" });
     return new NextResponse(null, { status: 200, headers });
