@@ -1,4 +1,4 @@
-# ADR 0009 · CSP con nonce por petición y headers de seguridad
+# ADR 0011 · CSP con nonce por petición y headers de seguridad
 
 - Estado: aceptado (SD-701) · Fecha: 2026-10-30 · **Chrome real en CI (carga inicial) añadido; preview report-only pendiente** (ver "Verificación en navegador" y "Pendiente")
 

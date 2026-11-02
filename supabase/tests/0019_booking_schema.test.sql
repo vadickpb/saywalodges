@@ -23,12 +23,12 @@ select ok(not exists (select 1 from information_schema.role_table_grants
   'authenticated has no write privilege on guests/quotes/bookings/payments');
 select ok((select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc where oid in (
   'public.create_booking_from_quote(text,text,text,text)'::regprocedure,
-  'public.confirm_payment(uuid,uuid)'::regprocedure, 'public.reject_payment(uuid,uuid,text)'::regprocedure,
+  'public.confirm_payment(uuid,uuid,numeric)'::regprocedure, 'public.reject_payment(uuid,uuid,text)'::regprocedure,
   'public.cancel_booking(uuid,uuid,text)'::regprocedure, 'public.expire_holds()'::regprocedure,
   'private.release_expired_holds(uuid)'::regprocedure)),
   'Every SD-401 function is SECURITY DEFINER with an empty search_path');
 select ok(has_function_privilege('anon', 'public.create_booking_from_quote(text,text,text,text)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.confirm_payment(uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.confirm_payment(uuid,uuid,numeric)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.reject_payment(uuid,uuid,text)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.cancel_booking(uuid,uuid,text)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.expire_holds()', 'EXECUTE'),
@@ -269,7 +269,7 @@ insert into public.payments (id, org_id, booking_id, amount_cents, currency, met
   ('a0000000-0000-4000-8000-000000000002', 'bf88f504-051f-4fdc-ab73-4fa12d715817', (select (v->>'booking_id')::uuid from res where k = 'b1'), 33000, 'USD', 'yape');
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
 set local role authenticated;
-select lives_ok($$insert into res select 'c1', public.confirm_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a0000000-0000-4000-8000-000000000002')$$,
+select lives_ok($$insert into res select 'c1', public.confirm_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a0000000-0000-4000-8000-000000000002', 3.75)$$,
   'The owner confirms a payment covering the deposit');
 select is((select v->>'booking_status' from res where k = 'c1'), 'confirmed', 'The RPC reports the booking confirmed');
 select results_eq($$select b.status::text, b.expires_at is null, b.confirmed_at is not null from public.bookings b where b.id = (select (v->>'booking_id')::uuid from res where k = 'b1')$$,

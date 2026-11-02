@@ -8,11 +8,11 @@ export default defineConfig({
     environment: "node",
     coverage: {
       provider: "v8",
-      include: ["lib/domain/pricing.ts", "lib/domain/rates-management.ts", "lib/domain/finance.ts", "lib/domain/finance-reports.ts", "lib/domain/finance-export.ts", "lib/domain/finance-recurring.ts", "lib/domain/dates.ts", "lib/domain/availability.ts", "lib/domain/public-availability.ts", "lib/domain/public-rates.ts", "lib/ical/export.ts"],
+      include: ["lib/domain/pricing.ts", "lib/domain/rates-management.ts", "lib/domain/finance.ts", "lib/domain/finance-reports.ts", "lib/domain/finance-export.ts", "lib/domain/finance-recurring.ts", "lib/domain/dates.ts", "lib/domain/availability.ts", "lib/domain/public-availability.ts", "lib/domain/public-rates.ts", "lib/domain/site-appearance.ts", "lib/ical/export.ts"],
       reporter: ["text", "json-summary", "html"],
       thresholds: { perFile: true, lines: 90, statements: 90, functions: 90, branches: 90 },
     },
-    include: ["lib/**/*.test.ts", "app/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "app/**/*.test.ts", "proxy.test.ts"],
     // Dummy defaults so modules that import lib/env.ts (which validates
     // eagerly at import time) don't crash in test files that never touch
     // env themselves. env.test.ts overrides process.env directly per case.

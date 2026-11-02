@@ -1,0 +1,95 @@
+import { z } from "zod";
+import { format } from "@/lib/domain/format";
+import { ICAL_CHANNELS } from "@/lib/domain/ical-feeds";
+import { emailMessages, type EmailLang } from "./messages";
+import { DEFAULT_BRAND_NAME } from "./config";
+
+// Every template is a pure function (lang, props) → EmailContent. One shared
+// layout renders it to HTML and one function to plain text, so a new template
+// (SD-407) is copy + props schema, not markup.
+export type EmailContent = {
+  subject: string;
+  preheader: string;
+  heading: string;
+  paragraphs: string[];
+  cta?: { label: string; url: string };
+};
+
+// Anything that reaches a template prop is user-controlled (guest names...).
+// Strip control characters (CR/LF would otherwise reach the subject) and cap
+// length. HTML escaping is done by React when the layout renders.
+const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
+export const cleanText = (value: string, max: number) => value.replace(CONTROL_CHARS, " ").trim().slice(0, max);
+
+export const httpsUrl = z
+  .string()
+  .max(2000)
+  .refine((value) => {
+    try {
+      return new URL(value).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "must be an https URL");
+
+// No .max(): a unit name the database accepts (up to 200 characters) must not make the
+// alert fail validation and vanish silently; it is shortened to 100 instead.
+const displayName = z
+  .string()
+  .transform((value) => cleanText(value, 100))
+  .optional();
+
+// `build` validates its props with the schema first, so callers can pass raw,
+// untrusted values; invalid ones throw a ZodError.
+function defineTemplate<S extends z.ZodType>(schema: S, build: (lang: EmailLang, props: z.output<S>, brand: string) => EmailContent) {
+  return { build: (lang: EmailLang, raw: z.input<S>, brand: string = DEFAULT_BRAND_NAME): EmailContent => build(lang, schema.parse(raw), brand) };
+}
+
+export const templates = {
+  test: defineTemplate(z.object({ name: displayName }), (lang, props, brand) => {
+    const m = emailMessages[lang].test;
+    return {
+      subject: format(m.subject, { brand }),
+      preheader: m.preheader,
+      heading: m.heading,
+      paragraphs: [props.name ? format(m.greeting, { name: props.name }) : m.greetingAnonymous, format(m.body, { brand }), m.note],
+    };
+  }),
+  // SD-307. Business data only (channel + unit name): no guest names, dates, URLs of feeds or amounts.
+  icalConflict: defineTemplate(
+    z.object({ channel: z.enum(ICAL_CHANNELS), unitName: displayName, count: z.number().int().min(1).max(100000), url: httpsUrl.optional() }),
+    (lang, props, brand) => {
+      const m = emailMessages[lang].icalConflict;
+      const vars = { channel: emailMessages[lang].channels[props.channel], unit: props.unitName ?? "-", count: String(props.count) };
+      return {
+        subject: format(m.subject, { brand }),
+        preheader: m.preheader,
+        heading: m.heading,
+        paragraphs: [m.greeting, format(props.count === 1 ? m.bodyOne : m.bodyMany, vars), m.note],
+        ...(props.url ? { cta: { label: m.cta, url: props.url } } : {}),
+      };
+    },
+  ),
+  icalFeedDown: defineTemplate(
+    z.object({ channel: z.enum(ICAL_CHANNELS), unitName: displayName, url: httpsUrl.optional() }),
+    (lang, props, brand) => {
+      const m = emailMessages[lang].icalFeedDown;
+      return {
+        subject: format(m.subject, { brand }),
+        preheader: m.preheader,
+        heading: m.heading,
+        paragraphs: [m.greeting, format(m.body, { channel: emailMessages[lang].channels[props.channel], unit: props.unitName ?? "-" }), m.note],
+        ...(props.url ? { cta: { label: m.cta, url: props.url } } : {}),
+      };
+    },
+  ),
+};
+
+export type TemplateName = keyof typeof templates;
+export type TemplateInput<N extends TemplateName> = Parameters<(typeof templates)[N]["build"]>[1];
+export type EmailMessage = { [N in TemplateName]: { template: N; lang: EmailLang; props: TemplateInput<N> } }[TemplateName];
+
+export function buildContent(message: EmailMessage, brand: string = DEFAULT_BRAND_NAME): EmailContent {
+  // Safe: `template` and `props` are tied together by the EmailMessage union.
+  return (templates[message.template].build as (lang: EmailLang, props: unknown, brand: string) => EmailContent)(message.lang, message.props, brand);
+}

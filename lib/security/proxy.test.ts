@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // proxy.ts must never reach Supabase in tests; getClaims is the only call it makes.
 const getClaims = vi.fn(async () => ({ data: null, error: null }));
@@ -86,5 +86,44 @@ describe("proxy CSP", () => {
     const csp = res.headers.get("content-security-policy-report-only") ?? "";
     expect(res.headers.get("x-middleware-request-x-nonce")).toBe(nonceOf(csp));
     expect(res.headers.get("x-middleware-request-content-security-policy-report-only")).toBe(csp);
+  });
+});
+
+// Installation mode (SD-1001, ADR 0010): the same nonce CSP must cover every response the proxy gives there.
+describe("proxy CSP · installation mode", () => {
+  beforeEach(() => {
+    env.DEPLOYMENT_MODE = "installation";
+  });
+  afterEach(() => {
+    env.DEPLOYMENT_MODE = "platform";
+  });
+
+  const INSTALLATION_CASES: { name: string; host: string; path: string; status: number }[] = [
+    { name: "client site with locale (rewrite)", host: "localhost:3000", path: "/es", status: 200 },
+    { name: "client site without locale (redirect)", host: "localhost:3000", path: "/", status: 307 },
+    { name: "sitemap on the site host", host: "localhost:3000", path: "/sitemap.xml", status: 200 },
+    { name: "panel root on app host (rewrite to /app)", host: "app.localhost:3000", path: "/", status: 200 },
+    { name: "login on app host", host: "app.localhost:3000", path: "/login", status: 200 },
+    { name: "cron API on app host", host: "app.localhost:3000", path: "/api/cron/expire-holds", status: 200 },
+    { name: "API on the site host (404)", host: "localhost:3000", path: "/api/cron/expire-holds", status: 404 },
+    { name: "login on the site host (404)", host: "localhost:3000", path: "/login", status: 404 },
+    { name: "unknown host (404)", host: "other.test", path: "/es", status: 404 },
+    { name: "invalid Host (400)", host: "x/../../app", path: "/", status: 400 },
+  ];
+
+  it.each(INSTALLATION_CASES)("$name: sets a nonce CSP and keeps its routing outcome", async ({ host, path, status }) => {
+    const res = await get(host, path);
+    expect(res.status).toBe(status);
+    const csp = res.headers.get("content-security-policy") ?? "";
+    expect(csp).toMatch(/'nonce-[^']+'/);
+    // Responses that render forward the same nonce to Next; rejections and redirects have no render.
+    if (status === 200) expect(res.headers.get("x-middleware-request-x-nonce")).toBe(nonceOf(csp));
+  });
+
+  it("does not refresh the session on the public site host", async () => {
+    await get("localhost:3000", "/es");
+    expect(getClaims).not.toHaveBeenCalled();
+    await get("app.localhost:3000", "/login");
+    expect(getClaims).toHaveBeenCalledTimes(1);
   });
 });

@@ -4,6 +4,7 @@ import {
   compareReports,
   globalReport,
   monthReport,
+  parseDateRange,
   periodReport,
   prepareReport,
   splitAcrossNights,
@@ -175,6 +176,24 @@ describe("availability", () => {
     expect(march.units[0]).toMatchObject({ availableNights: 0, occupancyBps: null });
     // An active house ignores a stale end date.
     expect(periodReport(prepare([rental], [unit({ availableUntil: "2027-02-10" })]), FEB, "stay").units[0].availableNights).toBe(28);
+  });
+
+  it("subtracts the nights the owner blocked from the available nights, only inside the window", () => {
+    const blocked = (ranges: { start: string; end: string }[], over: Partial<ReportUnit> = {}) =>
+      periodReport(prepare([rental], [unit({ blockedRanges: ranges, ...over })]), FEB, "stay").units[0];
+    // 28 nights - 4 blocked (3..6 Feb); the booked nights and the sale are untouched.
+    expect(blocked([{ start: "2027-02-03", end: "2027-02-07" }])).toMatchObject({ availableNights: 24, bookedNights: 2, occupancyBps: 833 });
+    // A block crossing the month boundary only counts its nights inside the period.
+    expect(blocked([{ start: "2027-01-30", end: "2027-02-03" }]).availableNights).toBe(26);
+    expect(blocked([{ start: "2027-02-27", end: "2027-03-04" }]).availableNights).toBe(26);
+    // Two blocks add up; blocks outside the period or before the house existed change nothing.
+    expect(blocked([{ start: "2027-02-01", end: "2027-02-03" }, { start: "2027-02-10", end: "2027-02-11" }]).availableNights).toBe(25);
+    expect(blocked([{ start: "2027-04-01", end: "2027-04-05" }]).availableNights).toBe(28);
+    expect(blocked([{ start: "2027-02-01", end: "2027-02-10" }], { availableFrom: "2027-02-20" }).availableNights).toBe(9);
+    // A block covering the whole period leaves nothing available, never a negative number.
+    expect(blocked([{ start: "2027-01-01", end: "2027-04-01" }])).toMatchObject({ availableNights: 0, occupancyBps: null });
+    // No blocks listed behaves as before.
+    expect(blocked([]).availableNights).toBe(28);
   });
 
   it("never counts an inactive house with no bookings and no end date", () => {
@@ -379,5 +398,14 @@ describe("globalReport", () => {
     const b = entry({ kind: "income", amountPenCents: 100, unitId: "ub", stayStart: "2027-02-01", stayEnd: "2027-02-02" });
     const g = globalReport(prepare([b, a], [unit({ id: "ub", name: "Beta" }), unit({ id: "ua", name: "Alfa" })]), FEB, "stay");
     expect(g.ranking.map((u) => u.name)).toEqual(["Alfa", "Beta"]);
+  });
+});
+
+describe("parseDateRange", () => {
+  it("reads a Postgres daterange and refuses anything else", () => {
+    expect(parseDateRange("[2027-03-01,2027-03-05)")).toEqual({ start: "2027-03-01", end: "2027-03-05" });
+    for (const bad of ["empty", "", "[2027-03-05,2027-03-01)", "[2027-03-01,2027-03-01)", "(2027-03-01,2027-03-05)", "[2027-03-01,2027-03-05]"]) {
+      expect(parseDateRange(bad)).toBeNull();
+    }
   });
 });

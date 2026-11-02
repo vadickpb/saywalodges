@@ -8,7 +8,8 @@ description: Workflow estándar para implementar un ticket de Saywa Direct de pr
 ## 1. Preparar
 - Localiza el ticket en `docs/roadmap.md` (o el issue de GitHub) y relee sus criterios de aceptación
   y dependencias. Si una dependencia no está hecha, detente y avisa.
-- Parte de `main` actualizado: rama `<type>/<ticket-id>-<slug>` (ej. `feat/SD-041-quote-link`).
+- Ejecuta `npm run where` para confirmar rama, worktree y estado. Trabaja en un worktree propio (1 ticket = 1 worktree).
+- Parte de `origin/main` actualizado: rama `<type>/<ticket-id>-<slug>` (ej. `feat/SD-041-quote-link`).
 
 ## 2. Entender y planificar
 - Lee los archivos afectados antes de proponer nada.
@@ -42,3 +43,6 @@ anota lo que encuentres fuera de alcance como propuesta de ticket nuevo.
   "Autonomía de trabajo, PR y merge" en `AGENTS.md`.
 - PR con `.github/pull_request_template.md` completo. Squash merge con CI en verde.
 - Marca el ticket como hecho en `docs/roadmap.md`.
+- Si el PR trae migración, avisa que el workflow *Deploy database* quedará esperando la aprobación del dueño.
+- Termina siempre con el bloque «Te toca a ti» definido en `docs/workflow.md` (rama, worktree, pasos exactos
+  y cómo verificarlos, o «Nada pendiente para ti»).

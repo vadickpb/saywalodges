@@ -56,5 +56,7 @@ Roadmap y tickets: `docs/roadmap.md`. Decisiones de arquitectura: `docs/adr/`.
     server actions públicas o variables de entorno.
   - Los revisores no editan; el agente principal aplica los arreglos.
   - No delegar implementación ni búsquedas que se resuelven leyendo 2–3 archivos.
+- Proceso completo (ramas, migraciones, despliegue de BD, cierre «Te toca a ti»): `docs/workflow.md`.
+  Arquitectura explicada: `docs/architecture.md`. Estado de ramas/PR: `npm run where`.
 - Commits: Conventional Commits `type(scope): subject` (feat, fix, refactor, test, chore, docs).
   Un PR por ticket, rama `<type>/<ticket-id>-slug`, squash merge.

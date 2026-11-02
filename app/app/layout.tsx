@@ -10,6 +10,7 @@ import { env } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveOrg, getOrgProperty } from "@/lib/dal/organizations";
 import { getSiteUrl } from "@/lib/dal/public/site";
+import { siteHostFor } from "@/lib/domain/host-routing";
 import { signOut } from "@/app/app/actions";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { OrgSwitcher } from "@/components/dashboard/org-switcher";
@@ -96,7 +97,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const supabase = await createClient();
   const property = await getOrgProperty(supabase, activeOrg.id);
   const siteUrl = property
-    ? getSiteUrl(property.customDomain ?? `${property.subdomain}.${env.ROOT_DOMAIN}`)
+    ? getSiteUrl(siteHostFor({ mode: env.DEPLOYMENT_MODE, rootDomain: env.ROOT_DOMAIN, subdomain: property.subdomain, customDomain: property.customDomain }))
     : null;
 
   return (

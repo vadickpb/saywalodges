@@ -1,7 +1,9 @@
 # Saywa Direct — Roadmap técnico
 
-SaaS multi-tenant para que alojamientos independientes en Perú conviertan consultas de WhatsApp/Instagram
-en reservas directas pagadas. Fuera de alcance del MVP: PMS completo, channel manager por API,
+Sistema de reservas directas que se **instala por cliente** (una instalación por alojamiento, con garantía de 3 meses
+y mantenimiento mensual; [ADR 0010](adr/0010-installation-per-client.md)) para que alojamientos independientes en Perú
+conviertan consultas de WhatsApp/Instagram en reservas directas pagadas. Internamente conserva el modelo multi-tenant
+(`org_id` + RLS) con una organización por instalación. Fuera de alcance del MVP: PMS completo, channel manager por API,
 marketplace, precios dinámicos.
 
 Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `ticket` (`.claude/skills/ticket`).
@@ -11,7 +13,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Id**: `SD-<fase><nn>` (SD-101 = Fase 1, ticket 01). Rama: `<type>/SD-101-slug`.
 - **Tamaño**: `S` ≤ 1 día · `M` 2–3 días · `L` 4–5 días. Un `L` que crece se divide.
 - **Review**: `R` = `reviewer` · `R+S` = `reviewer` + `security-reviewer`.
-- **Estado**: `[ ]` pendiente · `[~]` en curso · `[x]` hecho.
+- **Estado**: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[-]` descartado (con motivo).
 
 ### Definition of Done (todos los tickets)
 
@@ -31,9 +33,10 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 | **M2 · Contenido y tarifas** | Fase 2 | Dueño edita su sitio y sus tarifas desde el dashboard |
 | **M3 · Calendario sin dobles reservas** | Fase 3 | Calendario único sincronizado con Airbnb/Booking |
 | **M4 · Primera reserva directa** 🎯 | Fase 4 | Link de reserva + pago por voucher en producción para Saywa |
-| **M5 · Pago en línea** | Fase 5 | Mercado Pago por tenant |
-| **M6 · Listo para clientes** | Fase 6–7 | CRM, check-in, dominios propios, hardening, portafolio |
+| **M5 · Pago en línea** | Fase 5 | Mercado Pago por instalación (ADR 0010) |
+| **M6 · Listo para clientes** | Fase 6–7 | CRM, check-in, hardening, portafolio |
 | **M8 · Finanzas** | Fase 8 (SD-801–805) | Ingresos, egresos, reportes estilo Airbnb y Excel para el contador |
+| **M10 · Vendible por instalación** | Fase 10 | Cliente nuevo instalado con script, actualizado y vigilado de forma central; demo pública; WhatsApp automático |
 
 ---
 
@@ -572,7 +575,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     misma página cuando SD-202 agregue esas policies, sin tocar el resto del formulario.
   - **Sin color primario/acento.** SD-210 es el ticket dedicado a todo el tema (presets, colores,
     tipografía, radio, aviso de contraste) — duplicarlo aquí con una versión reducida no tenía sentido.
-    `theme`/`content` siguen sin grant de escritura hasta SD-210.
+    `theme`/`content` no tenían grant de escritura; SD-210 lo añade (migración pendiente de aplicar).
   - **Sin `revalidateTag`.** `app/sites/[host]/[lang]/page.tsx` ya es 100% dinámico (`ƒ`, sin ninguna
     directiva de cache) — no hay nada que invalidar hoy, confirmado arriba con la prueba real. Se agrega
     el día que el sitio público tenga una capa de cache de verdad.
@@ -827,7 +830,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   verde**: en la sesión de desarrollo Docker no respondía, así que no se corrió contra una BD local y no se
   afirma resultado HTTP; solo hay `node --check`, lint, typecheck, test y build.
 
-### [ ] SD-209 · feat(site): customizable public site template
+### [x] SD-209 · feat(site): customizable public site template
 `L` · Depende: SD-201, SD-208 · Review: `R+S`
 - **Objetivo**: que el sitio de cada alojamiento se vea profesional, con la marca de cada dueño, y convierta
   visitas en consultas y reservas.
@@ -841,7 +844,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [ ] `saywa-lodges` y `demo` se ven con marcas distintas solo cambiando el tema, sin código.
   - [ ] Un color con contraste insuficiente muestra advertencia y el CTA sigue siendo legible.
   - [ ] El tema solo acepta valores validados (hex, presets); intentar inyectar CSS falla (test).
-  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad.
+  - [x] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (CI: Saywa 93/96, demo 100/93).
 - **Parte 1 (hecha, adelantada a pedido)**: plantilla nueva en `components/site/*` (hero editorial con barra de
   datos, intro + amenities, galería bento con visor `<dialog>`, espacios en tarjetas, tarifas + CTA de
   disponibilidad, ubicación, FAQ `<details>`, contacto, footer y barra CTA fija en móvil). Migración
@@ -850,7 +853,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   `dictionaries/` quedó solo con etiquetas genéricas. Fotos locales con `npm run db:seed-storage`.
   Cubre los criterios 1 y 3 y la parte de "CTA legible" del 2 (`foregroundFor`). El aviso de contraste en el
   editor, las reseñas y Lighthouse quedan para SD-210.
-- **Parte 2 (local, sin push; SD-209 sigue abierto)**: `deriveTints`/`mixHex` en `lib/domain/site-theme.ts`
+- **Parte 2 (fusionada con SD-209)**: `deriveTints`/`mixHex` en `lib/domain/site-theme.ts`
   calculan `--site-muted/surface/line` en el servidor (antes `color-mix` en CSS, sin validar): el texto atenuado
   cae a `fg` completo si no llega a AA sobre fondo y superficie, y la superficie cae al fondo si aun así no
   alcanza (caso real hallado por test en grises medios). Enlace «saltar al contenido» (`skipToContent`,
@@ -862,22 +865,35 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - **Reseñas: no implementadas.** No existe tabla ni fuente de datos de reseñas verificables; no se inventan
     testimonios. Requiere un ticket propio (modelo de datos + moderación).
   - **Editor/aviso de contraste**: sigue siendo SD-210 (no duplicado).
-  - **Lighthouse móvil ≥ 90: PENDIENTE.** El sitio público necesita la BD local sembrada y Docker no respondía
-    (`Cannot connect to the Docker daemon`); sin BD la ruta responde 404, así que no se midió nada ni se afirma
-    puntaje. Medir en preview o con el stack local levantado.
+  - **Lighthouse móvil ≥ 90: cumplido en CI** (`scripts/lighthouse-mobile.mjs`): Saywa 93/96, demo 100/93.
   - **Verificado**: `npm run lint`, `typecheck`, `test` (48 archivos, 743 tests) y `build` en verde. El smoke
     HTTP solo pasó `node --check`; su ejecución real queda a cargo de CI.
 
-### [ ] SD-210 · feat(dashboard): site appearance editor
+### [~] SD-210 · feat(dashboard): site appearance editor
 `M` · Depende: SD-106, SD-201, SD-209 (parte 1) · Review: `R+S`
 - **Alcance**: "Sitio → Apariencia" en el dashboard: elegir preset, colores, par tipográfico y radio, con vista
   previa en vivo y aviso de contraste (`contrastWarnings`); editar `properties.content` (textos y FAQ por idioma).
   Server action + zod con los mismos schemas de `lib/domain`; ampliar el grant de `update` de `authenticated`
   a `theme`/`content`. Sección de reseñas cuando haya fuente de datos.
 - **Criterios**
-  - [ ] Un color con contraste insuficiente muestra advertencia antes de guardar.
-  - [ ] Un miembro de otra org no puede editar el tema (test pgTAP).
-  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (medido en un deploy de preview).
+  - [x] Un color con contraste insuficiente muestra advertencia antes de guardar (`contrastWarnings` en vivo
+    en el editor; no bloquea el guardado). Verificado por tipos/build y tests de dominio; **no probado aún en
+    navegador** (ver nota).
+  - [ ] Un miembro de otra org no puede editar el tema (test pgTAP `0021_site_appearance_isolation`, escrito
+    pero **sin ejecutar**: Docker no disponible en local; lo ejecutará el job `db` de CI).
+  - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (medido en un deploy de preview). **Sin medir**:
+    se sigue verificando con `scripts/lighthouse-mobile.mjs` en CI; este ticket no declara puntajes.
+- **Notas (provisional, sin push)**:
+  - Ruta `/app/site/appearance` (pestaña «Apariencia»): preset, 3 colores hex (selector + texto, validados),
+    par tipográfico, radio, vista previa con `themeToCssVars` (fuentes aproximadas con pila del sistema),
+    textos es/en, destacados y FAQ. Sin CSS libre. Reseñas: solo aviso, sigue sin fuente de datos.
+  - Server action `saveAppearance`: un único campo JSON `payload` validado por `parseAppearancePayload`
+    (`lib/domain/site-appearance.ts`, reutiliza `themeSchema`/`contentSchema`; FAQ y destacados completos en
+    ambos idiomas). La org sale de `requireActiveOrg()`, nunca del formulario; el DAL escribe con
+    `.eq("org_id")` y exige exactamente 1 fila. Mismo permiso que «Información» (cualquier miembro, vía RLS).
+  - El tema se guarda solo con las diferencias respecto del preset elegido.
+  - **Migración pendiente para el dueño**: `20261030211752_site_appearance_write_grant.sql` (aditiva:
+    `grant update (theme, content)` a `authenticated`). Debe aplicarse en producción **antes** del deploy.
 
 ---
 
@@ -1095,7 +1111,40 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Alcance**: Resend (dominio verificado), `lib/email/` con plantillas React Email es/en, envío desde servidor,
   sin PII en logs.
 - **Criterios**
-  - [ ] Email de prueba enviado en entorno de preview.
+  - [ ] Email de prueba enviado en entorno de preview. **PENDIENTE (bloqueado por el dueño)**: requiere dominio
+        verificado en Resend y una API key, que el agente no tiene ni debe usar. Sin evidencia de envío real todavía.
+- **Estado (implementado en rama `feat/SD-306-email-infrastructure`, sin push ni PR)**:
+  - `lib/email/`: `config.ts` (config perezosa y fail-closed; no está en `lib/env.ts` para no romper build/previews sin key),
+    `content.ts` (plantillas = función pura `(lang, props) → contenido`, props validadas con zod, texto saneado),
+    `messages.ts` (copy es/en), `layout.tsx` (HTML con tablas e estilos inline; React escapa todo), `render.tsx`
+    (HTML + texto plano), `send.ts` (`sendEmail`, nunca lanza; devuelve `{ok,id,simulated}` o `{ok:false,reason}`).
+  - **Sin dependencias nuevas**: Resend se llama por `fetch` a su API REST (con `Idempotency-Key`), y las plantillas son
+    componentes React renderizados con `react-dom/server.edge` (ya incluido con React; `react-dom/server` lo bloquea Next
+    en el grafo del servidor). **Desviación del alcance**: no se usa `@react-email/components` (1.0.12 en npm,
+    peer `react ^18 || ^19`, compatible). Se reintentó `npm install @react-email/components@^1.0.12` el 2026-10-30 y el
+    permiso de Bash para instalar no fue concedido en la sesión, por lo que no se modificó `package.json`/lockfile.
+    Migrar es instalarlo y cambiar `layout.tsx` por sus componentes (`Html`, `Body`, `Container`, `Button`…) sin tocar
+    `content.ts`/`send.ts`; `render.test.ts` cubre escape, `lang` y subject.
+  - Seguridad: sin key fuera de producción → **simulación** (renderiza y registra, no entrega); en producción sin key, con
+    `EMAIL_MODE=simulate` o remitente inválido → `not_configured`. Fuera de producción solo se entrega a
+    `EMAIL_ALLOWED_RECIPIENTS` (lista vacía = nadie). Remitente validado (sin CR/LF). Logs con campos cerrados: nunca
+    destinatario, asunto, cuerpo, props, key ni texto de error del proveedor.
+  - Reintentos: 3 intentos con backoff 300/600 ms ante red, timeout (10 s), 429, 5xx y 409 `concurrent_idempotent_requests`;
+    misma `Idempotency-Key` en todos los intentos; un 2xx nunca se reintenta; 4xx → `rejected`.
+  - `POST /api/email/test` (humo para el dueño): 404 salvo fuera de producción y con `EMAIL_TEST_SECRET` (≥ 16 car.);
+    Bearer comparado en tiempo constante; destinatario sujeto a la allow-list.
+  - Tests (Vitest, deterministas, sin red): config, idiomas es/en, escapado, control chars, PII en logs, reintentos,
+    idempotencia, ruta de prueba.
+  - **Pasos del dueño para cerrar el criterio** (el agente no los hace):
+    1. En Resend: verificar un dominio/subdominio (SPF + DKIM en el DNS) y crear una API key de envío.
+    2. En Vercel → entorno **Preview** (no Production): `RESEND_API_KEY`, `EMAIL_FROM` (en el dominio verificado),
+       `EMAIL_ALLOWED_RECIPIENTS` (tu correo), `EMAIL_TEST_SECRET` (aleatorio, ≥ 16 car.). `ROOT_DOMAIN` del preview debe
+       coincidir con el host usado, porque `proxy.ts` solo sirve `/api/*` en hosts de plataforma.
+    3. Tras el deploy del preview: `curl -X POST https://<host-preview>/api/email/test -H "Authorization: Bearer $EMAIL_TEST_SECRET" -H "Content-Type: application/json" -d '{"to":"<tu correo>","lang":"es"}'`
+       → `{"ok":true,"simulated":false,"id":"..."}` y llega el correo (revisar también `lang:"en"`).
+    4. Registrar aquí la evidencia (id del mensaje, fecha) y marcar el criterio. Antes de producción: configurar las mismas
+       variables en Production **sin** `EMAIL_ALLOWED_RECIPIENTS`/`EMAIL_TEST_SECRET`.
+  - Fuera de alcance / propuesta: límite de peticiones a la ruta de prueba (SD-409); plantillas de reservas (SD-407).
 
 ### [ ] SD-307 · feat(ical): scheduled sync and conflict alerts
 `M` · Depende: SD-305, SD-306 · Review: `R+S`
@@ -1104,6 +1153,16 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [ ] Sin el secreto → 401.
   - [ ] Un feed que falla no detiene los demás.
+- **Estado (implementado en rama `feat/SD-307-scheduled-ical-sync`, apilada sobre SD-306; sin push ni PR)**: ruta
+  `app/api/cron/ical-sync` (CRON_SECRET → 401 sin secreto), lote de 25 feeds / 5 en paralelo / presupuesto de 45 s, aislamiento
+  por feed, mismo importador con protección SSRF y misma semántica transaccional que SD-305 vía núcleos privados y RPC `cron_*`
+  solo `service_role` (migración `20261030120000_ical_cron_sync.sql`); alertas por correo al owner (conflicto nuevo / feed
+  caído > 24 h) con ledger persistente `ical_alerts`, sin PII, compatibles con el modo simulación de SD-306. Detalle y pasos
+  del dueño en `docs/cron.md`. Tests Vitest (ruta, orquestación, DAL, plantillas) y pgTAP `0021` escritos; **pgTAP no se
+  pudo ejecutar localmente (sin Docker): queda para el CI del PR**.
+  - **Pendiente del dueño** (criterios no cumplidos hasta entonces): programar la llamada cada 15 min (no hay Vercel Cron Pro ni
+    scheduler configurado), aplicar la migración en remoto antes de desplegar, y dominio/clave de Resend para correos reales
+    (sin evidencia de envío real).
 
 ### [x] SD-308 · feat(site): public availability calendar
 `M` · Depende: SD-303 · Review: `R`
@@ -1221,11 +1280,21 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [ ] Voucher accesible solo para miembros de la org (URL firmada de corta duración).
   - [ ] Subir voucher a una reserva ajena o expirada falla.
+  - [ ] **Hallazgo H2 de la revisión de seguridad de SD-403:** el `public_token` de la reserva lo recibe cualquiera que
+        tenga el enlace de la cotización (`get_quote_checkout` y el replay de `create_booking_from_quote` lo devuelven sin
+        comprobar identidad, incluso con la cotización vencida). Subir vouchers o mostrar cuentas de pago **no puede
+        depender solo de `public_token`**: acotarlo (p. ej. solo mientras la reserva esté en `pending_payment` y no haya
+        vencido) o exigir una prueba adicional, y cubrirlo con pgTAP.
 
 ### [ ] SD-406 · feat(dashboard): bookings management
 `L` · Depende: SD-405 · Review: `R+S`
 - **Alcance**: lista con filtros (estado, fechas, origen) y detalle; ver voucher; aprobar/rechazar pago; cancelar;
   registrar reserva manual (cerrada por WhatsApp/efectivo); registrar pago de saldo.
+- **Hallazgo H4 de la revisión de seguridad de SD-403 (diseño heredado de SD-401)**: `create_booking_from_quote` asocia la
+  reserva al huésped existente con el mismo correo y le rellena el teléfono si lo tenía vacío; quien tenga un enlace puede
+  reservar con el correo de un cliente recurrente y dejar su teléfono en la ficha ajena. Mostrar en el detalle los datos
+  enviados en el checkout (nombre y teléfono como *snapshot* de la reserva) y avisar cuando no coincidan con la ficha del
+  huésped; valorar que la RPC deje de rellenar teléfonos de huéspedes existentes.
 - **Criterios**
   - [ ] Aprobar el pago confirma la reserva y fija el bloque (sin `expires_at`).
   - [ ] Reserva manual respeta disponibilidad.
@@ -1264,9 +1333,10 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 `S` · Depende: SD-405 · Review: `R`
 - **Alcance**: `lib/payments/provider.ts` (`createCheckout`, `handleWebhook`); adaptar pago manual. ADR 0004.
 
-### [ ] SD-502 · feat(settings): per-tenant Mercado Pago credentials
+### [ ] SD-502 · feat(settings): per-installation Mercado Pago credentials
 `M` · Depende: SD-501 · Review: `R+S`
-- **Alcance**: credenciales por org cifradas (Supabase Vault), nunca devueltas al cliente; prueba de conexión.
+- **Alcance**: credenciales de Mercado Pago **por instalación** (ADR 0010: una organización por instalación), cifradas
+  (Supabase Vault) o como variables de entorno del proyecto, nunca devueltas al cliente; prueba de conexión.
 - **Criterios**
   - [ ] Las credenciales no aparecen en respuestas, logs ni en el bundle del cliente.
 
@@ -1291,6 +1361,8 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 ### [ ] SD-601 · feat(crm): guests
 `M` · Depende: SD-406 · Review: `R+S`
 - **Alcance**: lista, búsqueda, ficha con historial de estancias y gasto, notas, export CSV (solo owner).
+- **Seguridad del export** (hallazgo H3 de SD-403): los nombres los escribe un huésped anónimo; neutralizar los prefijos de
+  fórmula (`=`, `+`, `-`, `@`) en el CSV y en el Excel del contador, y no confiar en que la entrada ya esté limpia.
 
 ### [ ] SD-602 · feat(crm): digital check-in
 `M` · Depende: SD-601 · Review: `R+S`
@@ -1299,16 +1371,18 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [ ] Sin consentimiento, el huésped no aparece en exportaciones de marketing.
 
-### [ ] SD-603 · feat(platform): tenant provisioning (superadmin)
+### [-] SD-603 · feat(platform): tenant provisioning (superadmin)
 `M` · Depende: SD-105 · Review: `R+S`
-- **Alcance**: rol superadmin (tabla aparte, no en `memberships`); crear org, propiedad, subdominio e invitar owner por email.
+- **Descartado (ADR 0010)**: con una instalación por cliente no hay plataforma compartida que administrar; el alta de
+  organización, propiedad y owner la hace el script de SD-1002.
+- ~~**Alcance**: rol superadmin (tabla aparte, no en `memberships`); crear org, propiedad, subdominio e invitar owner por email.~~
 
-### [ ] SD-604 · feat(platform): custom domains
+### [-] SD-604 · feat(platform): custom domains
 `L` · Depende: SD-603 · Review: `R+S`
-- **Alcance**: alta de dominio vía Vercel Domains API, estado de verificación DNS e instrucciones en el dashboard,
-  redirección www ↔ apex.
-- **Criterios**
-  - [ ] `saywalodges.com` servido como tenant en producción.
+- **Descartado (ADR 0010)**: el dominio de cada cliente se configura una vez en su proyecto Vercel (runbook de SD-1002) y
+  el enrutado lo resuelve el modo instalación (SD-1001). Su criterio («`saywalodges.com` servido en producción») pasa a SD-1001.
+- ~~**Alcance**: alta de dominio vía Vercel Domains API, estado de verificación DNS e instrucciones en el dashboard,
+  redirección www ↔ apex.~~
 
 ### [ ] SD-605 · feat: audit log
 `S` · Depende: SD-406 · Review: `R+S`
@@ -1319,6 +1393,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Alcance**: monitoreo de errores y logs estructurados sin PII; alertas de fallo de cron/webhook.
 - **Estado**: logs estructurados + `onRequestError` + cron/iCal hechos (`docs/observability.md`). Falta la alerta remota:
   requiere elegir y configurar un servicio externo (decisión del dueño); el ticket sigue abierto.
+- **Cambia (ADR 0010)**: la alerta remota se resuelve como salud central de todas las instalaciones en SD-1004.
 
 ---
 
@@ -1328,24 +1403,29 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 `M` · Depende: SD-105 · Review: `R+S`
 - **Alcance**: CSP con nonce (ver `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`),
   compatible con Mercado Pago.
-- **Estado (provisional)**: implementado en ADR 0009 (`lib/security/csp.ts`, `proxy.ts`). Verificado: unit/proxy
+- **Estado (provisional)**: implementado en ADR 0011 (`lib/security/csp.ts`, `proxy.ts`). Verificado: unit/proxy
   tests, build, smoke HTTP de plataforma y Chrome headless sin violaciones. El job `db` de CI añade smoke con
   Supabase local y Lighthouse móvil ≥ 90 que falla ante cualquier violación CSP en la carga inicial de
-  `saywa-lodges` y `demo` (ADR 0009). **Pendiente**: revisión en preview con `CSP_REPORT_ONLY=1` de interacciones,
+  `saywa-lodges` y `demo` (ADR 0011). **Pendiente**: revisión en preview con `CSP_REPORT_ONLY=1` de interacciones,
   dashboard y login; por eso sigue sin marcar.
 
 ### [ ] SD-702 · chore: production readiness
 `S` · Depende: M4 · Review: `R`
 - **Alcance**: Supabase Pro (sin pausa, backups), migraciones aplicadas por CI, runbook (restaurar backup,
   rotar secretos, incidente de doble reserva).
+- **Cambia (ADR 0010)**: todo se aplica **por instalación**; las migraciones llegan a cada proyecto con SD-1003.
 
 ### [ ] SD-703 · docs: portfolio polish
 `S` · Depende: M6 · Review: `R`
 - **Alcance**: diagrama de arquitectura, capturas, tenant demo público, sección "decisiones técnicas" en el README
   enlazando ADRs.
+- **Cambia (ADR 0010)**: el "tenant demo público" es la instalación demo de SD-1007.
 
-### [ ] SD-704 · feat(marketing): Saywa Direct landing
+### [-] SD-704 · feat(marketing): Saywa Direct landing
 `M` · Depende: SD-105, SD-107 · Review: `R`
+- **Reemplazado por SD-1006 (ADR 0010)**: la landing comercial no va dentro del producto (en una instalación el dominio
+  raíz es del cliente). Su trabajo (PR #45) se reutiliza en la web del vendedor, con la oferta de instalación + garantía +
+  mantenimiento. El PR #45 no se mergea en este repositorio. El texto de abajo queda como referencia histórica.
 - **Objetivo**: atraer dueños de alojamientos (clientes del SaaS) y convertir visitas en conversaciones de venta.
 - **Alcance**: landing comercial en el dominio raíz: hero con la propuesta de valor ("Convierte tus chats de
   WhatsApp en reservas pagadas"), problema y solución, cómo funciona en 3 pasos, funcionalidades (link de reserva,
@@ -1507,7 +1587,7 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - Global: ranking de casas, mezcla de canales y ahorro en comisiones de las reservas directas, costo promedio
     de limpieza/mantenimiento por alquiler.
   - Estado de resultados mensual/anual imprimible (CSS de impresión → PDF del navegador) con logo y período.
-  - Noches disponibles = días con la casa activa; nota visible hasta que SD-807 descuente bloqueos del dueño.
+  - Noches disponibles = días con la casa activa; SD-807 descuenta los bloqueos manuales del dueño.
 - **Criterios**
   - [x] Un alquiler que cruza meses reparte noches e ingreso por noche en "por estadía" y cae entero en la fecha
         de cobro en "por cobro" (tests de `finance-reports.test.ts`).
@@ -1597,8 +1677,170 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   = pago, idempotente). Airbnb/Booking: iCal solo trae fechas, así que cada estadía importada sin ingreso
   aparece en "Alquileres por completar" con limpieza sugerida. Ocupación de SD-804 descuenta bloqueos del dueño.
 - **Criterios**
-  - [ ] Reprocesar el mismo pago o el mismo evento iCal no duplica movimientos.
+  - [ ] Reprocesar el mismo pago o el mismo evento iCal no duplica movimientos. Implementado y probado con Vitest;
+        pgTAP `0021_finance_booking_income.test.sql` (89 asserts) **pendiente de correr en CI** (Docker local no respondió).
+- **Nota (SD-807, en revisión)**:
+  - `confirm_payment(org, pago, fx?)` aprueba el pago y escribe el ingreso (`source = booking`, `external_ref` = id del pago,
+    `created_by` nulo) en la misma transacción; el índice único `(org_id, source, external_ref)` impide un segundo ingreso.
+    Monto = lo realmente pagado (no el total), fecha de cobro = día en Lima del registro del pago. Moneda extranjera: usa el
+    tipo de cambio recibido o, si no, el último del libro de la organización; sin ninguno responde `22023` antes de cambiar
+    nada y el dueño debe indicarlo. Cancelar una reserva confirmada conserva el ingreso (no hay reembolsos aún).
+  - iCal: nada se escribe solo ni se infiere el importe. `list_ical_rentals_to_complete` (solo dueño) lista estadías Airbnb/Booking
+    ya iniciadas sin ingreso; `complete_ical_rental` registra lo que el dueño escribe (+ limpieza sugerida opcional). Clave
+    idempotente `ical:<sha256>` derivada en la BD; ni el UID ni su hash llegan al cliente. Una estadía cargada a mano con las mismas
+    fechas también cuenta como completada. Sección «Alquileres por completar» en `/app/finance` (solo dueño).
+  - Ocupación (SD-804): las noches con bloqueo manual salen de las disponibles; bloqueos de reserva/iCal no (son noches vendidas).
+  - Fuera de alcance / propuestas: descartar bloqueos de canal que no son reservas (Airbnb «Not available»), saldo restante
+    de una reserva más allá del pago aprobado, reembolsos.
+  - Despliegue: aplicar la migración antes del deploy (reemplaza la firma de `confirm_payment`; ningún código desplegado la llama aún).
+    `lib/database.types.ts` se editó a mano (sin Docker): regenerar con `npx supabase gen types` y verificar que no haya diff.
 
+
+### [~] SD-900 · chore(workflow): single dev workflow, DB deploy with approval and recruiter-ready README
+`M` · Depende: — · Review: `R+S`
+- **Objetivo**: que el dueño intervenga solo cuando es imprescindible, que las migraciones lleguen a
+  producción sin comandos manuales y que el repositorio público se lea como un proyecto profesional.
+- **Alcance**: `docs/workflow.md` como proceso único para Claude Code y Codex (referenciado desde `AGENTS.md`
+  y `CLAUDE.md`); regla de una migración por ticket y cambios aditivos; workflow `deploy-db.yml` con aprobación
+  del dueño; protocolo de cierre «Te toca a ti»; `npm run where`; `docs/architecture.md`; README en inglés
+  (el español pasa a `README.es.md`).
+- **Criterios**
+  - [x] `npm run where` indica rama, worktree, PR, CI, migraciones nuevas y siguiente paso.
+  - [x] Las reglas de migración y el cierre «Te toca a ti» están en `AGENTS.md`, `supabase/CLAUDE.md` y la skill `ticket`.
+  - [ ] Environment `supabase-production` con *Required reviewers*, secretos y variable configurados (pasos del dueño en
+        `docs/workflow.md`).
+  - [ ] Una ejecución manual de *Deploy database* queda en «Waiting» y el *Dry run* confirma que la base remota está al día.
+
+## Fase 10 — Instalación por cliente (ADR 0010)
+
+Orden: SD-1005 y SD-1006 son independientes. El resto sigue la cadena SD-1001 → SD-1002 → SD-1003 / SD-1007 → SD-1004.
+SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
+
+### [x] SD-1000 · docs: installation-per-client model
+`S` · Depende: — · Review: `R`
+- **Alcance**: [ADR 0010](adr/0010-installation-per-client.md); roadmap y README actualizados (SD-603, SD-604 y SD-704
+  descartados o reemplazados; SD-502, SD-606, SD-702 y SD-703 ajustados; esta fase añadida). Id `00` a propósito: es el
+  ticket documental que abre la fase y se cierra en el mismo PR.
+- **Pendiente del dueño**: `CLAUDE.md` todavía describe el proyecto como «SaaS multi-tenant»; actualizarlo es decisión del
+  dueño (es la configuración que leen los agentes).
+
+### [~] SD-1001 · feat(routing): installation mode
+`M` · Depende: — · Review: `R+S`
+- **Alcance**: `DEPLOYMENT_MODE=installation` cambia qué sirve cada host:
+  - el dominio raíz del cliente sirve **solo** su sitio público (`/sites/[host]/[lang]`);
+  - `app.<dominio>` sirve el panel, `/login`, `/auth`, recuperación de contraseña **y todas las rutas `/api/*`**
+    (cron de `docs/cron.md`, `/api/ical/[token]` y las futuras `/api/health` y `/api/whatsapp/webhook`);
+  - cualquier otro host da 404, sin buscarlo en la base (hoy un host desconocido se trata como dominio propio).
+  Archivos: `proxy.ts` (`resolveHost`, `isPlatformHost`, rutas sin reescritura), `lib/dal/public/site.ts`,
+  `app/(platform)/page.tsx`, `app/sitemap.ts`, `app/robots.ts`, el enlace «Ver mi sitio» de `app/app/layout.tsx`,
+  `siteOrigin` del cotizador (`lib/domain/quote-builder.ts`, llega con SD-402 / PR #46) y el cron de iCal.
+  `NEXT_PUBLIC_SITE_URL` (`config/site.ts`, hoy con valor por defecto `https://saywalodges.com`) pasa a ser obligatoria en
+  producción **en modo instalación** y debe ser el panel, `https://app.<dominio>` (`metadataBase` y redirect del reset de
+  contraseña); en modo plataforma no se exige. `properties.custom_domain` se conserva
+  solo como dato de la instalación. Sin `DEPLOYMENT_MODE` todo se comporta como hoy.
+- **Criterios**
+  - [x] Tests de `resolveHost` en ambos modos: raíz, `app.`, `www`, host desconocido (404) y rutas `/api/*`
+        (`lib/domain/host-routing.test.ts` y `proxy.test.ts`).
+  - [x] `/sites/*` sigue sin ser accesible como ruta literal, y `/login` y `/auth` no se sirven en el dominio del cliente
+        (las cookies de sesión quedan en `app.`).
+  - [x] Arrancar en producción, en modo instalación, sin `NEXT_PUBLIC_SITE_URL` (o con otro host que `app.<dominio>`)
+        produce un error claro (`lib/env.test.ts`).
+  - [ ] `saywalodges.com` servido como instalación nº 1 en producción (criterio heredado de SD-604). **Diferido**: exige que el
+        dueño cambie la configuración y el dominio del proyecto actual.
+  - [ ] `siteOrigin` del cotizador usa `siteHostFor` (diferido hasta que SD-402 / PR #46 esté en `main`).
+- **Hecho** (rama `feat/SD-1001-installation-mode`):
+  - Decisión de enrutado extraída a `lib/domain/host-routing.ts` (pura, con tests); `proxy.ts` solo la aplica. En modo
+    `platform` el comportamiento es el de antes (fijado con tests de caracterización, también a través del `proxy` real en
+    `proxy.test.ts`); la única diferencia es que una respuesta 404 ya no refresca la cookie de sesión.
+  - `DEPLOYMENT_MODE` y la validación de `NEXT_PUBLIC_SITE_URL` en `lib/env.ts`: en producción, el modo instalación exige
+    que sea `https://app.<ROOT_DOMAIN>`. En modo plataforma no se exige (el despliegue actual no cambia).
+  - El sitio se busca por `properties.custom_domain = ROOT_DOMAIN` con la consulta existente (`getSiteByHost`): el
+    script de alta (SD-1002) debe fijar ese valor. `app/sitemap.ts` y `app/robots.ts` no cambian: en modo instalación el
+    proxy los deja pasar en el host del sitio y leen el host solos.
+  - «Ver mi sitio» usa `siteHostFor`. El cron de iCal ya apuntaba a `app.<ROOT_DOMAIN>`; `docs/cron.md` avisa de que
+    en este modo todo cron se llama en `app.`.
+  - Pendiente (depende del PR #46 de SD-402, que aún no está en `main`): usar `siteHostFor` en `siteOrigin` del
+    cotizador (`lib/domain/quote-builder.ts`) para que los enlaces compartidos usen el dominio raíz en modo instalación.
+  - Pendiente del dueño en cada instalación: añadir `https://app.<dominio>/auth/callback` a las URL de redirección de
+    Supabase Auth y redirigir `www` al dominio raíz en Vercel (runbook de SD-1002).
+
+### [ ] SD-1002 · chore(ops): client install script and runbook
+`M` · Depende: SD-1001 · Review: `R+S`
+- **Alcance**: `scripts/install-client.mjs` + `docs/runbook-instalacion.md`: proyecto Supabase y migraciones,
+  organización, propiedad y owner (Auth + `memberships role='owner'`, invitación), proyecto Vercel con variables y
+  dominios, cron (`expire-holds`, `ical-sync`, con GitHub Actions como en `docs/cron.md`), pasos de Resend y variables de
+  marca de los correos (`EMAIL_BRAND_NAME`, `EMAIL_FROM`; SD-1005). La service-role
+  solo la usa este script, que ejecuta el dueño en su máquina; nunca la app (excepción registrada en ADR 0010 sobre ADR 0002).
+- **Criterios**
+  - [ ] Una instalación de prueba se levanta desde cero solo con el script y el runbook; el owner entra al panel.
+
+### [ ] SD-1003 · ci: installation registry and multi-project DB deploy
+`S` · Depende: SD-1002 · Review: `R+S`
+- **Alcance**: `deploy/installations.json` (nombre, ref de Supabase, proyecto Vercel, dominio; sin secretos);
+  `deploy-db.yml` como *matrix* con un Environment por instalación y aprobación del dueño.
+- **Criterios**
+  - [ ] Un *dry run* contra dos instalaciones pide una aprobación por cada una.
+
+### [ ] SD-1004 · feat(ops): central installation health
+`M` · Depende: SD-1003 · Review: `R+S`
+- **Alcance**: `/api/health` en `app.` (SD-1001), protegida con un secreto propio (`HEALTH_SECRET`, cabecera
+  `Authorization: Bearer`, comparación en tiempo constante como `lib/cron-auth.ts`); devuelve versión, última migración y
+  estado de los cron. Sin el secreto responde `401` vacío y no revela nada. Una tarea programada del vendedor consulta
+  cada instalación del registro (SD-1003) y avisa por email si algo falla. Reemplaza la alerta pendiente de SD-606.
+- **Criterios**
+  - [ ] Sin secreto o con secreto incorrecto → `401` sin cuerpo (tests).
+  - [ ] Detener el cron de una instalación de prueba genera un aviso.
+
+### [x] SD-1005 · feat(email): per-installation branding
+`S` · Depende: SD-306 · Review: `R+S` (variables de entorno nuevas)
+- **Alcance**: los correos hablan en nombre del alojamiento: `EMAIL_BRAND_NAME` (por defecto «Saywa Direct», así que nada
+  cambia hasta configurarla) sustituye a la marca fija en asuntos, cabecera y pie (`{brand}` en `lib/email/messages.ts`);
+  `EMAIL_POWERED_BY=true` añade «Con tecnología de Saywa Direct» al pie, solo si la marca es otra. La marca es **por
+  despliegue**, no por propiedad: en una instalación hay una sola, el cron de iCal corre con service-role y no debe
+  consultar la base solo para rotular un correo, y el script de alta (SD-1002) la fija junto con `EMAIL_FROM`.
+  Límite conocido: una instalación con varias propiedades de nombres distintos obligaría a revisar esta decisión; las dos
+  variables (`EMAIL_BRAND_NAME` y el nombre dentro de `EMAIL_FROM`) las mantiene alineadas el operador.
+- **Criterios**
+  - [x] El remitente visible lo fija `EMAIL_FROM` y la cabecera, el asunto y el pie muestran la marca configurada; sin
+        «Powered by» salvo que se active (`lib/email/render.test.ts`, `send.test.ts`).
+  - [x] Sin configuración, la salida es idéntica a la de antes (tests existentes sin cambios).
+  - [x] La marca se limpia de caracteres de control (inyección de cabeceras) y se escapa en HTML.
+
+### [ ] SD-1006 · feat(marketing): vendor sales site
+`M` · Depende: — · Review: `R`
+- **Alcance**: sitio comercial aparte (repo o proyecto Vercel propio) que reutiliza el trabajo del PR #45; oferta de
+  instalación + 3 meses de garantía + mantenimiento mensual; enlace a la demo (SD-1007) y CTA a WhatsApp.
+- **Criterios**
+  - [ ] Ningún precio, cifra ni testimonio publicado sin aprobación del dueño; Lighthouse móvil ≥ 90 (el PR #45 ya logra 100).
+
+### [ ] SD-1007 · feat(demo): shared demo installation with nightly reset
+`M` · Depende: SD-1002, SD-1003 · Review: `R+S`
+- **Alcance**: instalación demo (una entrada más del registro de SD-1003) con datos ficticios (sin datos reales de Saywa),
+  usuario de prueba con rol `staff`, banner «Demo: se reinicia cada noche», seed de demo propio y reseteo nocturno
+  programado con GitHub Actions (como `docs/cron.md`).
+- **Criterios**
+  - [ ] Cambios hechos en la demo desaparecen tras el reseteo.
+
+### [ ] SD-1008 · feat(whatsapp): Cloud API client and webhook
+`M` · Depende: SD-1001 · Review: `R+S`
+- **Alcance**: `lib/whatsapp/` con el patrón de `lib/email/` (config, envío, modo simulación); credenciales por
+  instalación en variables de entorno (token, phone number id, app secret); webhook `/api/whatsapp/webhook` en `app.`
+  (SD-1001) con verificación de `X-Hub-Signature-256` y del token de suscripción; registro de estados de entrega; logs
+  sin datos personales (`lib/log.ts`).
+- **Criterios**
+  - [ ] Webhook con firma inválida → `401`; evento duplicado → sin efectos (tests).
+  - [ ] En modo simulación nada sale a Meta y el envío queda registrado (tests, como `lib/email`).
+
+### [ ] SD-1009 · feat(whatsapp): booking templates and guest opt-in
+`M` · Depende: SD-1008, SD-403, SD-405, SD-406 · Review: `R+S`
+- **Alcance**: plantillas aprobadas por Meta (confirmación de reserva, recordatorio del adelanto antes de que venza el hold
+  de SD-408, recordatorio de llegada, post-estadía); consentimiento (opt-in) del huésped para mensajes de WhatsApp,
+  registrado al reservar en el checkout (SD-403) y separado del consentimiento de marketing de SD-602; recordatorios
+  programados con GitHub Actions como `docs/cron.md`. Trámite de Meta por cliente (verificación del negocio, número,
+  aprobación de plantillas): paso del dueño.
+- **Criterios**
+  - [ ] Sin opt-in no se envía ningún mensaje (tests).
+  - [ ] Cada plantilla se prueba con el número de prueba de Meta.
 
 ## Propuesta de ticket fuera del alcance actual
 

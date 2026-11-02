@@ -2,6 +2,9 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import type { PropertySettings } from "@/lib/domain/property-settings";
+import type { AppearanceInput } from "@/lib/domain/site-appearance";
+import { resolveContent, type SiteContent } from "@/lib/domain/site-content";
+import { resolveTheme, type ResolvedTheme } from "@/lib/domain/site-theme";
 
 // Authenticated (member-only) reads/writes of a property's own settings —
 // distinct from lib/dal/public/property.ts, which is the anon-client path
@@ -104,6 +107,57 @@ export async function updatePropertySettings(
   // never legitimately >1 — see the migration adding that constraint).
   if (updated.length !== 1) {
     console.error(`updatePropertySettings: expected 1 row updated for org ${orgId}, got ${updated.length}`);
+    return { ok: false };
+  }
+  return { ok: true };
+}
+
+export type SiteAppearance = { theme: ResolvedTheme; content: SiteContent };
+
+// For the dashboard's "Sitio → Apariencia" editor. Invalid stored JSON
+// degrades to the default preset / empty copy (resolveTheme/resolveContent
+// never throw), so the editor always opens on a valid draft. Null when the
+// org has no property yet.
+export async function getSiteAppearance(
+  supabase: SupabaseClient<Database>,
+  orgId: string
+): Promise<SiteAppearance | null> {
+  const { data, error } = await supabase
+    .from("properties")
+    .select("theme, content")
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("getSiteAppearance failed:", error);
+    return null;
+  }
+  if (!data) return null;
+  return { theme: resolveTheme(data.theme), content: resolveContent(data.content) };
+}
+
+// `input` must come from parseAppearancePayload (zod, lib/domain/site-appearance.ts)
+// and orgId from requireActiveOrg(), never from the client. Same defense in
+// depth as updatePropertySettings: explicit org scope on top of RLS and the
+// column-scoped grant (20261030211752_site_appearance_write_grant.sql), and
+// exactly one row must change.
+export async function updateSiteAppearance(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+  input: AppearanceInput
+): Promise<{ ok: true } | { ok: false }> {
+  const { data: updated, error } = await supabase
+    .from("properties")
+    .update({ theme: input.theme, content: input.content })
+    .eq("org_id", orgId)
+    .select("id");
+
+  if (error) {
+    console.error("updateSiteAppearance failed:", error);
+    return { ok: false };
+  }
+  if (updated.length !== 1) {
+    console.error(`updateSiteAppearance: expected 1 row updated for org ${orgId}, got ${updated.length}`);
     return { ok: false };
   }
   return { ok: true };

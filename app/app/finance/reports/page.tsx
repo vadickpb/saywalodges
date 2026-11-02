@@ -184,7 +184,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <p className="text-xs text-muted-foreground">
         Todas las cifras están en soles. La ocupación, la tarifa promedio por noche y el ingreso por noche disponible se calculan siempre por noche
         de estadía, sea cual sea la base elegida. Las noches disponibles son los días del período desde que la casa existe (o desde su primera
-        reserva cargada) mientras estuvo activa; todavía no se descuentan los días que bloqueas, y las noches futuras del período cuentan como
+        reserva cargada) mientras estuvo activa, sin los días que bloqueaste a mano en el calendario; las noches futuras del período cuentan como
         disponibles.
       </p>
     </div>

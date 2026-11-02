@@ -34,7 +34,7 @@ describe("buildCsp (production)", () => {
     expect(directive(csp, "style-src-elem")).not.toContain("unsafe-inline");
   });
 
-  it("only style ATTRIBUTES may be inline (documented in ADR-0009)", () => {
+  it("only style ATTRIBUTES may be inline (documented in ADR-0011)", () => {
     const unsafe = prod().split("; ").filter((d) => d.includes("'unsafe-inline'"));
     expect(unsafe).toEqual(["style-src-attr 'unsafe-inline'"]);
   });

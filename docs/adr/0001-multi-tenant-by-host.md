@@ -1,6 +1,6 @@
 # ADR 0001 · Multi-tenant por host en una sola aplicación Next.js
 
-- Estado: aceptado · Fecha: 2026-09-23
+- Estado: aceptado · Fecha: 2026-09-23 · Modificado parcialmente por [ADR 0010](0010-installation-per-client.md) (modo instalación por cliente)
 
 ## Contexto
 Cada alojamiento necesita su propio sitio (subdominio o dominio propio) y un panel de gestión.

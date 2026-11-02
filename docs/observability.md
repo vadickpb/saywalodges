@@ -22,6 +22,9 @@ Para registrar algo nuevo hay que añadirlo a `FIELDS` a propósito (y a sus tes
 | `cron.expire_holds.failed` | error | 500 genérico al cliente |
 | `cron.expire_holds.rpc_failed` / `bad_result` | error | causa en el DAL (`code` = SQLSTATE) |
 | `ical.export.failed` | error | 500 del export iCal |
+| `cron.ical_sync.unauthorized` / `completed` / `failed` | warn / info / error | 401, 200 (`count` = feeds procesados) y 500 genérico de `/api/cron/ical-sync` |
+| `cron.ical_sync.rpc_failed` | warn/error | fallo de una RPC `cron_*` (`outcome` = list/begin/finish/claim/settle, `code` = SQLSTATE) |
+| `cron.ical_sync.feed_failed` / `alert_failed` | error | excepción aislada en un feed o alerta (el lote sigue) |
 
 No existen rutas de webhook todavía (llegan con los pagos); cuando se creen deben usar `lib/log.ts` con el
 mismo patrón (`<area>.<job>.unauthorized|completed|failed`).

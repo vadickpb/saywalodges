@@ -719,13 +719,64 @@ export type Database = {
           },
         ];
       };
+      ical_alerts: {
+        Row: {
+          claim_id: string;
+          claimed_at: string;
+          dedupe_key: string;
+          feed_id: string;
+          id: string;
+          kind: string;
+          org_id: string;
+          sent_at: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          claim_id: string;
+          claimed_at?: string;
+          dedupe_key: string;
+          feed_id: string;
+          id?: string;
+          kind: string;
+          org_id: string;
+          sent_at?: string | null;
+        };
+        Update: {
+          claim_id?: string;
+          claimed_at?: string;
+          dedupe_key?: string;
+          feed_id?: string;
+          id?: string;
+          kind?: string;
+          org_id?: string;
+          sent_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ical_alerts_feed_id_org_id_fkey";
+            columns: ["feed_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "ical_feeds";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "ical_alerts_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ical_feeds: {
         Row: {
           channel: Database["public"]["Enums"]["ical_channel"];
           created_at: string;
           export_token: string;
+          failing_since: string | null;
           id: string;
           import_url: string | null;
+          last_attempt_at: string | null;
           last_error: string | null;
           last_synced_at: string | null;
           org_id: string;
@@ -739,8 +790,10 @@ export type Database = {
           channel: Database["public"]["Enums"]["ical_channel"];
           created_at?: string;
           export_token?: string;
+          failing_since?: string | null;
           id?: string;
           import_url?: string | null;
+          last_attempt_at?: string | null;
           last_error?: string | null;
           last_synced_at?: string | null;
           org_id: string;
@@ -753,8 +806,10 @@ export type Database = {
           channel?: Database["public"]["Enums"]["ical_channel"];
           created_at?: string;
           export_token?: string;
+          failing_since?: string | null;
           id?: string;
           import_url?: string | null;
+          last_attempt_at?: string | null;
           last_error?: string | null;
           last_synced_at?: string | null;
           org_id?: string;
@@ -1571,8 +1626,21 @@ export type Database = {
         Args: { p_booking_id: string; p_org_id: string; p_reason?: string };
         Returns: Json;
       };
+      complete_ical_rental: {
+        Args: {
+          p_amount_cents: number;
+          p_block_id: string;
+          p_cleaning_cents?: number;
+          p_currency: Database["public"]["Enums"]["currency_code"];
+          p_fx_rate_pen?: number;
+          p_guests?: number;
+          p_occurred_on: string;
+          p_org_id: string;
+        };
+        Returns: Json;
+      };
       confirm_payment: {
-        Args: { p_org_id: string; p_payment_id: string };
+        Args: { p_fx_rate_pen?: number; p_org_id: string; p_payment_id: string };
         Returns: Json;
       };
       confirm_recurring_expense: {
@@ -1630,6 +1698,28 @@ export type Database = {
         };
         Returns: string;
       };
+      cron_begin_ical_sync: { Args: { p_feed_id: string }; Returns: Json };
+      cron_claim_ical_alert: {
+        Args: { p_feed_id: string; p_kind: string };
+        Returns: Json;
+      };
+      cron_finish_ical_sync: {
+        Args: {
+          p_error?: string;
+          p_events: Json;
+          p_feed_id: string;
+          p_token: string;
+        };
+        Returns: boolean;
+      };
+      cron_list_due_ical_feeds: {
+        Args: { p_limit?: number };
+        Returns: { feed_id: string }[];
+      };
+      cron_settle_ical_alert: {
+        Args: { p_claim_id: string; p_delivered: boolean; p_feed_id: string };
+        Returns: undefined;
+      };
       delete_finance_entry: {
         Args: { p_entry_id: string; p_org_id: string };
         Returns: string[];
@@ -1664,6 +1754,19 @@ export type Database = {
         Returns: {
           end_date: string;
           start_date: string;
+        }[];
+      };
+      list_ical_rentals_to_complete: {
+        Args: { p_org_id: string };
+        Returns: {
+          block_id: string;
+          channel: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          stay_end: string;
+          stay_start: string;
+          suggested_cleaning_cents: number;
+          unit_id: string;
+          unit_name: string;
         }[];
       };
       regenerate_ical_token: {
