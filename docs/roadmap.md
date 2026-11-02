@@ -1783,7 +1783,7 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   - Pendiente del dueño en cada instalación: añadir `https://app.<dominio>/auth/callback` a las URL de redirección de
     Supabase Auth y redirigir `www` al dominio raíz en Vercel (runbook de SD-1002).
 
-### [ ] SD-1002 · chore(ops): client install script and runbook
+### [~] SD-1002 · chore(ops): client install script and runbook
 `M` · Depende: SD-1001 · Review: `R+S`
 - **Alcance**: `scripts/install-client.mjs` + `docs/runbook-instalacion.md`: proyecto Supabase y migraciones,
   organización, propiedad y owner (Auth + `memberships role='owner'`, invitación), proyecto Vercel con variables y
@@ -1791,7 +1791,17 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   marca de los correos (`EMAIL_BRAND_NAME`, `EMAIL_FROM`; SD-1005). La service-role
   solo la usa este script, que ejecuta el dueño en su máquina; nunca la app (excepción registrada en ADR 0010 sobre ADR 0002).
 - **Criterios**
+  - [x] Núcleo puro con tests (validación de configuración, variables de Vercel, filas semilla): `scripts/lib/install-core.test.mjs`.
+  - [x] `--dry-run` por defecto; `--apply` explícito; reintentable (estado en `.install/`, ignorado por git).
   - [ ] Una instalación de prueba se levanta desde cero solo con el script y el runbook; el owner entra al panel.
+        **Pendiente del dueño**: exige cuentas reales (proyecto Supabase, Vercel Pro, dominio); no se pudo ejecutar contra
+        servicios reales desde el entorno de desarrollo. Los endpoints de las APIs de Supabase/Vercel están sin verificar
+        en vivo: al primer uso real, corregir lo que falle y marcar este criterio.
+- **Hecho** (rama `chore/SD-1002-install-script`): `scripts/install-client.mjs` + `scripts/lib/install-core.mjs`,
+  `docs/runbook-instalacion.md`, `deploy/install.example.json`. Decisiones: el proyecto Supabase se crea a mano (el script
+  nunca crea recursos de pago); el owner se crea confirmado y sin contraseña y la fija con «Olvidé mi contraseña» (el
+  callback de la app solo soporta el flujo PKCE de recuperación, no el de invitación); las variables sensibles solo van a
+  producción y el proyecto del cliente no construye previews; el cron queda manual hasta SD-1003.
 
 ### [ ] SD-1003 · ci: installation registry and multi-project DB deploy
 `S` · Depende: SD-1002 · Review: `R+S`

@@ -43,3 +43,7 @@ next-env.d.ts
 # claude code (personal/local)
 .claude/worktrees/
 .claude/settings.local.json
+
+# per-client installation state and generated secrets (SD-1002)
+.install/
+deploy/installs/
