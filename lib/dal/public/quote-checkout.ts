@@ -23,7 +23,7 @@ export async function bookQuote(host: string, guest: CheckoutGuest) {
   // Host comes from the request, never from submitted form fields. The quote token
   // remains the capability; this additional check prevents cross-site UI conversion.
   const quote = await getQuoteCheckout(host, guest.token);
-  if (!quote) return { error: "invalid" } as const;
+  if (!quote) return { error: "linkUnavailable" } as const;
   if ("public_token" in quote) return { publicToken: quote.public_token };
   const { data, error } = await getSupabaseAnon().rpc("create_booking_from_quote", {
     p_token: guest.token, p_guest_name: guest.name, p_guest_email: guest.email, p_guest_phone: guest.phone || undefined,

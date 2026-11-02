@@ -21,27 +21,31 @@ describe("public checkout action", () => {
       .rejects.toThrow(`REDIRECT:/es/reserva/${publicToken}`);
     expect(book).toHaveBeenCalledWith("demo",{token,name:"Ana",email:"ana@example.com",phone:"",terms:"on"});
   });
-  it.each([{token:"bad"},{name:" "},{email:"bad"},{phone:"script"},{terms:"false"}])("validates before calling DAL %o",async patch => {
+  it.each([{name:" "},{name:"Ana\n"},{name:"Ana\u202e"},{email:"bad"},{email:""},{phone:"script"},{terms:"false"}])("validates before calling DAL %o",async patch => {
     const state=await submitCheckout("es",{},form(patch));
-    expect(state.error).toBe("invalid");
+    expect(state.error).toBe("validation");
     expect(state.fields).toHaveProperty(Object.keys(patch)[0],true);
+    expect(book).not.toHaveBeenCalled();
+  });
+  it("treats a malformed token as an unavailable link rather than a field error", async () => {
+    expect(await submitCheckout("es", {}, form({token:"bad", email:""}))).toEqual({error:"linkUnavailable"});
     expect(book).not.toHaveBeenCalled();
   });
   it("requires terms acceptance and never trusts previous state",async () => {
     const data=form(); data.delete("terms");
-    expect(await submitCheckout("en",{fields:{terms:false}},data)).toEqual({error:"invalid",fields:{terms:true}});
+    expect(await submitCheckout("en",{fields:{terms:false}},data)).toEqual({error:"validation",fields:{terms:true}});
     expect(book).not.toHaveBeenCalled();
   });
   it("rejects a forged redirect language",async () => {
     expect(await submitCheckout("//evil.test",{},form())).toEqual({error:"generic"});
     expect(book).not.toHaveBeenCalled();
   });
-  it("double submission ends at the same booking status URL",async () => {
+  it("redirects each successful DAL result to its returned status capability",async () => {
     book.mockResolvedValue({publicToken});
     for(let i=0;i<2;i++) await expect(submitCheckout("en",{},form())).rejects.toThrow(`REDIRECT:/en/reserva/${publicToken}`);
     expect(redirect.mock.calls).toEqual([[`/en/reserva/${publicToken}`],[`/en/reserva/${publicToken}`]]);
   });
-  it.each(["invalid","expired","unavailable","generic"])("returns expected %s error",async error => {
+  it.each(["linkUnavailable","unbookable","unavailable","generic"])("returns expected %s error",async error => {
     book.mockResolvedValue({error});
     expect(await submitCheckout("es",{},form())).toEqual({error});
     expect(redirect).not.toHaveBeenCalled();

@@ -13,12 +13,13 @@ export async function submitCheckout(lang: string, _previous: CheckoutState, for
     phone: form.get("phone") ?? "", terms: form.get("terms"),
   });
   if (!parsed.success) {
+    if (parsed.error.issues.some(issue => issue.path[0] === "token")) return { error: "linkUnavailable" };
     const fields: CheckoutState["fields"] = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
       if (key === "name" || key === "email" || key === "phone" || key === "terms" || key === "token") fields[key] = true;
     }
-    return { error: "invalid", fields };
+    return { error: "validation", fields };
   }
   let result;
   try {

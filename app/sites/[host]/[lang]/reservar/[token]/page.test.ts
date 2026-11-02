@@ -8,7 +8,7 @@ vi.mock("@/lib/dal/public/quote-checkout", () => ({ getQuoteCheckout: (...args: 
 vi.mock("@/lib/dal/public/site", () => ({ getSiteByHost: async () => ({slug:"demo"}) }));
 vi.mock("@/lib/dal/public/property", () => ({ getProperty: async () => ({name:"Demo"}), whatsappUrl: () => "https://wa.me/51999000111" }));
 vi.mock("./actions", () => ({ submitCheckout: vi.fn() }));
-import Page, { metadata } from "./page";
+import Page, { generateMetadata } from "./page";
 const token="a".repeat(64);
 const params = (lang="es", t=token) => Promise.resolve({host:"demo",lang,token:t});
 const quote = { property_name: "Demo", unit_name: "<script>alert('x')</script>", check_in: "2030-01-01", check_out: "2030-01-02",
@@ -16,7 +16,9 @@ const quote = { property_name: "Demo", unit_name: "<script>alert('x')</script>",
   expires_at: "2030-01-01T00:00:00+00:00", hold_minutes: 120 };
 beforeEach(() => vi.clearAllMocks());
 describe("checkout page", () => {
-  it("prevents indexing and referrer disclosure", () => {
+  it.each(["es", "en"])("localizes metadata and prevents indexing/referrer disclosure in %s", async lang => {
+    const metadata = await generateMetadata({ params: params(lang) });
+    expect(metadata.title).toBe(lang === "es" ? "Completa tu reserva" : "Complete your booking");
     expect(metadata.robots).toEqual({index:false,follow:false});
     expect(metadata.referrer).toBe("no-referrer");
   });
@@ -34,7 +36,11 @@ describe("checkout page", () => {
     read.mockRejectedValue(new Error(`secret ${token}`));
     const html=renderToStaticMarkup(await Page({params:params()}));
     expect(html).not.toContain("secret");
-    expect(html).not.toContain(token);
+    expect(html).toContain("No pudimos completar la reserva");
+    expect(html).toContain("Reintentar");
+    expect(html).not.toContain("Este enlace de reserva no está disponible");
+    expect(html).not.toContain("wa.me");
+    expect(html).toContain(`href="/es/reservar/${token}"`);
   });
   it("redirects converted quotes to the existing status page",async () => {
     const publicToken="b".repeat(64);

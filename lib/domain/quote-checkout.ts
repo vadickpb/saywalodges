@@ -14,18 +14,20 @@ export const quoteCheckoutSchema = z.union([
 ]);
 export const checkoutGuestSchema = z.object({
   token: checkoutTokenSchema,
-  name: z.string().trim().min(1).max(200),
+  name: z.string().refine(v => !/[\p{Cc}\p{Cf}]/u.test(v), {
+    message: "Use a name without control or text direction characters.",
+  }).pipe(z.string().trim().min(1).max(200)),
   email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
   phone: z.string().trim().max(30).refine(v => v === "" || (v.length >= 5 && /^[0-9+() -]+$/.test(v))),
   terms: z.literal("on"),
 });
 export type CheckoutGuest = z.infer<typeof checkoutGuestSchema>;
-export type CheckoutError = "invalid" | "expired" | "unavailable" | "generic";
+export type CheckoutError = "validation" | "linkUnavailable" | "unbookable" | "unavailable" | "generic";
 export type CheckoutState = { error?: CheckoutError; fields?: Partial<Record<keyof CheckoutGuest, boolean>> };
 export function checkoutError(code: string): CheckoutError {
-  if (code === "SD001") return "expired";
+  if (code === "SD001" || code === "P0002") return "linkUnavailable";
   if (code === "23P01") return "unavailable";
-  if (code === "P0002") return "invalid";
+  if (code === "22023") return "unbookable";
   return "generic";
 }
 export const checkoutBookingSchema = z.object({ public_token: checkoutTokenSchema, replayed: z.boolean() });

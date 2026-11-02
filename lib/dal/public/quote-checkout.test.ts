@@ -23,7 +23,7 @@ describe("checkout DAL", () => {
   });
   it("treats nonexistent, expired and cross-tenant results alike; never mutates", async () => {
     rpc.mockResolvedValue({ data: null, error: null });
-    expect(await bookQuote("wrong",guest)).toEqual({error:"invalid"});
+    expect(await bookQuote("wrong",guest)).toEqual({error:"linkUnavailable"});
     expect(rpc).toHaveBeenCalledTimes(1);
   });
   it.each([{...quote,org_id:"secret"},{...quote,balance_cents:0},{...quote,breakdown:{total:1}}])("rejects unsafe or incoherent snapshots", async data => {
@@ -48,7 +48,7 @@ describe("checkout DAL", () => {
     expect(await bookQuote("demo",guest)).toEqual({publicToken});
     expect(rpc).toHaveBeenCalledTimes(1);
   });
-  it.each([["23P01","unavailable"],["SD001","expired"],["P0002","invalid"],["42501","generic"],["XX000","generic"]])("maps mutation code %s without leaking DB messages",async (code,error) => {
+  it.each([["23P01","unavailable"],["SD001","linkUnavailable"],["P0002","linkUnavailable"],["22023","unbookable"],["42501","generic"],["XX000","generic"]])("maps mutation code %s without leaking DB messages",async (code,error) => {
     rpc.mockResolvedValueOnce({data:quote,error:null}).mockResolvedValueOnce({data:null,error:{code,message:`secret ${token}`}});
     expect(await bookQuote("demo",guest)).toEqual({error});
     expect(log).toHaveBeenCalledWith("error","checkout.book.failed",{code});

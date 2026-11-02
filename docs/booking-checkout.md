@@ -2,7 +2,8 @@
 
 Ruta pública: `/{lang}/reservar/{token}` (`es` / `en`). Al convertir la cotización o volver a abrir una ya
 convertida, se redirige a `/{lang}/reserva/{public_token}`. El token es una credencial: no copiar enlaces reales
-en logs, capturas públicas o incidencias.
+en logs, capturas públicas o incidencias. El enlace de la cotización equivale a acceso al estado de la reserva:
+quien lo conserve puede obtener el `public_token` de la reserva original al volver a abrirlo.
 
 ## Contrato y seguridad
 
@@ -12,8 +13,15 @@ en logs, capturas públicas o incidencias.
 - El resumen no consulta ni devuelve `breakdown`. Importes, saldo, fechas y moneda vienen de columnas.
 - La acción valida token, nombre, correo, teléfono y aceptación con zod; descarta los demás campos.
   Lee el host del encabezado de la petición, comprueba la cotización y usa la RPC anon existente.
-  La RPC sigue siendo una capacidad por token; no se cambia su contrato de autorización ni su transacción.
-- `create_booking_from_quote` solo añade `public_token` a las respuestas de creación y repetición. Mantiene
+  La RPC sigue siendo una capacidad por token y conserva su transacción. Las nuevas conversiones exigen
+  una propiedad publicada, también al llamar directamente con anon; el rechazo es `22023` antes de escribir.
+  El nombre rechaza caracteres Unicode de control/formato (Cc/Cf) antes de recortarse, tanto en zod como
+  en SQL (rangos explícitos). NUL no es representable en `text` de PostgreSQL y se rechaza al decodificar.
+- `create_booking_from_quote` devuelve `public_token` en creación y repetición. Un replay de una cotización
+  ya convertida redirige a la reserva original e ignora los datos del segundo envío: los campos aún deben
+  superar la validación de entrada, pero no cambian el huésped ni crean una reserva o bloque adicionales.
+  La comprobación de publicación sucede después del replay; este sigue funcionando directamente en la RPC
+  aunque el sitio se haya despublicado. La lectura pública del checkout sigue exigiendo publicación. Mantiene
   `FOR UPDATE`, la reserva única por cotización y la exclusión de fechas. No altera tablas, RLS ni grants existentes.
 - Metadatos `noindex,nofollow` y `no-referrer`; WhatsApp también lleva `noreferrer`. No se añaden analíticas ni
   scripts de terceros. Los únicos datos de errores de BD registrados por esta implementación son códigos.
@@ -37,8 +45,8 @@ En un equipo con Docker, desde este worktree y la rama `feat/SD-403-booking-chec
    futuras y generar una cotización. Abrir el enlace generado en una ventana privada.
 4. En `http://saywa-lodges.localhost:3000/es/reservar/{token}`, verificar nombre de unidad, fechas, huéspedes,
    importes, vencimiento y minutos de retención. Repetir con `/en/` y en un viewport de 375 px.
-5. Enviar sin aceptar términos y con correo inválido: debe aparecer el aviso enfocado, con errores asociados
-   a los campos; se conservan los datos escritos. Enviar datos válidos y aceptar: el botón se deshabilita
+5. Enviar sin aceptar términos y con correo inválido: debe enfocarse el primer campo inválido, con mensaje
+   asociado por `aria-describedby` y `aria-invalid`; se conservan los datos escritos. Enviar datos válidos y aceptar: el botón se deshabilita
    mientras envía y se llega a `/es/reserva/{public_token}`. Reabrir la cotización: misma página de estado.
 6. Abrir `/es/reservar/invalido` y una cotización vencida sin reserva: misma pantalla clara con WhatsApp de
    Saywa. Abrir un token de Saywa bajo `http://demo.localhost:3000/es/reservar/{token}`: misma pantalla con
@@ -46,18 +54,23 @@ En un equipo con Docker, desde este worktree y la rama `feat/SD-403-booking-chec
 7. Para fechas ocupadas, crear dos cotizaciones solapadas antes de reservar: convertir la primera y enviar
    la segunda; debe pedir otra cotización por WhatsApp. `0023_quote_checkout.test.sql` comprueba también
    que el doble envío devuelve la misma reserva/token y no crea otro huésped.
-8. En DevTools, verificar `meta[name=robots]`, `meta[name=referrer]` y ausencia de scripts/analíticas de
+8. Dejar vencer una cotización mientras se completa el formulario: al enviar, debe indicar enlace no
+   disponible y ofrecer WhatsApp, sin pedir corregir campos. Con unidad inactiva o capacidad insuficiente,
+   debe pedir una cotización nueva. Un fallo de lectura de infraestructura debe mostrar error genérico con
+   botón **Reintentar**, sin afirmar que el enlace es inválido.
+9. En DevTools, verificar `meta[name=robots]`, `meta[name=referrer]` y ausencia de scripts/analíticas de
    terceros. El enlace WhatsApp no incluye el token ni envía Referer.
 
 ## Producción y revisión pendiente
 
-PR apilado sobre #46: **no mergear** hasta que Claude ejecute `reviewer` y `security-reviewer` y se resuelvan
-los hallazgos. Primero se mergea #46, después se cambia la base de SD-403 a `main` y se verifica CI del último
-commit. La migración es aditiva; sin ella el checkout muestra el estado no disponible y no permite convertir.
+PR apilado sobre #46: **no mergear** hasta completar las correcciones de `reviewer` y `security-reviewer` de Claude
+y verificar el CI actualizado. Primero se mergea #46, después se cambia la base de SD-403 a `main` y se verifica CI del último
+commit. La migración es aditiva; sin ella el checkout muestra error genérico con reintento y no permite convertir.
 
 ### Te toca a ti
 
-- Pedir a Claude las revisiones `reviewer` y `security-reviewer` del PR SD-403. Sin ambas, no mergear.
+- Revisiones `reviewer` y `security-reviewer` realizadas por Claude: verificar sus correcciones en el PR SD-403
+  y esperar el merge de #46 antes de continuar con el merge de SD-403.
 - Antes de compartir enlaces reales, sustituir los `TODO(owner)` de `dictionaries/checkout-policies.ts` por los
   textos aprobados en es/en y verificar que aparecen en ambas rutas. Sin esto, los términos siguen pendientes.
 - Después del merge autorizado, abrir https://github.com/vadickpb/saywalodges/actions/workflows/deploy-db.yml,

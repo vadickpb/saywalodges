@@ -8,9 +8,16 @@ import { CheckoutForm } from "@/components/site/checkout-form";
 import { Button } from "@/components/ui/button";
 import { format } from "@/lib/domain/format";
 
-export const metadata: Metadata = {
-  title: "Booking checkout", robots: { index: false, follow: false }, referrer: "no-referrer",
-};
+export async function generateMetadata({ params }: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  if (!hasLocale(lang)) notFound();
+  return {
+    title: (await getDictionary(lang)).checkout.title,
+    robots: { index: false, follow: false }, referrer: "no-referrer",
+  };
+}
 
 export default async function QuoteCheckoutPage({ params }: {
   params: Promise<{ host: string; lang: string; token: string }>;
@@ -23,7 +30,14 @@ export default async function QuoteCheckoutPage({ params }: {
   const property = await getProperty(site.slug);
   const contact = <Button asChild variant="outline" size="lg"><a href={whatsappUrl(property, lang)} referrerPolicy="no-referrer" rel="noreferrer">{t.contact}</a></Button>;
   let quote;
-  try { quote = await getQuoteCheckout(host, token); } catch { quote = null; }
+  try { quote = await getQuoteCheckout(host, token); } catch {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-xl flex-col items-start gap-6 px-6 py-16">
+        <p>{property.name}</p><h1 className="text-3xl font-semibold">{t.generic}</h1>
+        <Button asChild size="lg"><a href={`/${lang}/reservar/${encodeURIComponent(token)}`}>{t.retry}</a></Button>
+      </main>
+    );
+  }
   if (quote && "public_token" in quote) redirect(`/${lang}/reserva/${quote.public_token}`);
   if (!quote) return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-start gap-6 px-6 py-16">
@@ -46,14 +60,14 @@ export default async function QuoteCheckoutPage({ params }: {
           <dt>{t.deposit}</dt><dd>{money(quote.deposit_cents)}</dd>
           <dt>{t.balance}</dt><dd>{money(quote.balance_cents)}</dd>
         </dl>
-        <p className="mt-4 text-sm">{t.expires}: {expiry} (Lima)</p>
+        <p className="mt-4 text-sm">{t.expires}: {expiry} {t.timeZone}</p>
         <p className="mt-2 text-sm">{format(t.hold, { minutes: quote.hold_minutes })}</p>
       </section>
       <section className="space-y-3 text-sm" aria-labelledby="policies">
         <h2 id="policies" className="text-lg font-semibold">{t.policies}</h2>
         <p>{t.policyContent.cancellation}</p><p>{t.policyContent.terms}</p>
       </section>
-      <CheckoutForm token={token} lang={lang} t={t} />
+      <CheckoutForm token={token} lang={lang} t={t} contactUrl={whatsappUrl(property, lang)} />
       {contact}
     </main>
   );

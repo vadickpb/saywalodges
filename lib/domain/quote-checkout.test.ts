@@ -17,9 +17,17 @@ describe("checkout validation", () => {
     expect(checkoutGuestSchema.safeParse(guest).success).toBe(true);
     expect(checkoutGuestSchema.safeParse({ ...guest, phone: "+51 (999) 000-111" }).success).toBe(true);
   });
+  it.each(["\nAna", "Ana\n", "A\0na", "Ana\tMaría", "A\u007fna", "A\u009fna", "A\u202ena", "A\u200ena", "A\u200fna", "A\u2066na", "A\u2069na", "A\u00adna", "A\u{e0001}na"])("rejects raw controls in names %j", name => {
+    const result = checkoutGuestSchema.safeParse({ ...guest, name });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0]?.path).toEqual(["name"]);
+  });
+  it("accepts accents and ñ", () => {
+    expect(checkoutGuestSchema.parse({ ...guest, name: " María Muñoz " }).name).toBe("María Muñoz");
+  });
   it("maps only known database codes", () => {
-    expect(["SD001", "23P01", "P0002", "XX000", "42501"].map(checkoutError))
-      .toEqual(["expired", "unavailable", "invalid", "generic", "generic"]);
+    expect(["SD001", "23P01", "P0002", "22023", "XX000", "42501"].map(checkoutError))
+      .toEqual(["linkUnavailable", "unavailable", "linkUnavailable", "unbookable", "generic", "generic"]);
   });
   it("rejects extra keys even on a redirect snapshot", () => {
     expect(quoteCheckoutSchema.safeParse({ public_token: guest.token }).success).toBe(true);

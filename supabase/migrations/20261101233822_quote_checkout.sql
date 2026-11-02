@@ -1,7 +1,8 @@
 -- SD-403: closed public checkout snapshot and additive booking capability response.
--- No tables, RLS, booking locks or mutation semantics change.
+-- No tables, RLS or booking locks change. New conversions require a published
+-- property; raw guest names reject Unicode control/format characters. The publication check follows replay.
 -- Rollback: drop get_quote_checkout(text,text); restore create_booking_from_quote
--- from 20261029185857 (removes only the additive public_token response field).
+-- from 20261029185857 (removes the public_token response field and these input/publication guards).
 begin;
 create function public.get_quote_checkout(p_host text, p_token text)
 returns jsonb
@@ -54,6 +55,11 @@ begin
   if p_token is null or char_length(p_token) < 32 or char_length(p_token) > 200 then
     raise exception 'quote not found' using errcode = 'P0002';
   end if;
+  -- Explicit Unicode Cc/Cf ranges, checked BEFORE trimming. PostgreSQL text
+  -- cannot contain NUL: the input/encoding layer rejects it before the RPC.
+  if p_guest_name ~ U&'[\0001-\001f\007f-\009f\00ad\0600-\0605\061c\06dd\070f\0890-\0891\08e2\180e\200b-\200f\202a-\202e\2060-\2064\2066-\206f\feff\fff9-\fffb\+0110bd\+0110cd\+013430-\+01343f\+01bca0-\+01bca3\+01d173-\+01d17a\+0e0001\+0e0020-\+0e007f]' then
+    raise exception 'invalid guest data' using errcode = '22023';
+  end if;
   if v_name is null or char_length(v_name) not between 1 and 200
      or v_email is null or char_length(v_email) > 254 or v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
      or (v_phone is not null and (char_length(v_phone) not between 5 and 30 or v_phone !~ '^[0-9+() -]+$')) then
@@ -76,7 +82,7 @@ begin
   end if;
   select * into v_unit from public.units where id = q.unit_id and org_id = q.org_id and property_id = q.property_id;
   select * into v_prop from public.properties where id = q.property_id and org_id = q.org_id;
-  if v_unit.id is null or v_prop.id is null or not v_unit.active or v_prop.currency <> q.currency
+  if v_unit.id is null or v_prop.id is null or not v_unit.active or not v_prop.published or v_prop.currency <> q.currency
      or q.guests > v_unit.max_guests then
     raise exception 'quote is not bookable' using errcode = '22023';
   end if;
