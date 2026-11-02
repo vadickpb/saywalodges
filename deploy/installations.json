@@ -1,0 +1,5 @@
+{
+  "installations": [
+    { "id": "saywa-lodges", "environment": "supabase-production" }
+  ]
+}

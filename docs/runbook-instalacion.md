@@ -71,6 +71,24 @@ Resend → **Domains** → añade el dominio de envío (p. ej. `mail.<dominio>`)
 3. Prueba un flujo completo: cotización → enlace → reserva → correo recibido.
 4. Anota la fecha de entrega: empieza la garantía de 3 meses.
 
+## 10. Registrar la instalación para las actualizaciones (manual, una vez por cliente)
+Así las migraciones futuras llegan a este cliente con **tu aprobación** (SD-1003). Sin este paso, el cliente no recibe
+actualizaciones de base de datos.
+1. GitHub → Settings → Environments → **New environment** `supabase-<slug>`.
+2. **Required reviewers**: tú (deja *Prevent self-review* desactivado). **Deployment branches** → solo `main`. Primero las
+   reglas y después los secretos.
+3. Secretos **del Environment** (no del repo): `SUPABASE_ACCESS_TOKEN` y `SUPABASE_DB_PASSWORD` (el de este proyecto).
+   Variable: `SUPABASE_PROJECT_ID` = el `projectRef` del cliente. Por terminal:
+   ```bash
+   gh secret set SUPABASE_ACCESS_TOKEN --env supabase-<slug> --repo vadickpb/saywalodges
+   gh secret set SUPABASE_DB_PASSWORD  --env supabase-<slug> --repo vadickpb/saywalodges
+   gh variable set SUPABASE_PROJECT_ID --env supabase-<slug> --repo vadickpb/saywalodges --body <projectRef>
+   ```
+4. Añade `{ "id": "<slug>", "environment": "supabase-<slug>" }` a `deploy/installations.json` por PR. **No pongas nombre
+   del cliente, dominio ni ref**: el repo es público.
+5. Comprueba: Actions → *Deploy database* → **Run workflow** con `installation` = `<slug>`. Debe quedar en «Waiting»;
+   aprueba y el «Dry run» debe decir *Remote database is up to date*.
+
 ## Verificación rápida
 - `https://<dominio>` muestra el sitio (tras publicar) y `https://app.<dominio>/login` el acceso.
 - Cualquier otro host da 404; `https://<dominio>/login` también (las sesiones viven solo en `app.`).

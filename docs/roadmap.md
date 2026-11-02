@@ -1803,12 +1803,19 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   callback de la app solo soporta el flujo PKCE de recuperación, no el de invitación); las variables sensibles solo van a
   producción y el proyecto del cliente no construye previews; el cron queda manual hasta SD-1003.
 
-### [ ] SD-1003 · ci: installation registry and multi-project DB deploy
+### [~] SD-1003 · ci: installation registry and multi-project DB deploy
 `S` · Depende: SD-1002 · Review: `R+S`
 - **Alcance**: `deploy/installations.json` (nombre, ref de Supabase, proyecto Vercel, dominio; sin secretos);
   `deploy-db.yml` como *matrix* con un Environment por instalación y aprobación del dueño.
 - **Criterios**
-  - [ ] Un *dry run* contra dos instalaciones pide una aprobación por cada una.
+  - [x] El registro se valida y la matriz tiene un job por instalación; un id desconocido falla en vez de no desplegar nada
+        (`scripts/lib/installations.test.mjs`, incluye el registro real).
+  - [ ] Un *dry run* contra dos instalaciones pide una aprobación por cada una. **Pendiente del dueño**: exige crear
+        el segundo Environment con credenciales reales (runbook, paso 10); se comprueba la primera vez que haya un cliente.
+- **Hecho** (rama `ci/SD-1003-installation-registry`): `deploy/installations.json`, `scripts/installations-matrix.mjs`,
+  `deploy-db.yml` con job `plan` (sin secretos) + `migrate` en matriz (`max-parallel: 1`, `fail-fast: false`), entrada
+  opcional `installation` para desplegar a una sola. Desviación del alcance original: el registro **no** lleva nombre, ref
+  ni dominio porque el repo es público; el ref ya vive en `SUPABASE_PROJECT_ID` de cada Environment.
 
 ### [ ] SD-1004 · feat(ops): central installation health
 `M` · Depende: SD-1003 · Review: `R+S`
