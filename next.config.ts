@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { env } from "./lib/env";
+import { staticSecurityHeaders } from "./lib/security/csp";
 
 // Scoped to this project's own Storage host instead of *.supabase.co, so an
 // image URL from a different Supabase project can't be proxied through
@@ -44,22 +45,12 @@ const nextConfig: NextConfig = {
 
   async headers() {
     return [
-      // Security headers on every response. Only here now — vercel.json's
-      // copy was removed (SD-003) to avoid two sources of truth.
+      // Nonce-free security headers on every response (lib/security/csp.ts). The
+      // per-request CSP is set by proxy.ts. vercel.json's copy was removed (SD-003)
+      // to avoid two sources of truth.
       {
         source: "/:path*",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
-          },
-        ],
+        headers: staticSecurityHeaders(process.env.NODE_ENV === "production"),
       },
     ];
   },
