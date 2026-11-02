@@ -108,7 +108,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
           <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
             {env.DEMO_MODE === "true" && (
-              <p role="status" className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-950 print:hidden">
+              <p className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-950 print:hidden">
                 Demo: los datos se reinician cada noche. Puedes probar con libertad; no uses datos reales.
               </p>
             )}

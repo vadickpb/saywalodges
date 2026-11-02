@@ -29,6 +29,7 @@ export function buildDemoData(today, { rootDomain } = {}) {
       subdomain: "demo",
       name: "Casa Demo Valle",
       custom_domain: rootDomain ?? null,
+      site_url: rootDomain ? `https://${rootDomain}` : "",
       whatsapp_number: "51900000000",
       whatsapp_message_es: "Hola, quiero reservar en Casa Demo Valle.",
       whatsapp_message_en: "Hi, I would like to book Casa Demo Valle.",
@@ -73,6 +74,25 @@ export function buildDemoData(today, { rootDomain } = {}) {
     ],
     membership: { org_id, role: "staff" },
   };
+}
+
+// Mirrors the CHECK constraints of public.properties (migration 20261016230028). The reset script validates BEFORE it
+// deletes anything: a bad value (say a DEMO_ROOT_DOMAIN with capitals or a port) must abort while the demo is still intact,
+// not after the organization is gone (that would leave the demo empty every night).
+const SUBDOMAIN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+const CUSTOM_DOMAIN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
+const RESERVED = ["app", "www", "api", "admin", "dashboard", "mail", "ftp", "assets", "static", "cdn", "support", "help", "blog", "status", "docs"];
+export const PRIVATE_BUCKETS = ["property-photos", "finance-receipts"];
+
+/** @returns {string[]} human-readable problems; empty = valid */
+export function validateDemoData(data) {
+  const problems = [];
+  const p = data.property;
+  if (!SUBDOMAIN.test(p.subdomain) || RESERVED.includes(p.subdomain)) problems.push("property.subdomain is invalid or reserved");
+  if (p.custom_domain !== null && !CUSTOM_DOMAIN.test(p.custom_domain)) {
+    problems.push("DEMO_ROOT_DOMAIN must be a lowercase bare domain such as demo.example.org (no scheme, port or trailing dot)");
+  }
+  return problems;
 }
 
 /** Insert order that respects the composite foreign keys. */

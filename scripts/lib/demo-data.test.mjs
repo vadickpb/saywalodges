@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEMO_ORG_ID, DEMO_PROPERTY_ID, DEMO_STAFF_EMAIL, INSERT_ORDER, TABLE_OF, buildDemoData } from "./demo-data.mjs";
+import { validateDemoData, PRIVATE_BUCKETS, DEMO_ORG_ID, DEMO_PROPERTY_ID, DEMO_STAFF_EMAIL, INSERT_ORDER, TABLE_OF, buildDemoData } from "./demo-data.mjs";
 
 const today = new Date("2026-11-03T05:00:00Z");
 const data = buildDemoData(today, { rootDomain: "demo.example.org" });
@@ -48,6 +48,23 @@ describe("demo data", () => {
       const keySets = new Set(rows(k).map((r) => Object.keys(r).sort().join(",")));
       expect(keySets.size, k).toBe(1);
     }
+  });
+  it("accepts the default data and a valid root domain", () => {
+    expect(validateDemoData(buildDemoData(today))).toEqual([]);
+    expect(validateDemoData(data)).toEqual([]);
+  });
+  it.each(["Demo.Example.org", "demo.example.org:3000", "demo.example.org.", "https://demo.example.org", "demo", "-demo.example.org", "demo example.org"])(
+    "rejects the root domain %s before anything is deleted",
+    (rootDomain) => {
+      expect(validateDemoData(buildDemoData(today, { rootDomain })).join()).toMatch(/DEMO_ROOT_DOMAIN/);
+    },
+  );
+  it("uses the root domain as the canonical site URL, and none otherwise", () => {
+    expect(data.property.site_url).toBe("https://demo.example.org");
+    expect(buildDemoData(today).property.site_url).toBe("");
+  });
+  it("covers both storage buckets", () => {
+    expect(PRIVATE_BUCKETS).toEqual(["property-photos", "finance-receipts"]);
   });
   it("has a table for every insert group", () => {
     for (const k of INSERT_ORDER) expect(TABLE_OF[k]).toMatch(/^[a-z_]+$/);

@@ -44,4 +44,6 @@ jobs:
             echo "::warning::The demo-reset environment has no DEMO_SUPABASE_URL / DEMO_SERVICE_ROLE_KEY: demo NOT reset."
             exit 0
           fi
+          # Never --init here: the very first run is manual (docs/demo.md), so a mistaken credential for an empty
+          # client project is refused instead of populated.
           node scripts/demo-reset.mjs --apply
