@@ -92,14 +92,19 @@ export function parseEmailConfig(source: EnvSource = process.env): EmailConfig {
 // name, set by the install script; it defaults to the product name, so nothing changes until it is configured.
 export type EmailBrand = { name: string; poweredBy: boolean };
 export const DEFAULT_BRAND_NAME = "Saywa Direct";
+export const DEFAULT_BRAND: EmailBrand = { name: DEFAULT_BRAND_NAME, poweredBy: false };
 const BRAND_CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 
 export function parseEmailBrand(source: EnvSource = process.env): EmailBrand {
   // Control characters (CR/LF) would otherwise reach the subject header.
-  const name = (read(source, "EMAIL_BRAND_NAME") ?? "").replace(BRAND_CONTROL_CHARS, " ").trim().slice(0, 80) || DEFAULT_BRAND_NAME;
-  // "Powered by" only makes sense when the brand is not already the product itself.
+  // Cut by code points (not UTF-16 units, which could split an emoji), then trim what the cut may leave at the end.
+  const name =
+    Array.from((read(source, "EMAIL_BRAND_NAME") ?? "").replace(BRAND_CONTROL_CHARS, " ").trim()).slice(0, 80).join("").trim() ||
+    DEFAULT_BRAND_NAME;
+  // "Powered by" only makes sense when the brand is not already the product itself (compared loosely).
+  const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
   const flag = read(source, "EMAIL_POWERED_BY")?.toLowerCase();
-  return { name, poweredBy: name !== DEFAULT_BRAND_NAME && (flag === "true" || flag === "1") };
+  return { name, poweredBy: normalize(name) !== normalize(DEFAULT_BRAND_NAME) && (flag === "true" || flag === "1") };
 }
 
 export function isRecipientAllowed(config: Extract<EmailConfig, { mode: "resend" }>, to: string): boolean {

@@ -1751,7 +1751,8 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 `M` · Depende: SD-1001 · Review: `R+S`
 - **Alcance**: `scripts/install-client.mjs` + `docs/runbook-instalacion.md`: proyecto Supabase y migraciones,
   organización, propiedad y owner (Auth + `memberships role='owner'`, invitación), proyecto Vercel con variables y
-  dominios, cron (`expire-holds`, `ical-sync`, con GitHub Actions como en `docs/cron.md`), pasos de Resend. La service-role
+  dominios, cron (`expire-holds`, `ical-sync`, con GitHub Actions como en `docs/cron.md`), pasos de Resend y variables de
+  marca de los correos (`EMAIL_BRAND_NAME`, `EMAIL_FROM`; SD-1005). La service-role
   solo la usa este script, que ejecuta el dueño en su máquina; nunca la app (excepción registrada en ADR 0010 sobre ADR 0002).
 - **Criterios**
   - [ ] Una instalación de prueba se levanta desde cero solo con el script y el runbook; el owner entra al panel.
@@ -1780,6 +1781,8 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   `EMAIL_POWERED_BY=true` añade «Con tecnología de Saywa Direct» al pie, solo si la marca es otra. La marca es **por
   despliegue**, no por propiedad: en una instalación hay una sola, el cron de iCal corre con service-role y no debe
   consultar la base solo para rotular un correo, y el script de alta (SD-1002) la fija junto con `EMAIL_FROM`.
+  Límite conocido: una instalación con varias propiedades de nombres distintos obligaría a revisar esta decisión; las dos
+  variables (`EMAIL_BRAND_NAME` y el nombre dentro de `EMAIL_FROM`) las mantiene alineadas el operador.
 - **Criterios**
   - [x] El remitente visible lo fija `EMAIL_FROM` y la cabecera, el asunto y el pie muestran la marca configurada; sin
         «Powered by» salvo que se active (`lib/email/render.test.ts`, `send.test.ts`).

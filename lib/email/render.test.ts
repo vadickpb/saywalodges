@@ -24,6 +24,11 @@ describe("renderEmail · brand", () => {
     expect(on.text).toContain("Con tecnología de Saywa Direct.");
     expect(renderEmail({ template: "test", lang: "en", props: {} }, { ...brand, poweredBy: true }).text).toContain("Powered by Saywa Direct.");
   });
+  it("does not reinterpret placeholders written inside the brand", () => {
+    const email = renderEmail({ template: "test", lang: "es", props: { name: "Ana" } }, { name: "Casa {name} {unit}", poweredBy: false });
+    expect(email.subject).toBe("Correo de prueba · Casa {name} {unit}");
+    expect(email.text).toContain("Enviado por Casa {name} {unit}");
+  });
   it("escapes the brand in HTML", () => {
     const email = renderEmail({ template: "test", lang: "es", props: {} }, { name: "<script>alert(1)</script>", poweredBy: false });
     expect(email.html).not.toContain("<script>alert(1)</script>");
