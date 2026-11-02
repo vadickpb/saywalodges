@@ -64,7 +64,10 @@ jobs:
         env:
           # Passed through the environment, never interpolated into the script.
           INSTALLATION: ${{ inputs.installation }}
-        run: echo "matrix=$(node scripts/installations-matrix.mjs)" >> "$GITHUB_OUTPUT"
+        run: |
+          # Two statements on purpose: inside echo "$(...)" a failing script would not fail the step.
+          matrix=$(node scripts/installations-matrix.mjs)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   migrate:
     name: supabase db push (${{ matrix.id }})

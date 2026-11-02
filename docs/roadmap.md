@@ -1810,7 +1810,7 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 - **Criterios**
   - [x] El registro se valida y la matriz tiene un job por instalación; un id desconocido falla en vez de no desplegar nada
         (`scripts/lib/installations.test.mjs`, incluye el registro real).
-  - [ ] Un *dry run* contra dos instalaciones pide una aprobación por cada una. **Pendiente del dueño**: exige crear
+  - [ ] Una ejecución contra dos instalaciones pide una aprobación por cada una (el job aplica migraciones de verdad; el «Dry run» es un paso previo). **Pendiente del dueño**: exige crear
         el segundo Environment con credenciales reales (runbook, paso 10); se comprueba la primera vez que haya un cliente.
 - **Hecho** (rama `ci/SD-1003-installation-registry`): `deploy/installations.json`, `scripts/installations-matrix.mjs`,
   `deploy-db.yml` con job `plan` (sin secretos) + `migrate` en matriz (`max-parallel: 1`, `fail-fast: false`), entrada

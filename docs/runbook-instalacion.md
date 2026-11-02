@@ -87,7 +87,7 @@ actualizaciones de base de datos.
 4. Añade `{ "id": "<slug>", "environment": "supabase-<slug>" }` a `deploy/installations.json` por PR. **No pongas nombre
    del cliente, dominio ni ref**: el repo es público.
 5. Comprueba: Actions → *Deploy database* → **Run workflow** con `installation` = `<slug>`. Debe quedar en «Waiting»;
-   aprueba y el «Dry run» debe decir *Remote database is up to date*.
+   aprueba. **Ojo: no es un simulacro**: el job aplica de verdad las migraciones que falten (en un proyecto recién instalado ya están, así que el «Dry run» debe decir *Remote database is up to date* y no cambia nada).
 
 ## Verificación rápida
 - `https://<dominio>` muestra el sitio (tras publicar) y `https://app.<dominio>/login` el acceso.
