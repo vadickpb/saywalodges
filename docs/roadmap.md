@@ -1280,11 +1280,21 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [ ] Voucher accesible solo para miembros de la org (URL firmada de corta duración).
   - [ ] Subir voucher a una reserva ajena o expirada falla.
+  - [ ] **Hallazgo H2 de la revisión de seguridad de SD-403:** el `public_token` de la reserva lo recibe cualquiera que
+        tenga el enlace de la cotización (`get_quote_checkout` y el replay de `create_booking_from_quote` lo devuelven sin
+        comprobar identidad, incluso con la cotización vencida). Subir vouchers o mostrar cuentas de pago **no puede
+        depender solo de `public_token`**: acotarlo (p. ej. solo mientras la reserva esté en `pending_payment` y no haya
+        vencido) o exigir una prueba adicional, y cubrirlo con pgTAP.
 
 ### [ ] SD-406 · feat(dashboard): bookings management
 `L` · Depende: SD-405 · Review: `R+S`
 - **Alcance**: lista con filtros (estado, fechas, origen) y detalle; ver voucher; aprobar/rechazar pago; cancelar;
   registrar reserva manual (cerrada por WhatsApp/efectivo); registrar pago de saldo.
+- **Hallazgo H4 de la revisión de seguridad de SD-403 (diseño heredado de SD-401)**: `create_booking_from_quote` asocia la
+  reserva al huésped existente con el mismo correo y le rellena el teléfono si lo tenía vacío; quien tenga un enlace puede
+  reservar con el correo de un cliente recurrente y dejar su teléfono en la ficha ajena. Mostrar en el detalle los datos
+  enviados en el checkout (nombre y teléfono como *snapshot* de la reserva) y avisar cuando no coincidan con la ficha del
+  huésped; valorar que la RPC deje de rellenar teléfonos de huéspedes existentes.
 - **Criterios**
   - [ ] Aprobar el pago confirma la reserva y fija el bloque (sin `expires_at`).
   - [ ] Reserva manual respeta disponibilidad.
@@ -1351,6 +1361,8 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 ### [ ] SD-601 · feat(crm): guests
 `M` · Depende: SD-406 · Review: `R+S`
 - **Alcance**: lista, búsqueda, ficha con historial de estancias y gasto, notas, export CSV (solo owner).
+- **Seguridad del export** (hallazgo H3 de SD-403): los nombres los escribe un huésped anónimo; neutralizar los prefijos de
+  fórmula (`=`, `+`, `-`, `@`) en el CSV y en el Excel del contador, y no confiar en que la entrada ya esté limpia.
 
 ### [ ] SD-602 · feat(crm): digital check-in
 `M` · Depende: SD-601 · Review: `R+S`
