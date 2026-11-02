@@ -13,7 +13,8 @@ name: Deploy database
 #     `supabase-<id>` for the rest; docs/runbook-instalacion.md → "Registrar la instalación"): Required reviewers + "Deployment branches" = main only
 #   * NOT `production`: GitHub environment names are case-insensitive and Vercel already
 #     owns `Production` for its own deployments; sharing it would mix the two gates
-#   * the two secrets and the SUPABASE_PROJECT_ID variable live ONLY in that environment, never at repo level
+#   * the two secrets and the SUPABASE_PROJECT_ID and INSTALLATION_ID variables live ONLY in that environment,
+#     never at repo level (INSTALLATION_ID must equal the registry id: it proves the Environment is the right one)
 #   * the registry is public: it holds only an id and the environment name, never refs or domains
 
 on:
@@ -102,7 +103,16 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
           ENVIRONMENT_NAME: ${{ matrix.environment }}
+          # `secrets.*` / `vars.*` fall back to repo- and org-level values when the Environment does not
+          # define them, so the three checks below could pass for a mistyped, auto-created (unprotected)
+          # Environment. INSTALLATION_ID must be defined INSIDE each Environment and equal the registry id.
+          EXPECTED_ID: ${{ matrix.id }}
+          ACTUAL_ID: ${{ vars.INSTALLATION_ID }}
         run: |
+          if [ "$ACTUAL_ID" != "$EXPECTED_ID" ]; then
+            echo "::error::Environment $ENVIRONMENT_NAME does not declare INSTALLATION_ID=$EXPECTED_ID (see docs/runbook-instalacion.md, step 10)"
+            exit 1
+          fi
           if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_DB_PASSWORD" ] || [ -z "$SUPABASE_PROJECT_ID" ]; then
             echo "::error::Environment $ENVIRONMENT_NAME is not configured (see docs/workflow.md and docs/runbook-instalacion.md)"
             exit 1

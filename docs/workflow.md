@@ -98,7 +98,8 @@ dependa de la migración no funcionará hasta que apruebes.
 
 `deploy/installations.json` es el registro y es **público**: solo lleva un `id` y el nombre del Environment, nunca
 nombres de clientes, dominios ni refs de Supabase (el ref vive en la variable `SUPABASE_PROJECT_ID` del Environment).
-Para añadir una instalación sigue `docs/runbook-instalacion.md` → «Registrar la instalación». Para desplegar a una sola
+Los ids son opacos (`inst-0002`), nunca el nombre del cliente. Cada Environment declara además una variable
+`INSTALLATION_ID` igual al id del registro (**la primera instalación también**: ver abajo). Para añadir una instalación sigue `docs/runbook-instalacion.md` → «Registrar la instalación». Para desplegar a una sola
 (p. ej. reintentar una): Actions → *Deploy database* → **Run workflow** → campo `installation` = su `id`.
 Si un Environment no existe o está vacío, GitHub lo autocrea sin protección y el workflow se detiene en el paso
 «Require a configured environment» antes de tocar nada.
@@ -127,7 +128,8 @@ con un único dueño administrador es aceptable, pero un administrador puede sal
      reconocible (p. ej. `github-deploy-db`) y rótalo de vez en cuando: da acceso de gestión a tu cuenta.
    - Créalos **solo en el environment**, nunca como secretos de repositorio (los de repositorio los lee cualquier workflow).
    - `SUPABASE_DB_PASSWORD`: contraseña de la BD (Supabase → Project Settings → Database).
-3. **Variables** del entorno: `SUPABASE_PROJECT_ID` = el *Reference ID* del proyecto (Supabase → Project Settings → General).
+3. **Variables** del entorno: `SUPABASE_PROJECT_ID` = el *Reference ID* del proyecto (Supabase → Project Settings → General) e
+   `INSTALLATION_ID` = el `id` de esa instalación en `deploy/installations.json` (`saywa-lodges` para este Environment).
 4. Comprobación: Actions → *Deploy database* → **Run workflow**. Debe quedar en «Waiting»; apruébalo y el
    «Dry run» debe decir que la base remota está al día (*Remote database is up to date*).
 
