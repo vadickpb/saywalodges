@@ -1,0 +1,11 @@
+{
+  "slug": "hotel-andino",
+  "name": "Hotel Andino",
+  "rootDomain": "hotelandino.pe",
+  "ownerEmail": "dueno@hotelandino.pe",
+  "whatsappNumber": "51999999999",
+  "currency": "PEN",
+  "supabase": { "projectRef": "abcdefghijklmnopqrst" },
+  "vercel": { "projectName": "hotel-andino" },
+  "email": { "from": "Hotel Andino <reservas@mail.hotelandino.pe>", "replyTo": "reservas@hotelandino.pe", "poweredBy": false }
+}
