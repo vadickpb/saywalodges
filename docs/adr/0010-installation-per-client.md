@@ -36,6 +36,8 @@ modelo de negocio:
   usarla en páginas ni en acciones de usuario.
 - **WhatsApp:** cliente de la Cloud API y webhook (SD-1008), luego plantillas y consentimiento del huésped (SD-1009), con
   credenciales por instalación. Va después del flujo de reservas (SD-403 a SD-406), porque se engancha a sus eventos.
+- **Cookies de sesión:** viven solo en `app.<dominio>` y nunca deben llevar el atributo `Domain` (cookies de host exacto).
+  En modo instalación el sitio público del cliente ni siquiera refresca la sesión.
 - **Saywa Lodges es la instalación nº 1.**
 
 ## Consecuencias

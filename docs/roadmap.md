@@ -1707,7 +1707,7 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 - **Pendiente del dueño**: `CLAUDE.md` todavía describe el proyecto como «SaaS multi-tenant»; actualizarlo es decisión del
   dueño (es la configuración que leen los agentes).
 
-### [ ] SD-1001 · feat(routing): installation mode
+### [~] SD-1001 · feat(routing): installation mode
 `M` · Depende: — · Review: `R+S`
 - **Alcance**: `DEPLOYMENT_MODE=installation` cambia qué sirve cada host:
   - el dominio raíz del cliente sirve **solo** su sitio público (`/sites/[host]/[lang]`);
@@ -1718,14 +1718,34 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   `app/(platform)/page.tsx`, `app/sitemap.ts`, `app/robots.ts`, el enlace «Ver mi sitio» de `app/app/layout.tsx`,
   `siteOrigin` del cotizador (`lib/domain/quote-builder.ts`, llega con SD-402 / PR #46) y el cron de iCal.
   `NEXT_PUBLIC_SITE_URL` (`config/site.ts`, hoy con valor por defecto `https://saywalodges.com`) pasa a ser obligatoria en
-  producción y apunta al panel (`metadataBase` y redirect del reset de contraseña). `properties.custom_domain` se conserva
+  producción **en modo instalación** y debe ser el panel, `https://app.<dominio>` (`metadataBase` y redirect del reset de
+  contraseña); en modo plataforma no se exige. `properties.custom_domain` se conserva
   solo como dato de la instalación. Sin `DEPLOYMENT_MODE` todo se comporta como hoy.
 - **Criterios**
-  - [ ] Tests de `resolveHost` en ambos modos: raíz, `app.`, `www`, host desconocido (404) y rutas `/api/*`.
-  - [ ] `/sites/*` sigue sin ser accesible como ruta literal, y `/login` y `/auth` no se sirven en el dominio del cliente
+  - [x] Tests de `resolveHost` en ambos modos: raíz, `app.`, `www`, host desconocido (404) y rutas `/api/*`
+        (`lib/domain/host-routing.test.ts` y `proxy.test.ts`).
+  - [x] `/sites/*` sigue sin ser accesible como ruta literal, y `/login` y `/auth` no se sirven en el dominio del cliente
         (las cookies de sesión quedan en `app.`).
-  - [ ] Arrancar en producción sin `NEXT_PUBLIC_SITE_URL` produce un error claro.
-  - [ ] `saywalodges.com` servido como instalación nº 1 en producción (criterio heredado de SD-604).
+  - [x] Arrancar en producción, en modo instalación, sin `NEXT_PUBLIC_SITE_URL` (o con otro host que `app.<dominio>`)
+        produce un error claro (`lib/env.test.ts`).
+  - [ ] `saywalodges.com` servido como instalación nº 1 en producción (criterio heredado de SD-604). **Diferido**: exige que el
+        dueño cambie la configuración y el dominio del proyecto actual.
+  - [ ] `siteOrigin` del cotizador usa `siteHostFor` (diferido hasta que SD-402 / PR #46 esté en `main`).
+- **Hecho** (rama `feat/SD-1001-installation-mode`):
+  - Decisión de enrutado extraída a `lib/domain/host-routing.ts` (pura, con tests); `proxy.ts` solo la aplica. En modo
+    `platform` el comportamiento es el de antes (fijado con tests de caracterización, también a través del `proxy` real en
+    `proxy.test.ts`); la única diferencia es que una respuesta 404 ya no refresca la cookie de sesión.
+  - `DEPLOYMENT_MODE` y la validación de `NEXT_PUBLIC_SITE_URL` en `lib/env.ts`: en producción, el modo instalación exige
+    que sea `https://app.<ROOT_DOMAIN>`. En modo plataforma no se exige (el despliegue actual no cambia).
+  - El sitio se busca por `properties.custom_domain = ROOT_DOMAIN` con la consulta existente (`getSiteByHost`): el
+    script de alta (SD-1002) debe fijar ese valor. `app/sitemap.ts` y `app/robots.ts` no cambian: en modo instalación el
+    proxy los deja pasar en el host del sitio y leen el host solos.
+  - «Ver mi sitio» usa `siteHostFor`. El cron de iCal ya apuntaba a `app.<ROOT_DOMAIN>`; `docs/cron.md` avisa de que
+    en este modo todo cron se llama en `app.`.
+  - Pendiente (depende del PR #46 de SD-402, que aún no está en `main`): usar `siteHostFor` en `siteOrigin` del
+    cotizador (`lib/domain/quote-builder.ts`) para que los enlaces compartidos usen el dominio raíz en modo instalación.
+  - Pendiente del dueño en cada instalación: añadir `https://app.<dominio>/auth/callback` a las URL de redirección de
+    Supabase Auth y redirigir `www` al dominio raíz en Vercel (runbook de SD-1002).
 
 ### [ ] SD-1002 · chore(ops): client install script and runbook
 `M` · Depende: SD-1001 · Review: `R+S`

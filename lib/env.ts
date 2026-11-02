@@ -18,6 +18,17 @@ const envSchema = z.object({
   // "localhost:3000" dev setup CLAUDE.md documents, so local dev works
   // without a .env.local change — production still sets its real value.
   ROOT_DOMAIN: z.string().min(1).default("localhost:3000"),
+  // Server-only (SD-1001, ADR 0010). "platform" (default) is how Saywa runs today: tenant sites under
+  // <sub>.<ROOT_DOMAIN>. "installation" is one installation per client: ROOT_DOMAIN is the client's public
+  // site and app.<ROOT_DOMAIN> serves the panel, auth and every /api/* route.
+  DEPLOYMENT_MODE: z.enum(["platform", "installation"]).default("platform"),
+  // Public URL of the panel (password-reset redirects, dashboard metadata). Required in production when
+  // DEPLOYMENT_MODE=installation (checked below); otherwise config/site.ts keeps its historical default.
+  // An empty value counts as unset (config/site.ts reads it with `||`), so a blank variable in Vercel keeps working.
+  NEXT_PUBLIC_SITE_URL: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().url("NEXT_PUBLIC_SITE_URL must be a valid URL").optional(),
+  ),
   // Server-only (SD-408). Bearer secret for /api/cron/*. Optional so dev/build work
   // without it: when absent or shorter than 32 chars the cron route refuses every call.
   CRON_SECRET: z.string().optional(),
@@ -42,6 +53,20 @@ function loadEnv() {
     throw new Error(
       "Invalid environment configuration:\n  - ROOT_DOMAIN: required in production (no default) — set it in Vercel → Settings → Environment Variables.\n\nCheck .env.local against .env.example."
     );
+  }
+
+  // Installation mode in production: the panel URL is mandatory and must be app.<ROOT_DOMAIN>. The historical
+  // default (https://saywalodges.com) would send a client's password-reset links to another site, and that
+  // host answers 404 for /auth/callback in this mode.
+  if (process.env.NODE_ENV === "production" && parsed.data.DEPLOYMENT_MODE === "installation") {
+    const siteUrl = parsed.data.NEXT_PUBLIC_SITE_URL;
+    const expectedHost = `app.${parsed.data.ROOT_DOMAIN}`;
+    const url = siteUrl ? new URL(siteUrl) : null;
+    if (!url || url.origin !== `https://${expectedHost}` || url.username || url.password) {
+      throw new Error(
+        `Invalid environment configuration:\n  - NEXT_PUBLIC_SITE_URL: required in production when DEPLOYMENT_MODE=installation and must be the panel URL (https://${expectedHost}).\n\nCheck .env.local against .env.example.`
+      );
+    }
   }
 
   return parsed.data;

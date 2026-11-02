@@ -4,68 +4,15 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { locales, defaultLocale } from "./dictionaries";
 import { env } from "./lib/env";
+import { decideRoute, shouldRefreshSession } from "./lib/domain/host-routing";
 
-// ─── Shared-across-tenants routes ────────────────────────────────────────────
-// Dashboard and auth pages (CLAUDE.md: dashboard is
-// app/app/(dashboard); the rest live in the app/(platform) route group) are
-// the same for every tenant — one login, one dashboard — not a tenant's own
-// content. They skip both the locale-prefix rewrite and the host-based
-// /sites/[host] rewrite below, same on any host. Root-level special files
-// (sitemap.xml, robots.txt) join them: they read the host themselves via
-// headers() to build per-tenant URLs and must never be rewritten into
-// /sites/... first.
-const NO_REWRITE_PATHS = [
-  "/app",
-  "/login",
-  "/forgot-password",
-  "/update-password",
-  "/auth",
-  "/sitemap.xml",
-  "/robots.txt",
-];
-
-function isNoRewritePath(pathname: string) {
-  return NO_REWRITE_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
-}
+// Host and path decisions live in lib/domain/host-routing.ts (pure, unit-tested); this file only applies them.
 
 // ─── Locale routing ──────────────────────────────────────────────────────────
 function getLocale(request: NextRequest): string {
   const acceptLang = request.headers.get("accept-language") ?? "";
   const preferred = acceptLang.split(",")[0].trim().split("-")[0].toLowerCase();
   return locales.includes(preferred as never) ? preferred : defaultLocale;
-}
-
-// ─── Host-based tenant resolution (ADR-0001) ─────────────────────────────────
-// Never queries the DB — just string matching against ROOT_DOMAIN. The
-// actual host → property lookup happens in lib/dal/public/site.ts, inside
-// the page itself, which 404s for a host nothing matches.
-
-// Node's HTTP parser accepts far more in a raw Host header value than a
-// real hostname allows (it's attacker-controlled: nothing stops a non-browser
-// client from sending any header value) — without this check, something
-// like "x/../../app" could ride through resolveHost() and land in
-// `/sites/${siteIdentifier}${pathname}`, letting a crafted Host rewrite the
-// path outside of /sites entirely. Reject anything that isn't a plausible
-// hostname[:port] before it's used for anything.
-const VALID_HOST = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:\d{1,5})?$/i;
-
-function isValidHost(host: string): boolean {
-  return VALID_HOST.test(host);
-}
-
-type HostRoute =
-  | { kind: "landing" }
-  | { kind: "site"; siteIdentifier: string };
-
-function resolveHost(host: string): HostRoute {
-  if (host === env.ROOT_DOMAIN || host === `app.${env.ROOT_DOMAIN}`) return { kind: "landing" };
-  if (host.endsWith(`.${env.ROOT_DOMAIN}`)) {
-    return { kind: "site", siteIdentifier: host.slice(0, -(env.ROOT_DOMAIN.length + 1)) };
-  }
-  // Doesn't match ROOT_DOMAIN at all — assumed a tenant's own custom domain
-  // (SD-604). Not validated against the DB here; the page 404s if no
-  // property's custom_domain matches.
-  return { kind: "site", siteIdentifier: host };
 }
 
 // ─── Supabase session refresh ────────────────────────────────────────────────
@@ -123,76 +70,45 @@ function applySessionRefresh(
 }
 
 // ─── Main proxy ──────────────────────────────────────────────────────────────
+// Never queries the DB (ADR-0001): it only matches the host against ROOT_DOMAIN. The actual host → property
+// lookup happens in lib/dal/public/site.ts, inside the page itself, which 404s for a host nothing matches.
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get("host") ?? "";
 
-  // 1. Reject anything that isn't a plausible hostname outright — see
-  // isValidHost's comment. Nothing below this point is safe to do with an
-  // unvalidated Host value.
-  if (!isValidHost(host)) {
-    return new NextResponse("Invalid request", { status: 400 });
-  }
+  const decision = decideRoute({ host, pathname, rootDomain: env.ROOT_DOMAIN, mode: env.DEPLOYMENT_MODE });
+  if (decision.type === "invalid-host") return new NextResponse("Invalid request", { status: 400 });
+  if (decision.type === "not-found") return new NextResponse("Not found", { status: 404 });
 
-  // 2. /sites/* only ever exists as an internal rewrite target (step 5
-  // below) — it must never be reachable as a literal incoming path, on any
-  // host, or the platform hosts' pass-through (step 5) would
-  // let anyone browse any tenant directly under the platform's own domain.
-  if (pathname === "/sites" || pathname.startsWith("/sites/")) {
-    return new NextResponse("Not found", { status: 404 });
-  }
+  const refresh = shouldRefreshSession({ host, rootDomain: env.ROOT_DOMAIN, mode: env.DEPLOYMENT_MODE })
+    ? await refreshSession(request)
+    : { pendingCookies: [], pendingHeaders: {} };
 
-  const isPlatformHost = host === env.ROOT_DOMAIN || host === `app.${env.ROOT_DOMAIN}`;
-
-  const refresh = await refreshSession(request);
-
-  // 3. app.<ROOT_DOMAIN>'s own root path → the dashboard home. Every other
-  // path on this host (/login, /forgot-password, …) already exists at
-  // that exact top-level path, so it needs no rewrite at all — see step 4.
-  if (host === `app.${env.ROOT_DOMAIN}` && pathname === "/") {
+  // The dashboard's own root path → the dashboard home. Every other path on that host (/login, /forgot-password,
+  // …) already exists at that exact top-level path, so it needs no rewrite at all.
+  if (decision.type === "rewrite-panel-root") {
     return applySessionRefresh(NextResponse.rewrite(new URL("/app", request.url)), refresh);
   }
 
-  // 4. Shared-across-tenants routes: no locale rewrite, no host rewrite —
-  // and not reachable on a tenant's own host.
-  // One shared dashboard/login/auth flow, not one per tenant — serving it
-  // on a tenant's custom domain would let that tenant harvest session
-  // cookies scoped to their own domain.
-  // `{ request }` forwards the request object refreshSession already
-  // mutated via request.cookies.set, so the render sees the refreshed
-  // session instead of the stale cookie it arrived with —
-  // NextResponse.next() with no argument would silently discard that
-  // mutation and forward the original, unmodified request.
-  if (isNoRewritePath(pathname)) {
-    if (!isPlatformHost) return new NextResponse("Not found", { status: 404 });
+  // Native routes (landing, dashboard, auth, api, special files). `{ request }` forwards the request object
+  // refreshSession already mutated via request.cookies.set, so the render sees the refreshed session instead of
+  // the stale cookie it arrived with — NextResponse.next() with no argument would silently discard that mutation.
+  if (decision.type === "pass") {
     return applySessionRefresh(NextResponse.next({ request }), refresh);
   }
 
-  // 5. Everything else: resolve the host, then locale-detect/redirect
-  // for tenant sites. On ROOT_DOMAIN and app.<ROOT_DOMAIN>, use native
-  // routes (including native 404s). Whatever exists at this path under
-  // app/(platform) or app/app serves it directly. Otherwise, rewrite into /sites/[host]/[lang]/... once the
-  // locale prefix is present (the page itself resolves [host] to a
-  // property and 404s if nothing matches — this proxy never queries the
-  // DB, per ADR-0001).
-  const hostRoute = resolveHost(host);
-  if (hostRoute.kind === "landing") {
-    return applySessionRefresh(NextResponse.next(), refresh);
-  }
-
-  const matchedLocale = locales.find(
-    (l) => pathname.startsWith(`/${l}/`) || pathname === `/${l}`
-  );
-  const hasLocale = Boolean(matchedLocale);
+  // A tenant / client site: locale-detect and redirect, then rewrite into /sites/[host]/[lang]/… once the locale
+  // prefix is present.
+  const matchedLocale = locales.find((l) => pathname.startsWith(`/${l}/`) || pathname === `/${l}`);
   const lang = matchedLocale ?? getLocale(request);
 
-  if (!hasLocale) {
+  if (!matchedLocale) {
     request.nextUrl.pathname = `/${lang}${pathname}`;
     return applySessionRefresh(NextResponse.redirect(request.nextUrl), refresh);
   }
 
   const rewriteUrl = request.nextUrl.clone();
-  rewriteUrl.pathname = `/sites/${encodeURIComponent(hostRoute.siteIdentifier)}${pathname}`;
+  rewriteUrl.pathname = `/sites/${encodeURIComponent(decision.siteIdentifier)}${pathname}`;
   return applySessionRefresh(NextResponse.rewrite(rewriteUrl), refresh);
 }
 
