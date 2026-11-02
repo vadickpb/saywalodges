@@ -1773,11 +1773,18 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   - [ ] Sin secreto o con secreto incorrecto → `401` sin cuerpo (tests).
   - [ ] Detener el cron de una instalación de prueba genera un aviso.
 
-### [ ] SD-1005 · feat(email): per-installation branding
-`S` · Depende: SD-306 · Review: `R`
-- **Alcance**: `lib/email/messages.ts` usa el nombre de la propiedad; «Powered by Saywa Direct» opcional en el pie.
+### [x] SD-1005 · feat(email): per-installation branding
+`S` · Depende: SD-306 · Review: `R+S` (variables de entorno nuevas)
+- **Alcance**: los correos hablan en nombre del alojamiento: `EMAIL_BRAND_NAME` (por defecto «Saywa Direct», así que nada
+  cambia hasta configurarla) sustituye a la marca fija en asuntos, cabecera y pie (`{brand}` en `lib/email/messages.ts`);
+  `EMAIL_POWERED_BY=true` añade «Con tecnología de Saywa Direct» al pie, solo si la marca es otra. La marca es **por
+  despliegue**, no por propiedad: en una instalación hay una sola, el cron de iCal corre con service-role y no debe
+  consultar la base solo para rotular un correo, y el script de alta (SD-1002) la fija junto con `EMAIL_FROM`.
 - **Criterios**
-  - [ ] El remitente y la cabecera muestran el nombre de la propiedad; el pie no dice «Powered by» salvo que se active (tests).
+  - [x] El remitente visible lo fija `EMAIL_FROM` y la cabecera, el asunto y el pie muestran la marca configurada; sin
+        «Powered by» salvo que se active (`lib/email/render.test.ts`, `send.test.ts`).
+  - [x] Sin configuración, la salida es idéntica a la de antes (tests existentes sin cambios).
+  - [x] La marca se limpia de caracteres de control (inyección de cabeceras) y se escapa en HTML.
 
 ### [ ] SD-1006 · feat(marketing): vendor sales site
 `M` · Depende: — · Review: `R`

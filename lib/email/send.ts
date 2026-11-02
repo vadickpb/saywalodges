@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
-import { isRecipientAllowed, parseEmailConfig, type EmailConfig } from "./config";
+import { isRecipientAllowed, parseEmailBrand, parseEmailConfig, type EmailBrand, type EmailConfig } from "./config";
 import type { EmailMessage } from "./content";
 import { renderEmail } from "./render";
 
@@ -31,6 +31,7 @@ export type EmailLogger = (level: "info" | "warn" | "error", event: string, fiel
 
 export type EmailDeps = {
   config?: EmailConfig;
+  brand?: EmailBrand;
   fetch?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
   log?: EmailLogger;
@@ -66,7 +67,7 @@ export async function sendEmail(input: SendEmailInput, deps: EmailDeps = {}): Pr
 
   let rendered;
   try {
-    rendered = renderEmail(input);
+    rendered = renderEmail(input, deps.brand ?? parseEmailBrand());
   } catch {
     log("warn", "email.invalid_input", { ...base, reason: "template" });
     return { ok: false, reason: "invalid_input" };

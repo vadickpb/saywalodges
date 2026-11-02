@@ -1,4 +1,6 @@
 import type { EmailContent } from "./content";
+import type { EmailBrand } from "./config";
+import { format } from "@/lib/domain/format";
 import { emailMessages, type EmailLang } from "./messages";
 
 // Table-based layout with inline styles: the only thing every mail client
@@ -6,7 +8,7 @@ import { emailMessages, type EmailLang } from "./messages";
 // no dangerouslySetInnerHTML anywhere in lib/email.
 const font = "-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif";
 
-export function EmailLayout({ lang, content }: { lang: EmailLang; content: EmailContent }) {
+export function EmailLayout({ lang, content, brand }: { lang: EmailLang; content: EmailContent; brand: EmailBrand }) {
   const m = emailMessages[lang];
   return (
     <html lang={lang}>
@@ -25,7 +27,7 @@ export function EmailLayout({ lang, content }: { lang: EmailLang; content: Email
                 <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} style={{ maxWidth: 560, backgroundColor: "#ffffff", borderRadius: 8 }}>
                   <tbody>
                     <tr>
-                      <td style={{ padding: "32px 32px 8px", color: "#7a6a58", fontSize: 13, letterSpacing: 1, textTransform: "uppercase" }}>{m.brand}</td>
+                      <td style={{ padding: "32px 32px 8px", color: "#7a6a58", fontSize: 13, letterSpacing: 1, textTransform: "uppercase" }}>{brand.name}</td>
                     </tr>
                     <tr>
                       <td style={{ padding: "0 32px", color: "#2b2a28" }}>
@@ -45,7 +47,10 @@ export function EmailLayout({ lang, content }: { lang: EmailLang; content: Email
                       </td>
                     </tr>
                     <tr>
-                      <td style={{ padding: "16px 32px 32px", color: "#8b8680", fontSize: 12, lineHeight: "18px" }}>{m.footer}</td>
+                      <td style={{ padding: "16px 32px 32px", color: "#8b8680", fontSize: 12, lineHeight: "18px" }}>
+                        {format(m.footer, { brand: brand.name })}
+                        {brand.poweredBy ? <><br />{m.poweredBy}</> : null}
+                      </td>
                     </tr>
                   </tbody>
                 </table>

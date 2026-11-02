@@ -45,6 +45,17 @@ describe("sendEmail", () => {
     expect(body.text).toContain("Hola Guest Personname,");
   });
 
+  it("renders with the brand it is given, falling back to the environment", async () => {
+    const { deps, fetchMock } = harness([json(200, { id: "msg_b" }), json(200, { id: "msg_c" })]);
+    await sendEmail(input, { ...deps, brand: { name: "Casa Marian", poweredBy: false } });
+    const first = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(first.subject).toBe("Correo de prueba · Casa Marian");
+    expect(first.html).not.toContain("Saywa Direct");
+    await sendEmail(input, deps);
+    const second = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string);
+    expect(second.subject).toBe("Correo de prueba · Saywa Direct");
+  });
+
   it("simulates without any network call and returns a recognisable id", async () => {
     const { deps, fetchMock } = harness([], { mode: "simulate" });
     const result = await sendEmail(input, deps);

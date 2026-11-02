@@ -88,6 +88,20 @@ export function parseEmailConfig(source: EnvSource = process.env): EmailConfig {
   };
 }
 
+// Who the emails speak as (SD-1005). One brand per deployment: in an installation (ADR 0010) it is the lodging's
+// name, set by the install script; it defaults to the product name, so nothing changes until it is configured.
+export type EmailBrand = { name: string; poweredBy: boolean };
+export const DEFAULT_BRAND_NAME = "Saywa Direct";
+const BRAND_CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
+
+export function parseEmailBrand(source: EnvSource = process.env): EmailBrand {
+  // Control characters (CR/LF) would otherwise reach the subject header.
+  const name = (read(source, "EMAIL_BRAND_NAME") ?? "").replace(BRAND_CONTROL_CHARS, " ").trim().slice(0, 80) || DEFAULT_BRAND_NAME;
+  // "Powered by" only makes sense when the brand is not already the product itself.
+  const flag = read(source, "EMAIL_POWERED_BY")?.toLowerCase();
+  return { name, poweredBy: name !== DEFAULT_BRAND_NAME && (flag === "true" || flag === "1") };
+}
+
 export function isRecipientAllowed(config: Extract<EmailConfig, { mode: "resend" }>, to: string): boolean {
   if (config.allowedRecipients === null) return true;
   const address = to.toLowerCase();

@@ -7,19 +7,19 @@ export const emailLangs = ["es", "en"] as const satisfies readonly EmailLang[];
 export const emailMessages = {
   es: {
     channels: { airbnb: "Airbnb", booking: "Booking.com", vrbo: "Vrbo", other: "otro canal" },
-    brand: "Saywa Direct",
-    footer: "Enviado por Saywa Direct. Si no esperabas este correo, puedes ignorarlo.",
+    footer: "Enviado por {brand}. Si no esperabas este correo, puedes ignorarlo.",
+    poweredBy: "Con tecnología de Saywa Direct.",
     test: {
-      subject: "Correo de prueba · Saywa Direct",
+      subject: "Correo de prueba · {brand}",
       preheader: "La configuración de correo funciona.",
       heading: "Correo de prueba",
       greeting: "Hola {name},",
       greetingAnonymous: "Hola,",
-      body: "Si lees esto, el envío transaccional de Saywa Direct está configurado correctamente (dominio verificado y clave de Resend).",
+      body: "Si lees esto, el envío transaccional de {brand} está configurado correctamente (dominio verificado y clave de Resend).",
       note: "Este mensaje no contiene datos de ninguna reserva.",
     },
     icalConflict: {
-      subject: "Conflicto nuevo en tu calendario iCal · Saywa Direct",
+      subject: "Conflicto nuevo en tu calendario iCal · {brand}",
       preheader: "Un calendario importado choca con fechas ya ocupadas.",
       heading: "Conflicto nuevo en el calendario",
       greeting: "Hola,",
@@ -29,7 +29,7 @@ export const emailMessages = {
       cta: "Ver conflictos",
     },
     icalFeedDown: {
-      subject: "Un calendario iCal lleva más de 24 horas sin sincronizar · Saywa Direct",
+      subject: "Un calendario iCal lleva más de 24 horas sin sincronizar · {brand}",
       preheader: "No pudimos leer el calendario importado.",
       heading: "Calendario sin sincronizar",
       greeting: "Hola,",
@@ -40,19 +40,19 @@ export const emailMessages = {
   },
   en: {
     channels: { airbnb: "Airbnb", booking: "Booking.com", vrbo: "Vrbo", other: "another channel" },
-    brand: "Saywa Direct",
-    footer: "Sent by Saywa Direct. If you weren't expecting this email, you can ignore it.",
+    footer: "Sent by {brand}. If you weren't expecting this email, you can ignore it.",
+    poweredBy: "Powered by Saywa Direct.",
     test: {
-      subject: "Test email · Saywa Direct",
+      subject: "Test email · {brand}",
       preheader: "Your email setup works.",
       heading: "Test email",
       greeting: "Hi {name},",
       greetingAnonymous: "Hi,",
-      body: "If you are reading this, Saywa Direct transactional email is set up correctly (verified domain and Resend key).",
+      body: "If you are reading this, {brand} transactional email is set up correctly (verified domain and Resend key).",
       note: "This message does not contain any booking data.",
     },
     icalConflict: {
-      subject: "New iCal calendar conflict · Saywa Direct",
+      subject: "New iCal calendar conflict · {brand}",
       preheader: "An imported calendar clashes with dates that are already taken.",
       heading: "New calendar conflict",
       greeting: "Hi,",
@@ -62,7 +62,7 @@ export const emailMessages = {
       cta: "View conflicts",
     },
     icalFeedDown: {
-      subject: "An iCal calendar has not synced for over 24 hours · Saywa Direct",
+      subject: "An iCal calendar has not synced for over 24 hours · {brand}",
       preheader: "We could not read the imported calendar.",
       heading: "Calendar not syncing",
       greeting: "Hi,",
