@@ -1857,13 +1857,25 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 - **Criterios**
   - [ ] Ningún precio, cifra ni testimonio publicado sin aprobación del dueño; Lighthouse móvil ≥ 90 (el PR #45 ya logra 100).
 
-### [ ] SD-1007 · feat(demo): shared demo installation with nightly reset
+### [~] SD-1007 · feat(demo): shared demo installation with nightly reset
 `M` · Depende: SD-1002, SD-1003 · Review: `R+S`
 - **Alcance**: instalación demo (una entrada más del registro de SD-1003) con datos ficticios (sin datos reales de Saywa),
   usuario de prueba con rol `staff`, banner «Demo: se reinicia cada noche», seed de demo propio y reseteo nocturno
   programado con GitHub Actions (como `docs/cron.md`).
 - **Criterios**
-  - [ ] Cambios hechos en la demo desaparecen tras el reseteo.
+  - [x] Cambios hechos en la demo desaparecen tras el reseteo: probado de punta a punta contra una base local (huésped y
+        nombre alterados vuelven al estado inicial; el staff entra con la contraseña pública).
+  - [x] El reseteo se niega a ejecutarse si el proyecto tiene otra organización además de la demo (probado: aborta con
+        código 1 y no borra nada); datos y reglas con test (`scripts/lib/demo-data.test.mjs`).
+  - [ ] La demo funciona en Vercel/Supabase reales y se resetea de noche. **Pendiente del dueño**: crear el proyecto Supabase,
+        el de Vercel y el Environment `demo-reset` (docs/demo.md).
+- **Hecho** (rama `feat/SD-1007-shared-demo`): `scripts/lib/demo-data.mjs`, `scripts/demo-reset.mjs`,
+  `.github/workflows/demo-reset.yml` (03:30 Lima), banner con `DEMO_MODE` en el panel, `"demo": true` en la configuración de
+  instalación (carga `DEMO_MODE` y nunca `RESEND_API_KEY`), `docs/demo.md`. Decisiones: sin migración (el reseteo borra la
+  organización por cascada vía API con service-role, no hay función destructiva en las bases de los clientes); usuario `staff`
+  con credenciales públicas y contraseña reimpuesta cada noche; la demo no comparte proyecto con ningún cliente. Sin reservas de
+  ejemplo precargadas (se puede añadir luego). Nota: `npx supabase` descarga hoy la v3.0.0, sin binario para macOS arm64; usar
+  `npx supabase@2.122.0` (la versión del CI).
 
 ### [ ] SD-1008 · feat(whatsapp): Cloud API client and webhook
 `M` · Depende: SD-1001 · Review: `R+S`

@@ -102,6 +102,19 @@ describe("buildVercelEnv", () => {
   });
 });
 
+describe("demo installation", () => {
+  const demo = parseInstallConfig({ ...base, demo: true });
+  const env = Object.fromEntries(buildVercelEnv(demo, { ...secrets, resendApiKey: "re_x" }).map((v) => [v.key, v]));
+  it("turns on the banner and never carries a Resend key, even if one is supplied", () => {
+    expect(env.DEMO_MODE.value).toBe("true");
+    expect(env.RESEND_API_KEY).toBeUndefined();
+  });
+  it("a normal installation has no DEMO_MODE", () => {
+    const normal = Object.fromEntries(buildVercelEnv(parseInstallConfig(base), secrets).map((v) => [v.key, v]));
+    expect(normal.DEMO_MODE).toBeUndefined();
+  });
+});
+
 describe("buildSeed", () => {
   const cfg = parseInstallConfig(base);
   const seed = buildSeed(cfg, "user-1");
