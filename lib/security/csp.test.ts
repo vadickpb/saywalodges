@@ -6,6 +6,7 @@ import {
   SONNER_STYLE_HASH,
   buildCsp,
   generateNonce,
+  isReportOnly,
   staticSecurityHeaders,
   toExactOrigin,
 } from "./csp";
@@ -116,6 +117,18 @@ describe("staticSecurityHeaders", () => {
   });
   it("sends HSTS only in production", () => {
     expect(map(false)["Strict-Transport-Security"]).toBeUndefined();
-    expect(map(true)["Strict-Transport-Security"]).toBe("max-age=63072000; includeSubDomains");
+    // Exact value on purpose: includeSubDomains would reach subdomains of a client's domain that this app does not control.
+    expect(map(true)["Strict-Transport-Security"]).toBe("max-age=63072000");
+  });
+});
+
+describe("isReportOnly", () => {
+  it("is on only when the flag is exactly 1", () => {
+    expect(isReportOnly("1", undefined)).toBe(true);
+    expect(isReportOnly("1", "preview")).toBe(true);
+    for (const flag of [undefined, "", "0", "true", "yes"]) expect(isReportOnly(flag, "preview")).toBe(false);
+  });
+  it("never applies to a Vercel Production deployment", () => {
+    expect(isReportOnly("1", "production")).toBe(false);
   });
 });

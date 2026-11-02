@@ -41,7 +41,8 @@ describe("proxy CSP", () => {
     expect(nonceOf(csp)).toBeTruthy();
     expect(csp).toContain("script-src 'self' 'nonce-");
     expect(csp).not.toContain("unsafe-eval");
-    expect(csp).not.toContain("report-only");
+    // Enforcing by default: the Report-Only header is not sent at all.
+    expect(res.headers.get("content-security-policy-report-only")).toBeNull();
   });
 
   it("uses a different nonce on every request", async () => {
@@ -62,6 +63,12 @@ describe("proxy CSP", () => {
   it("does not trust a client-supplied x-nonce or CSP request header", async () => {
     const res = await get("localhost:3000", "/login", { "x-nonce": "attacker", "content-security-policy": "default-src *" });
     expect(res.headers.get("x-middleware-request-x-nonce")).not.toBe("attacker");
+    expect(res.headers.get("x-middleware-request-content-security-policy")).toBe(res.headers.get("content-security-policy"));
+  });
+
+  it("drops a client-supplied Report-Only header too, so it cannot win over the enforcing one", async () => {
+    const res = await get("localhost:3000", "/login", { "content-security-policy-report-only": "default-src *" });
+    expect(res.headers.get("x-middleware-request-content-security-policy-report-only")).toBeNull();
     expect(res.headers.get("x-middleware-request-content-security-policy")).toBe(res.headers.get("content-security-policy"));
   });
 
@@ -86,6 +93,40 @@ describe("proxy CSP", () => {
     const csp = res.headers.get("content-security-policy-report-only") ?? "";
     expect(res.headers.get("x-middleware-request-x-nonce")).toBe(nonceOf(csp));
     expect(res.headers.get("x-middleware-request-content-security-policy-report-only")).toBe(csp);
+  });
+
+  it("in Report-Only mode, a client-supplied enforcing CSP is not forwarded to Next", async () => {
+    env.CSP_REPORT_ONLY = "1";
+    const res = await get("demo.localhost:3000", "/es", { "content-security-policy": "script-src 'nonce-evil'" });
+    expect(res.headers.get("x-middleware-request-content-security-policy")).toBeNull();
+    const csp = res.headers.get("content-security-policy-report-only") ?? "";
+    expect(res.headers.get("x-middleware-request-content-security-policy-report-only")).toBe(csp);
+  });
+
+  it("ignores CSP_REPORT_ONLY on a Vercel Production deployment: the policy is enforced", async () => {
+    env.CSP_REPORT_ONLY = "1";
+    vi.stubEnv("VERCEL_ENV", "production");
+    try {
+      const res = await get("demo.localhost:3000", "/es");
+      expect(res.headers.get("content-security-policy-report-only")).toBeNull();
+      const csp = res.headers.get("content-security-policy") ?? "";
+      expect(csp).toContain("script-src");
+      expect(res.headers.get("x-middleware-request-content-security-policy")).toBe(csp);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("keeps Report-Only on a Vercel Preview deployment", async () => {
+    env.CSP_REPORT_ONLY = "1";
+    vi.stubEnv("VERCEL_ENV", "preview");
+    try {
+      const res = await get("demo.localhost:3000", "/es");
+      expect(res.headers.get("content-security-policy")).toBeNull();
+      expect(res.headers.get("content-security-policy-report-only")).toBeTruthy();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 

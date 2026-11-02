@@ -88,6 +88,15 @@ export function staticSecurityHeaders(isProd: boolean): { key: string; value: st
     { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
     // allow-popups keeps window.open()/payment popups working while isolating the opener from cross-origin pages.
     { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
-    ...(isProd ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }] : []),
+    // No includeSubDomains on purpose: this header also goes out on a client's own domain (installation mode, ADR 0010)
+    // and on tenants' custom domains, and includeSubDomains would force HTTPS for two years on subdomains this app
+    // does not control (webmail, legacy systems), with no way to undo it from the server. No preload either.
+    ...(isProd ? [{ key: "Strict-Transport-Security", value: "max-age=63072000" }] : []),
   ];
+}
+
+// Report-Only turns the whole protection into a console warning, so it must never apply to a Vercel Production
+// deployment, even if the variable is left there by mistake (it is meant for previews; ADR 0011).
+export function isReportOnly(flag: string | undefined, vercelEnv: string | undefined): boolean {
+  return flag === "1" && vercelEnv !== "production";
 }

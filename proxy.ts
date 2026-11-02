@@ -5,7 +5,7 @@ import type { CookieOptions } from "@supabase/ssr";
 import { locales, defaultLocale } from "./dictionaries";
 import { env } from "./lib/env";
 import { decideRoute, shouldRefreshSession } from "./lib/domain/host-routing";
-import { buildCsp, generateNonce } from "./lib/security/csp";
+import { buildCsp, generateNonce, isReportOnly } from "./lib/security/csp";
 
 // Host and path decisions live in lib/domain/host-routing.ts (pure, unit-tested); this file only applies them.
 
@@ -78,7 +78,7 @@ const CSP_HEADER = "content-security-policy";
 const CSP_REPORT_ONLY_HEADER = "content-security-policy-report-only";
 
 function cspHeaderName() {
-  return env.CSP_REPORT_ONLY === "1" ? CSP_REPORT_ONLY_HEADER : CSP_HEADER;
+  return isReportOnly(env.CSP_REPORT_ONLY, process.env.VERCEL_ENV) ? CSP_REPORT_ONLY_HEADER : CSP_HEADER;
 }
 
 // Built after refreshSession so the copied headers carry the refreshed session cookie that request.cookies.set
@@ -86,7 +86,11 @@ function cspHeaderName() {
 function forwardInit(request: NextRequest, nonce: string, csp: string) {
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);
-  headers.set(cspHeaderName(), csp);
+  // Next reads `content-security-policy || content-security-policy-report-only`, so the header we do NOT use must
+  // not survive from the client either: the enforcing one would win over ours.
+  const name = cspHeaderName();
+  headers.delete(name === CSP_HEADER ? CSP_REPORT_ONLY_HEADER : CSP_HEADER);
+  headers.set(name, csp);
   return { request: { headers } };
 }
 

@@ -1,6 +1,6 @@
 # ADR 0011 · CSP con nonce por petición y headers de seguridad
 
-- Estado: aceptado (SD-701) · Fecha: 2026-10-30 · **Chrome real en CI (carga inicial) añadido; preview report-only pendiente** (ver "Verificación en navegador" y "Pendiente")
+- Estado: **provisional** (SD-701) · Fecha: 2026-10-30 · **Chrome real en CI (carga inicial) añadido; preview report-only pendiente** (ver "Verificación en navegador" y "Pendiente")
 
 ## Contexto
 La app renderiza HTML con datos de tenants (nombre, textos, tema) y usa Supabase (Auth/Storage) desde el
@@ -39,15 +39,22 @@ leyéndolo del header CSP de la petición reenviada por `proxy.ts`.
 - Headers sin nonce (`next.config.ts` → `staticSecurityHeaders`): `X-Content-Type-Options`,
   `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy`,
   `Cross-Origin-Opener-Policy: same-origin-allow-popups` y, solo en producción,
-  `Strict-Transport-Security: max-age=63072000; includeSubDomains` (sin `preload`).
+  `Strict-Transport-Security: max-age=63072000` (sin `includeSubDomains` ni `preload`: la cabecera también sale en el
+  dominio raíz de cada cliente y en dominios propios de tenants, y `includeSubDomains` forzaría HTTPS durante dos años en
+  subdominios que la app no controla, sin forma de revertirlo desde el servidor; hallazgo de la revisión de seguridad).
 - `CSP_REPORT_ONLY=1` envía `Content-Security-Policy-Report-Only` (Next también lee el nonce de ese header),
-  para validar en un preview sin bloquear nada.
+  para validar en un preview sin bloquear nada. **Se ignora en un despliegue de Producción de Vercel**
+  (`VERCEL_ENV=production`): una variable olvidada no puede apagar la protección. El modo Report-Only no tiene
+  `report-uri`: las violaciones solo se ven en la consola del navegador. Como Next lee `content-security-policy ||
+  content-security-policy-report-only`, el proxy descarta del request reenviado la cabecera de CSP que no usa, para que
+  una enviada por el cliente no gane.
 
 ## Mercado Pago (futuro, no integrado)
 Hoy **no se añade ningún dominio de pagos**: `PAYMENT_PROVIDER_SOURCES` está vacío y un test lo exige.
 El ticket que integre Mercado Pago debe, con la documentación oficial vigente en ese momento:
-1. Elegir Checkout Pro por redirección (no requiere cambios: `form-action`/navegación no están limitados por
-   CSP) o SDK en página. Si es SDK, cargarlo con `<Script nonce>` (`strict-dynamic` ya lo permite sin añadir
+1. Elegir Checkout Pro por redirección (la navegación por enlace no está limitada por CSP, pero `form-action 'self'`
+   sí limita los envíos de un `<form>` real, y Chrome también bloquea la redirección de ese POST a otro origen; las
+   server actions van por `fetch` y no se ven afectadas. Revisarlo si el pago usa un formulario) o SDK en página. Si es SDK, cargarlo con `<Script nonce>` (`strict-dynamic` ya lo permite sin añadir
    host) y listar en `connect-src`/`frame-src`/`img-src` solo los **orígenes exactos** que el SDK use,
    pasando por `toExactOrigin` (sin comodines tipo `*.mercadopago.com` salvo que la documentación lo exija,
    justificado en el PR).
@@ -82,4 +89,10 @@ se imprimen como `NOTE` sin fallar, para no volver el CI frágil.
 - Revisar la consola en un preview con `CSP_REPORT_ONLY=1` (el modo report-only sigue disponible y sin cambios)
   sobre: interacciones del sitio de tenant, dashboard (toasts, selects, uploads) y login contra Supabase real.
   Nada de eso lo cubre el job de CI; hasta hacerlo, esas superficies no están validadas en navegador.
-- Tras la revisión, retirar `CSP_REPORT_ONLY` del preview; la producción nunca lo usa.
+- Tras la revisión, retirar `CSP_REPORT_ONLY` del preview; la producción nunca lo usa (y el proxy lo ignora ahí).
+- HSTS dura 2 años en cada host que el navegador visita (sin `includeSubDomains`): antes de producción, confirmar que
+  los hosts de la app (raíz, `app.` y subdominios de sitio) se sirven siempre por HTTPS.
+- `Permissions-Policy` no incluye `payment=()` ni `interest-cohort`: el ticket de pagos (Mercado Pago) debe decidir su
+  valor según el flujo elegido.
+- El smoke HTTP (`scripts/test-csp-http.mjs`) solo cubre el modo plataforma; el modo instalación está cubierto por los
+  tests del proxy pero no por una prueba HTTP real.
