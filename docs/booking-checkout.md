@@ -96,6 +96,15 @@ Fuera de esa ventana el `public_token` ya no revela cuentas ni permite subir nad
   `pending_review` con el **monto y la moneda de la reserva**. Un comprobante en revisión mantiene la retención (el barrido de `expire_holds` lo respeta).
 - **Lectura**: solo miembros de la organización, con URL firmada de 60 s (`lib/dal/payment-vouchers.ts`). Nadie puede modificar ni borrar un comprobante por la API.
 
+### Riesgos conocidos y su mitigación
+- **Un comprobante basura mantiene la retención**: mientras un pago está `pending_review`, el barrido no libera las fechas; si alguien con el enlace sube un
+  archivo falso, las fechas quedan bloqueadas hasta que el dueño lo rechace. Por diseño (un comprobante real no debe perder la reserva). Mitigación: el dueño debe
+  revisar a tiempo; SD-406 destacará los comprobantes con muchas horas en revisión y SD-1009 avisará por WhatsApp de cada comprobante nuevo.
+- **Archivos sin limpieza**: no hay purga de comprobantes huérfanos, rechazados ni de organizaciones borradas (SD-412). El tope de ~5 archivos por reserva no impide
+  subidas paralelas que lo superen un poco; lo acota el límite de reservas anónimas (SD-409).
+- **Tipo de archivo declarado**: Storage valida el `Content-Type` que declara el navegador, no los bytes. Las URLs firmadas se sirven desde el origen de Supabase (no desde la app),
+  pero SD-406 debe mostrar imágenes con `<img>` y abrir los PDF como descarga.
+
 ### Probarlo en local
 1. `npx supabase@2.122.0 db reset` y `npm run dev` con las variables de `docs/booking-checkout.md`.
 2. En el panel crea una cotización, ábrela como huésped y reserva; entra a la página de la reserva. Sin cuentas configuradas verás el aviso de coordinar por WhatsApp

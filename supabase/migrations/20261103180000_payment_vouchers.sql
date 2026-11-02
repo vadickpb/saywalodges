@@ -61,7 +61,8 @@ begin
       and b.status = 'pending_payment' and b.expires_at > now() and p.published
       and not exists (select 1 from public.payments y where y.booking_id = b.id and y.status = 'pending_review')
   )
-  -- At most 5 files per booking (counted before this insert), so the token cannot be used to fill the bucket.
+  -- About 5 files per booking (counted before this insert; truly parallel uploads can overshoot by a few), so the token
+  -- cannot be used to fill the bucket.
   and (select count(*) from storage.objects o
         where o.bucket_id = 'payment-vouchers' and o.name like v_org::text || '/' || v_token || '/%') < 5;
 end;
@@ -113,8 +114,8 @@ revoke all on function public.get_booking_payment_info(text, text) from public;
 grant execute on function public.get_booking_payment_info(text, text) to anon, authenticated, service_role;
 
 -- ─── Registering the uploaded voucher ───────────────────────────────────────
--- Errors: 22023 invalid input · P0002 booking or file not found · 55000 booking not payable / too many attempts ·
---         23505 a voucher is already under review.
+-- Errors: 22023 invalid input · P0002 booking not found · SD003 uploaded file not found · 55000 booking not payable ·
+--         SD002 too many voucher attempts · 23505 a voucher is already under review (or that file is already registered).
 create function public.submit_payment_voucher(
   p_host text, p_token text, p_voucher_path text, p_method public.payment_method, p_reference text default null
 ) returns jsonb
@@ -133,7 +134,9 @@ begin
   if p_method not in ('yape', 'plin', 'bank_transfer') then
     raise exception 'invalid payment method' using errcode = '22023';
   end if;
-  if v_ref is not null and (char_length(v_ref) > 200 or v_ref ~ '[[:cntrl:]]') then
+  -- Same explicit Cc/Cf/Zl/Zp ranges as the checkout name: no control, zero-width or bidi characters (they could make an
+  -- operation number look different to the owner who reads it).
+  if v_ref is not null and (char_length(v_ref) > 200 or v_ref ~ U&'[\0001-\001f\007f-\009f\00ad\0600-\0605\061c\06dd\070f\0890-\0891\08e2\180e\200b-\200f\2028-\2029\202a-\202e\2060-\2064\2066-\206f\feff\fff9-\fffb\+0110bd\+0110cd\+013430-\+01343f\+01bca0-\+01bca3\+01d173-\+01d17a\+0e0001\+0e0020-\+0e007f]') then
     raise exception 'invalid reference' using errcode = '22023';
   end if;
 
@@ -153,13 +156,13 @@ begin
     raise exception 'invalid voucher path' using errcode = '22023';
   end if;
   if not exists (select 1 from storage.objects o where o.bucket_id = 'payment-vouchers' and o.name = p_voucher_path) then
-    raise exception 'voucher file not found' using errcode = 'P0002';
+    raise exception 'voucher file not found' using errcode = 'SD003';
   end if;
   if exists (select 1 from public.payments y where y.booking_id = b.id and y.status = 'pending_review') then
     raise exception 'a voucher is already under review' using errcode = '23505';
   end if;
   if (select count(*) from public.payments y where y.booking_id = b.id) >= 5 then
-    raise exception 'too many voucher attempts' using errcode = '55000';
+    raise exception 'too many voucher attempts' using errcode = 'SD002';
   end if;
 
   insert into public.payments (org_id, booking_id, amount_cents, currency, method, reference, voucher_path)

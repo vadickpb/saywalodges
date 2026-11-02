@@ -1312,6 +1312,8 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   `components/site/voucher-form.tsx`, panel de pago en `/[lang]/reserva/[public_token]`. El archivo sube **directo del navegador** al bucket (puede
   superar el límite de 4,5 MB de una petición al servidor); el servidor solo registra el pago: **el monto y la moneda salen de la reserva**, nunca del formulario.
   Probado de punta a punta contra `next dev` + Supabase local (página, subida con clave anónima, rechazos, registro, lectura firmada).
+- **Para SD-406**: mostrar el voucher con `<img>` (imágenes) o como descarga (`createSignedUrl(..., { download: true })` en PDF); pasar a `getVoucherSignedUrl` el cliente de sesión y
+  el `orgId` de la membresía verificada (nunca de un parámetro); destacar los comprobantes con muchas horas `pending_review` (retienen las fechas hasta que el dueño decida).
 - **Pendiente / fuera de alcance**: la pantalla del dueño para **ver** el voucher y aprobar/rechazar es SD-406 (aquí solo el DAL de URL firmada);
   **no existe aún ninguna pantalla para configurar las cuentas de cobro** (Yape/Plin/banco, tabla `property_payment_accounts`): ver SD-411.
 
@@ -1354,6 +1356,15 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Criterios**
   - [ ] Solo miembros de la org gestionan sus cuentas (RLS ya existente); validación zod (teléfono, CCI, longitudes).
   - [ ] Una cuenta desactivada deja de mostrarse al huésped de inmediato.
+
+### [ ] SD-412 · chore(privacy): voucher retention and purge
+`S` · Depende: SD-405, SD-406 · Review: `R+S`
+- **Alcance**: cron con service-role (como `docs/cron.md`) que borra de `payment-vouchers`: archivos sin pago asociado con más de 24 h, comprobantes de pagos rechazados o de reservas
+  expiradas/canceladas pasado un plazo, y objetos de organizaciones borradas; define el plazo de conservación de los aprobados (Ley 29733) y lo documenta.
+  Opcional: límite de revisión (p. ej. 48 h) tras el cual un pago `pending_review` deja de retener las fechas o se marca urgente.
+- **Criterios**
+  - [ ] Un archivo huérfano de más de 24 h desaparece; uno asociado a un pago aprobado no.
+  - [ ] El job es idempotente y no registra rutas ni datos personales.
 
 ### [ ] SD-410 · test(e2e): booking flow
 `M` · Depende: SD-406 · Review: `R`

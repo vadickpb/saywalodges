@@ -14,12 +14,12 @@ export type VoucherMime = keyof typeof VOUCHER_TYPES;
 export const voucherMethodSchema = z.enum(["yape", "plin", "bank_transfer"]);
 export type VoucherMethod = z.infer<typeof voucherMethodSchema>;
 
-// Optional operation number. Control characters are refused (the database refuses them too).
+// Optional operation number. Control, zero-width and text-direction characters are refused (the database refuses them too).
 export const voucherReferenceSchema = z
   .string()
   .trim()
   .max(200)
-  .refine((v) => !/[\u0000-\u001f\u007f-\u009f]/.test(v));
+  .refine((v) => !/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(v));
 
 export type VoucherFileProblem = "missing" | "type" | "size";
 export function checkVoucherFile(file: { type: string; size: number } | null): VoucherFileProblem | null {
@@ -63,15 +63,20 @@ export const paymentInfoSchema = z.object({
 });
 export type PaymentInfo = z.infer<typeof paymentInfoSchema>;
 
-export type VoucherError = "validation" | "unavailable" | "expired" | "alreadyUnderReview" | "generic";
+export type VoucherError = "validation" | "unavailable" | "fileNotFound" | "expired" | "tooManyAttempts" | "alreadyUnderReview" | "generic";
 export type VoucherState = { error?: VoucherError };
+
+/** Errors after which the page itself is out of date (no longer payable or already under review) and must be reloaded. */
+export const STALE_PAGE_ERRORS: readonly VoucherError[] = ["expired", "alreadyUnderReview", "unavailable", "tooManyAttempts"];
 
 /** Maps a database error code to what the guest can act on. Never exposes the database message. */
 export function voucherError(code: string | undefined): VoucherError {
   switch (code) {
     case "22023": return "validation";
     case "P0002": return "unavailable";
+    case "SD003": return "fileNotFound";
     case "55000": return "expired";
+    case "SD002": return "tooManyAttempts";
     case "23505": return "alreadyUnderReview";
     default: return "generic";
   }

@@ -51,6 +51,8 @@ describe("voucherReferenceSchema", () => {
     expect(voucherReferenceSchema.parse("  Op 12345 ")).toBe("Op 12345");
     expect(voucherReferenceSchema.parse("")).toBe("");
     expect(voucherReferenceSchema.safeParse("a\nb").success).toBe(false);
+    for (const bad of ["12\u202E34", "12\u200B34", "12\u206634", "12\u202834"]) expect(voucherReferenceSchema.safeParse(bad).success).toBe(false);
+    expect(voucherReferenceSchema.parse("Op 12345/ñ-#7")).toBe("Op 12345/ñ-#7");
     expect(voucherReferenceSchema.safeParse("a".repeat(201)).success).toBe(false);
   });
 });
@@ -68,6 +70,8 @@ describe("voucherError", () => {
   it("maps database codes to guest-facing errors and never anything else", () => {
     expect(voucherError("22023")).toBe("validation");
     expect(voucherError("P0002")).toBe("unavailable");
+    expect(voucherError("SD003")).toBe("fileNotFound");
+    expect(voucherError("SD002")).toBe("tooManyAttempts");
     expect(voucherError("55000")).toBe("expired");
     expect(voucherError("23505")).toBe("alreadyUnderReview");
     expect(voucherError("XX000")).toBe("generic");

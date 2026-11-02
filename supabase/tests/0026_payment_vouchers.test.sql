@@ -2,7 +2,7 @@
 -- Ids from supabase/seed.sql: org Saywa bf88f504-... (property 131583b5-..., unit ee204001-...0001), org Demo ff24bacc-...
 -- Saywa owner a3b45db1-..., Demo owner bd6a1c86-...
 begin;
-select plan(36);
+select plan(43);
 
 -- ─── Fixtures (table owner) ─────────────────────────────────────────────────
 insert into public.guests (id, org_id, name, email) values
@@ -90,7 +90,7 @@ select throws_ok($$select public.submit_payment_voucher('demo', repeat('c4', 32)
   'P0002', null, 'the wrong host cannot register a voucher');
 select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('c4', 32),
   'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('c4', 32) || '/00000000-0000-4000-8000-0000000000aa.png', 'yape')$$,
-  'P0002', null, 'a path with no uploaded file is refused');
+  'SD003', null, 'a path with no uploaded file is refused (its own error code)');
 select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('c4', 32),
   'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('d5', 32) || '/00000000-0000-4000-8000-000000000001.png', 'yape')$$,
   '22023', null, 'a path from another booking is refused');
@@ -100,6 +100,9 @@ select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('
 select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('c4', 32),
   'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('c4', 32) || '/00000000-0000-4000-8000-000000000001.png', 'yape', E'a\nb')$$,
   '22023', null, 'a reference with control characters is refused');
+select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('c4', 32),
+  'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('c4', 32) || '/00000000-0000-4000-8000-000000000001.png', 'yape', 'Op ' || chr(8238) || '321')$$,
+  '22023', null, 'a reference with a text-direction override is refused too');
 select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('d5', 32),
   'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('d5', 32) || '/00000000-0000-4000-8000-000000000001.png', 'yape')$$,
   '55000', null, 'a lapsed hold cannot receive a voucher');
@@ -121,6 +124,39 @@ update public.bookings set expires_at = now() - interval '2 hours' where id = 'b
 select public.expire_holds();
 select is((select status::text from public.bookings where id = 'b2050000-0000-4000-8000-000000000001'), 'pending_payment',
   'the expiry sweep leaves a booking with a voucher under review');
+
+
+-- ─── More lifecycle coverage (as the table owner) ───────────────────────────
+-- The same file cannot back two payments (unique index), even after the first is rejected.
+update public.payments set status = 'rejected', reject_reason = 'illegible', reviewed_at = now()
+  where booking_id = 'b2050000-0000-4000-8000-000000000001';
+update public.bookings set expires_at = now() + interval '1 day' where id = 'b2050000-0000-4000-8000-000000000001';
+select is(public.get_booking_status('saywa-lodges', repeat('c4', 32))->>'voucher', 'rejected', 'after the owner rejects it, the guest sees the voucher as rejected');
+select ok(public.get_booking_payment_info('saywa-lodges', repeat('c4', 32)) is not null, 'a rejected voucher reopens the payment details');
+set local role anon;
+select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('c4', 32),
+  'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('c4', 32) || '/00000000-0000-4000-8000-000000000001.png', 'yape')$$,
+  '23505', null, 'the same file cannot be registered twice');
+select is(public.submit_payment_voucher('saywa-lodges', repeat('c4', 32),
+  'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('c4', 32) || '/00000000-0000-4000-8000-000000000011.png', 'plin'),
+  '{"voucher": "under_review"}'::jsonb, 'a new file can be submitted after a rejection');
+reset role;
+-- Five attempts in total, then the cap (SD002).
+update public.payments set status = 'rejected', reject_reason = 'again', reviewed_at = now() where booking_id = 'b2050000-0000-4000-8000-000000000001' and status = 'pending_review';
+insert into public.payments (org_id, booking_id, amount_cents, currency, method, status, reject_reason, reviewed_at)
+select 'bf88f504-051f-4fdc-ab73-4fa12d715817', 'b2050000-0000-4000-8000-000000000001', 30000, 'USD', 'yape', 'rejected', 'x', now() from generate_series(1, 3);
+set local role anon;
+select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('c4', 32),
+  'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('c4', 32) || '/00000000-0000-4000-8000-000000000012.png', 'yape')$$,
+  'SD002', null, 'after five attempts a sixth is refused (its own error code)');
+reset role;
+-- A cancelled booking cannot receive a voucher.
+update public.bookings set status = 'cancelled', cancelled_at = now(), expires_at = null where id = 'b2050000-0000-4000-8000-000000000001';
+set local role anon;
+select throws_ok($$select public.submit_payment_voucher('saywa-lodges', repeat('c4', 32),
+  'bf88f504-051f-4fdc-ab73-4fa12d715817/' || repeat('c4', 32) || '/00000000-0000-4000-8000-000000000013.png', 'yape')$$,
+  '55000', null, 'a cancelled booking cannot receive a voucher');
+reset role;
 
 -- ─── Reading and tampering with stored vouchers ─────────────────────────────
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
