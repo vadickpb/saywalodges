@@ -26,6 +26,22 @@ insert into public.quotes (org_id, property_id, unit_id, token, check_in, check_
 values ('ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712',
   'ee204001-0000-4000-8000-000000000002', repeat('d',64), '2035-01-10', '2035-01-12', 2,
   'PEN', 10000, 5000, now() + interval '1 day');
+-- Distinct Demo quotes/dates ensure each legitimate name creates a real reservation.
+create temp table valid_names (k integer primary key, raw_name text, expected_name text);
+insert into valid_names values
+  (1, '山田 太郎', '山田 太郎'),
+  (2, 'Иван Петров', 'Иван Петров'),
+  (3, 'محمد علي', 'محمد علي'),
+  (4, E'O\'Brien-Smith', E'O\'Brien-Smith'),
+  (5, U&'\00a0\1680\2000\200a\202f\205f\3000María Muñoz\3000\205f\202f\200a\2000\1680\00a0', 'María Muñoz'),
+  (6, repeat(U&'\+020bb7', 200), repeat(U&'\+020bb7', 200));
+grant select on valid_names to anon;
+insert into public.quotes (org_id, property_id, unit_id, token, check_in, check_out, guests,
+  currency, total_cents, deposit_cents, expires_at)
+select 'ff24bacc-47d2-40bc-9210-f860e98892fd', '57f914ac-3890-47c1-9d6d-1492782cf712',
+  'ee204001-0000-4000-8000-000000000002', repeat(k::text,64), '2036-01-01'::date + k * 3,
+  '2036-01-02'::date + k * 3, 2, 'PEN', 10000, 5000, now() + interval '1 day'
+from valid_names;
 update public.properties set custom_domain = 'checkout.example.com' where subdomain = 'saywa-lodges';
 create temp table results (k text primary key, payload jsonb);
 grant select, insert on results to anon;
@@ -65,8 +81,33 @@ select throws_ok($$select public.create_booking_from_quote(repeat('a',64),U&'Gue
   '22023', null, 'direct anon call rejects directional isolate');
 select throws_ok($$select public.create_booking_from_quote(repeat('a',64),U&'Guest\+0e0001Name','control@example.com')$$,
   '22023', null, 'direct anon call rejects supplementary Unicode format characters');
+-- Exercise each requested range/space through the actual anon RPC, before any valid call.
+select throws_ok(format('select public.create_booking_from_quote(repeat(''a'',64),%L,''control@example.com'')', raw_name),
+  '22023', null, 'direct anon call rejects ' || label)
+from (values
+  (U&'Guest\0085Name', 'U+0085'), (U&'Guest\009fName', 'U+009F'),
+  (U&'Guest\00adName', 'U+00AD'), (U&'Guest\feffName', 'U+FEFF'),
+  (U&'Guest\200bName', 'U+200B'), (U&'Guest\2028Name', 'U+2028'),
+  (U&'Guest\2029Name', 'U+2029'), (U&'Guest\+0e007fName', 'U+E007F'),
+  (U&'Guest\+01343fName', 'U+1343F'), (U&'\00a0', 'NBSP-only name'),
+  (U&'\3000', 'ideographic-space-only name'),
+  (U&'\1680', 'Ogham-space-only name'), (U&'\2000', 'en-quad-only name'),
+  (U&'\200a', 'hair-space-only name'), (U&'\202f', 'narrow-NBSP-only name'),
+  (U&'\205f', 'medium-mathematical-space-only name'),
+  (repeat(U&'\+020bb7', 201), '201-code-point name'),
+  (U&'Guest\200cName', 'ZWNJ'), (U&'Guest\200dName', 'ZWJ')
+) rejected(raw_name, label);
 reset role;
-select is((select count(*)::int from public.guests where email='control@example.com'), 0, 'invalid names do not create guests');
+select is((select count(*)::int from public.guests), 0, 'no guest remains after the entire rejected-name set');
+set local role anon;
+insert into results
+select 'name_' || k, public.create_booking_from_quote(repeat(k::text,64), raw_name, 'unicode-' || k || '@example.com')
+from valid_names order by k;
+select is(payload->>'replayed', 'false', 'legitimate name creates its own booking: ' || k)
+from results where k like 'name_%' order by k;
+reset role;
+select is(g.name, n.expected_name, 'legitimate name is stored with matching Unicode trimming: ' || n.k)
+from valid_names n join public.guests g on g.email = 'unicode-' || n.k || '@example.com' order by n.k;
 set local role anon;
 insert into results values ('first', public.create_booking_from_quote(repeat('a',64),'María Muñoz','guest@example.com','+51 999000111'));
 insert into results values ('replay', public.create_booking_from_quote(repeat('a',64),'Different Guest','other@example.com',null));

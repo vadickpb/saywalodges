@@ -41,7 +41,8 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_name text := btrim(p_guest_name);
+  -- Same accepted edge spaces as JavaScript trim(); Cc/Cf/Zl/Zp are rejected raw below.
+  v_name text := btrim(p_guest_name, U&'\0020\00a0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200a\202f\205f\3000');
   v_email text := lower(btrim(p_guest_email));
   v_phone text := nullif(btrim(p_guest_phone), '');
   q public.quotes%rowtype;
@@ -55,9 +56,9 @@ begin
   if p_token is null or char_length(p_token) < 32 or char_length(p_token) > 200 then
     raise exception 'quote not found' using errcode = 'P0002';
   end if;
-  -- Explicit Unicode Cc/Cf ranges, checked BEFORE trimming. PostgreSQL text
+  -- Explicit Unicode Cc/Cf/Zl/Zp ranges, checked BEFORE trimming. PostgreSQL text
   -- cannot contain NUL: the input/encoding layer rejects it before the RPC.
-  if p_guest_name ~ U&'[\0001-\001f\007f-\009f\00ad\0600-\0605\061c\06dd\070f\0890-\0891\08e2\180e\200b-\200f\202a-\202e\2060-\2064\2066-\206f\feff\fff9-\fffb\+0110bd\+0110cd\+013430-\+01343f\+01bca0-\+01bca3\+01d173-\+01d17a\+0e0001\+0e0020-\+0e007f]' then
+  if p_guest_name ~ U&'[\0001-\001f\007f-\009f\00ad\0600-\0605\061c\06dd\070f\0890-\0891\08e2\180e\200b-\200f\2028-\2029\202a-\202e\2060-\2064\2066-\206f\feff\fff9-\fffb\+0110bd\+0110cd\+013430-\+01343f\+01bca0-\+01bca3\+01d173-\+01d17a\+0e0001\+0e0020-\+0e007f]' then
     raise exception 'invalid guest data' using errcode = '22023';
   end if;
   if v_name is null or char_length(v_name) not between 1 and 200

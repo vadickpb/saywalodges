@@ -15,8 +15,12 @@ quien lo conserve puede obtener el `public_token` de la reserva original al volv
   Lee el host del encabezado de la petición, comprueba la cotización y usa la RPC anon existente.
   La RPC sigue siendo una capacidad por token y conserva su transacción. Las nuevas conversiones exigen
   una propiedad publicada, también al llamar directamente con anon; el rechazo es `22023` antes de escribir.
-  El nombre rechaza caracteres Unicode de control/formato (Cc/Cf) antes de recortarse, tanto en zod como
-  en SQL (rangos explícitos). NUL no es representable en `text` de PostgreSQL y se rechaza al decodificar.
+  El nombre rechaza caracteres Unicode de control/formato y separadores de línea/párrafo (Cc/Cf/Zl/Zp) antes de recortarse, tanto en zod como
+  en SQL (rangos explícitos). Ambas capas recortan los mismos espacios Unicode de los extremos y exigen
+  de 1 a 200 puntos de código tras recortar; un nombre de solo NBSP o espacio ideográfico no es válido.
+  U+200C/U+200D (ZWNJ/ZWJ, formato) se rechazan a propósito aunque se usen en algunos nombres persas
+  e índicos. Si producto decide permitirlos, se permitirán solo entre letras y en ambas capas a la vez.
+  NUL no es representable en `text` de PostgreSQL y se rechaza al decodificar.
 - `create_booking_from_quote` devuelve `public_token` en creación y repetición. Un replay de una cotización
   ya convertida redirige a la reserva original e ignora los datos del segundo envío: los campos aún deben
   superar la validación de entrada, pero no cambian el huésped ni crean una reserva o bloque adicionales.

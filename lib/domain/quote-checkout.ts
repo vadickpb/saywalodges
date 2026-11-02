@@ -14,9 +14,12 @@ export const quoteCheckoutSchema = z.union([
 ]);
 export const checkoutGuestSchema = z.object({
   token: checkoutTokenSchema,
-  name: z.string().refine(v => !/[\p{Cc}\p{Cf}]/u.test(v), {
-    message: "Use a name without control or text direction characters.",
-  }).pipe(z.string().trim().min(1).max(200)),
+  // PostgreSQL char_length counts code points; bound UTF-16 length before allocating.
+  name: z.string().refine(v => !/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(v), {
+    message: "Use a name without controls, line separators or text direction characters.",
+  }).pipe(z.string().trim().refine(v => v.length > 0 && v.length <= 400 && [...v].length <= 200, {
+    message: "Enter a name between 1 and 200 characters.",
+  })),
   email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
   phone: z.string().trim().max(30).refine(v => v === "" || (v.length >= 5 && /^[0-9+() -]+$/.test(v))),
   terms: z.literal("on"),

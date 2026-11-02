@@ -25,6 +25,22 @@ describe("checkout validation", () => {
   it("accepts accents and ñ", () => {
     expect(checkoutGuestSchema.parse({ ...guest, name: " María Muñoz " }).name).toBe("María Muñoz");
   });
+  it.each(["山田 太郎", "Иван Петров", "محمد علي", "O'Brien-Smith"])("accepts legitimate multilingual name %s", name => {
+    expect(checkoutGuestSchema.parse({ ...guest, name }).name).toBe(name);
+  });
+  it.each(["\u0085", "\u009f", "\u00ad", "\ufeff", "\u200b", "\u2028", "\u2029", "\u{e007f}", "\u{1343f}", "\u200c", "\u200d"])("rejects controls and separators %j even at the edges", character => {
+    for (const name of [character + "Ana", "Ana" + character]) {
+      expect(checkoutGuestSchema.safeParse({ ...guest, name }).success).toBe(false);
+    }
+  });
+  it.each(["\u0020", "\u00a0", "\u1680", ...Array.from({length:11}, (_, i) => String.fromCodePoint(0x2000 + i)), "\u202f", "\u205f", "\u3000"])("trims accepted Unicode edge space %j and rejects space-only names", space => {
+    expect(checkoutGuestSchema.safeParse({ ...guest, name: space.repeat(3) }).success).toBe(false);
+    expect(checkoutGuestSchema.parse({ ...guest, name: space + "María Muñoz" + space }).name).toBe("María Muñoz");
+  });
+  it("counts Unicode code points like PostgreSQL char_length", () => {
+    expect(checkoutGuestSchema.safeParse({ ...guest, name: "𠮷".repeat(200) }).success).toBe(true);
+    expect(checkoutGuestSchema.safeParse({ ...guest, name: "𠮷".repeat(201) }).success).toBe(false);
+  });
   it("maps only known database codes", () => {
     expect(["SD001", "23P01", "P0002", "22023", "XX000", "42501"].map(checkoutError))
       .toEqual(["linkUnavailable", "unavailable", "linkUnavailable", "unbookable", "generic", "generic"]);
