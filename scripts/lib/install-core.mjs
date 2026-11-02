@@ -16,9 +16,12 @@ const hostname = z
   )
   .refine((v) => !v.startsWith("app.") && !v.startsWith("www."), "rootDomain must be the apex domain, not app. or www.");
 
+// Mirrors properties_subdomain_format (migration 20261016230028): the slug is also the subdomain.
+export const RESERVED_SUBDOMAINS = ["app","www","api","admin","dashboard","mail","ftp","assets","static","cdn","support","help","blog","status","docs"];
+
 export const installConfigSchema = z
   .object({
-    slug: z.string().trim().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "slug: lowercase letters, digits and dashes").max(40),
+    slug: z.string().trim().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "slug: lowercase letters, digits and dashes").max(40).refine((v) => !RESERVED_SUBDOMAINS.includes(v), "slug is a reserved subdomain; pick another"),
     name: z.string().trim().min(1).max(120),
     rootDomain: hostname,
     ownerEmail: z.string().trim().toLowerCase().max(254).pipe(z.email()),
@@ -59,7 +62,8 @@ export const siteOrigin = (cfg) => `https://${cfg.rootDomain}`;
 
 /** URLs Supabase Auth must allow (the password-recovery link lands here). */
 export function authUrls(cfg) {
-  return { siteUrl: appOrigin(cfg), allowList: [`${appOrigin(cfg)}/auth/callback`] };
+  return { siteUrl: appOrigin(cfg), // The recovery link carries ?next=…, so allow the path with any query string.
+    allowList: [`${appOrigin(cfg)}/auth/callback`, `${appOrigin(cfg)}/auth/callback**`] };
 }
 
 /**

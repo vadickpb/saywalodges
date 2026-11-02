@@ -41,6 +41,9 @@ describe("parseInstallConfig", () => {
     expect(() => parseInstallConfig({ ...base, email: { from: "no-address" } })).toThrow();
     expect(() => parseInstallConfig({ ...base, email: { replyTo: "not an email" } })).toThrow();
   });
+  it.each(["status", "docs", "app", "www", "api"])("rejects the reserved subdomain %s as slug", (slug) => {
+    expect(() => parseInstallConfig({ ...base, slug })).toThrow(/reserved/);
+  });
   it("rejects a project ref that is not 20 lowercase letters", () => {
     expect(() => parseInstallConfig({ ...base, supabase: { projectRef: "short" } })).toThrow();
   });
@@ -55,8 +58,8 @@ describe("derived values", () => {
     expect(appHost(cfg)).toBe("app.casaandina.pe");
     expect(appOrigin(cfg)).toBe("https://app.casaandina.pe");
   });
-  it("auth allow-list is only the panel callback", () => {
-    expect(authUrls(cfg)).toEqual({ siteUrl: "https://app.casaandina.pe", allowList: ["https://app.casaandina.pe/auth/callback"] });
+  it("auth allow-list is only the panel callback (with and without query)", () => {
+    expect(authUrls(cfg)).toEqual({ siteUrl: "https://app.casaandina.pe", allowList: ["https://app.casaandina.pe/auth/callback", "https://app.casaandina.pe/auth/callback**"] });
   });
   it("dns checklist covers apex, app and www", () => {
     expect(dnsChecklist(cfg).map((r) => r.host)).toEqual(["casaandina.pe", "app.casaandina.pe", "www.casaandina.pe"]);

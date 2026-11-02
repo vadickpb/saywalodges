@@ -42,7 +42,7 @@ secretos generados y **no se commitea**):
 4. `seed`: crea el owner (ya confirmado, sin contraseña), la organización, la propiedad **sin publicar** y la membresía `owner`.
 5. `vercel`: crea el proyecto desde el repo, carga las variables (las sensibles solo en producción) y añade `<dominio>` y
    `app.<dominio>`. Los *previews* quedan desactivados en el proyecto del cliente.
-Para repetir un solo paso: `--step=keys|migrations|auth|seed|vercel`.
+Si el script no pudo configurar Auth por API, haz lo que te indica a mano, pon `"signupDisabled": true` en `.install/<slug>.state.json` y continúa con `--step=seed`. Para repetir un solo paso: `--step=keys|migrations|auth|seed|vercel`.
 
 ## 5. DNS (manual, en el proveedor del dominio)
 Vercel → proyecto → **Settings → Domains** muestra el registro exacto de cada dominio. Normalmente:
@@ -52,7 +52,7 @@ Vercel → proyecto → **Settings → Domains** muestra el registro exacto de c
 Verifica con `dig +short <dominio>` y espera a que Vercel marque «Valid Configuration».
 
 ## 6. Primer despliegue
-Vercel → **Deployments** → **Redeploy** de `main` (las variables se cargaron después de crear el proyecto). Debe terminar en verde.
+Vercel → proyecto → **Deployments**. Si hay un deployment de `main`, pulsa **Redeploy** (las variables se cargaron después de crearlo). Si no hay ninguno, haz un push vacío a `main` (`git commit --allow-empty -m "chore: first deploy" && git push`) o ejecuta `npx vercel deploy --prod` desde el repo enlazado al proyecto. Debe terminar en verde.
 
 ## 7. Cron (manual)
 Dos llamadas, cada 15 minutos, con `Authorization: Bearer <CRON_SECRET>` (el valor está en `.install/<slug>.state.json`):
@@ -66,7 +66,7 @@ Resend → **Domains** → añade el dominio de envío (p. ej. `mail.<dominio>`)
 «Verified», crea una API key y guárdala en Vercel como `RESEND_API_KEY` (sensible) y `EMAIL_FROM` si falta. Redeploy.
 
 ## 9. Entregar al cliente
-1. El owner abre `https://app.<dominio>/forgot-password`, escribe su correo y fija su contraseña con el enlace que recibe.
+1. El owner abre `https://app.<dominio>/forgot-password`, escribe su correo y fija su contraseña con el enlace que recibe. **Pruébalo tú antes de entregar**: si el enlace del correo no termina en `/update-password`, revisa las Redirect URLs de Supabase Auth.
 2. Carga contenido y fotos, y **publica** la propiedad desde el panel (queda sin publicar a propósito).
 3. Prueba un flujo completo: cotización → enlace → reserva → correo recibido.
 4. Anota la fecha de entrega: empieza la garantía de 3 meses.
