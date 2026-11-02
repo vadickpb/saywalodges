@@ -35,8 +35,14 @@ export const installConfigSchema = z
     }),
     email: z
       .object({
-        from: z.string().trim().max(254).optional(),
-        replyTo: z.string().trim().max(254).optional(),
+        // "Name <user@domain>" or a bare address; no control characters (header injection).
+        from: z
+          .string()
+          .trim()
+          .max(254)
+          .regex(/^[^\u0000-\u001f\u007f<>]*(<[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>|[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)$/, "email.from: \"Name <user@domain>\" or user@domain")
+          .optional(),
+        replyTo: z.string().trim().toLowerCase().max(254).pipe(z.email()).optional(),
         poweredBy: z.boolean().default(false),
       })
       .default({ poweredBy: false }),

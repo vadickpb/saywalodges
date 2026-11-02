@@ -34,6 +34,13 @@ describe("parseInstallConfig", () => {
   ])("rejects an invalid %s (%s)", (key, value) => {
     expect(() => parseInstallConfig({ ...base, [key]: value })).toThrow();
   });
+  it("validates email.from and email.replyTo (no header injection)", () => {
+    expect(() => parseInstallConfig({ ...base, email: { from: "Casa <r@mail.casaandina.pe>", replyTo: "Reservas@CasaAndina.pe" } })).not.toThrow();
+    expect(() => parseInstallConfig({ ...base, email: { from: "r@mail.casaandina.pe" } })).not.toThrow();
+    expect(() => parseInstallConfig({ ...base, email: { from: "Casa <r@x.pe>\r\nBcc: a@b.c" } })).toThrow();
+    expect(() => parseInstallConfig({ ...base, email: { from: "no-address" } })).toThrow();
+    expect(() => parseInstallConfig({ ...base, email: { replyTo: "not an email" } })).toThrow();
+  });
   it("rejects a project ref that is not 20 lowercase letters", () => {
     expect(() => parseInstallConfig({ ...base, supabase: { projectRef: "short" } })).toThrow();
   });

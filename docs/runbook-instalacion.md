@@ -12,7 +12,7 @@ pasos manuales que este documento lista **en orden**. Tiempo estimado: 30–45 m
 - Tokens, solo en tu terminal (no en archivos):
   - `export SUPABASE_ACCESS_TOKEN=...` → <https://supabase.com/dashboard/account/tokens>
   - `export VERCEL_TOKEN=...` → <https://vercel.com/account/tokens>
-- El repo clonado y `npm ci` hecho. La app de GitHub de Vercel debe tener acceso a `vadickpb/saywalodges`.
+- El repo clonado y `npm ci` hecho, **fuera de carpetas sincronizadas** (iCloud, Dropbox, Drive): `.install/` guarda las claves service-role de los clientes. La app de GitHub de Vercel debe tener acceso a `vadickpb/saywalodges`.
 
 ## 1. Datos del cliente
 Copia `deploy/install.example.json` a `deploy/installs/<cliente>.json` (**sin secretos**; `deploy/installs/` está en `.gitignore` porque el repo es público y no debe contener datos de clientes) y complétalo: `slug`, `name`, `rootDomain` (dominio raíz, sin `app.`), `ownerEmail`,
@@ -37,8 +37,8 @@ npm run install-client -- deploy/installs/<cliente>.json --apply
 Hace, en orden, y se puede repetir si algo falla (guarda el progreso en `.install/<slug>.state.json`, que contiene los
 secretos generados y **no se commitea**):
 1. `keys`: obtiene las claves anon y service-role y genera `CRON_SECRET`.
-2. `migrations`: `supabase link` + `supabase db push` (aplica todas las migraciones al proyecto del cliente).
-3. `auth`: Site URL y redirect `https://app.<dominio>/auth/callback` en Supabase Auth.
+2. `migrations`: `supabase link` + `supabase db push` (aplica todas las migraciones al proyecto del cliente y vuelve a desenlazar el clon con `supabase unlink`).
+3. `auth`: Site URL, redirect `https://app.<dominio>/auth/callback` y **desactiva el registro de usuarios nuevos** (si no se puede por API, el script te lo pide y no sigue al `seed`).
 4. `seed`: crea el owner (ya confirmado, sin contraseña), la organización, la propiedad **sin publicar** y la membresía `owner`.
 5. `vercel`: crea el proyecto desde el repo, carga las variables (las sensibles solo en producción) y añade `<dominio>` y
    `app.<dominio>`. Los *previews* quedan desactivados en el proyecto del cliente.
@@ -83,4 +83,5 @@ Resend → **Domains** → añade el dominio de envío (p. ej. `mail.<dominio>`)
   `NEXT_PUBLIC_SITE_URL=https://app.<dominio>` coinciden; la app falla al arrancar en producción si no (`lib/env.ts`).
 - **El reset de contraseña no llega**: Supabase usa su SMTP de prueba (muy limitado); configura SMTP propio en
   Authentication → SMTP Settings con Resend.
+- **«Could not create the owner»**: ese correo ya existe en el proyecto. Si es tu cuenta, copia su id (Supabase → Authentication → Users) como `ownerUserId` en el archivo de estado y repite `--step=seed`; el script nunca adopta usuarios ajenos.
 - Un paso a medias es seguro de repetir; borrar `.install/<slug>.state.json` solo si quieres regenerar los secretos.

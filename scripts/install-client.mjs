@@ -53,14 +53,27 @@ try {
 
 const stateDir = join(ROOT, ".install");
 const statePath = join(stateDir, `${cfg.slug}.state.json`);
-const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, "utf8")) : {};
+let state = {};
+if (existsSync(statePath)) {
+  try {
+    state = JSON.parse(readFileSync(statePath, "utf8"));
+  } catch {
+    // Generic on purpose: a parse error message can quote part of the file (secrets).
+    fail(`${statePath} is not valid JSON. Fix or delete it (deleting regenerates the secrets).`);
+  }
+}
 const saveState = () => {
   mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+  chmodSync(stateDir, 0o700);
   writeFileSync(statePath, JSON.stringify(state, null, 2), { mode: 0o600 });
   chmodSync(statePath, 0o600);
 };
 
 const ref = cfg.supabase.projectRef;
+// The state holds this project's keys and ids: never reuse it for another project or Vercel project.
+if (state.projectRef && state.projectRef !== ref) fail(`.install/${cfg.slug}.state.json belongs to Supabase project ${state.projectRef}, not ${ref}. Use a different slug, or delete that file to start over.`);
+if (state.vercelProjectName && state.vercelProjectName !== cfg.vercel.projectName) fail("The state file belongs to a different Vercel project name. Use a different slug, or delete it to start over.");
+state.projectRef = ref;
 const supabaseUrl = `https://${ref}.supabase.co`;
 const run = (label, fn) => (apply ? fn() : out(`  [dry-run] ${label}`));
 const want = (step) => !only || only === step;
@@ -104,8 +117,14 @@ if (want("migrations")) {
   out("2/5 Database migrations (supabase/migrations/*.sql)");
   await run("supabase link + db push to the client's project", () => {
     const env = { ...process.env, SUPABASE_ACCESS_TOKEN: need("SUPABASE_ACCESS_TOKEN"), SUPABASE_DB_PASSWORD: need("SUPABASE_DB_PASSWORD") };
-    execFileSync("npx", ["--no-install", "supabase", "link", "--project-ref", ref, "--yes"], { cwd: ROOT, env, stdio: "inherit" });
-    execFileSync("npx", ["--no-install", "supabase", "db", "push", "--yes"], { cwd: ROOT, env, stdio: "inherit" });
+    const sb = (...a) => execFileSync("npx", ["--no-install", "supabase", ...a], { cwd: ROOT, env, stdio: "inherit" });
+    sb("link", "--project-ref", ref, "--yes");
+    try {
+      sb("db", "push", "--yes");
+    } finally {
+      // Never leave this clone linked to a client's production database.
+      try { sb("unlink", "--yes"); } catch { out("  warning: run `npx supabase unlink` by hand so this clone is not left linked to a client."); }
+    }
   });
 }
 
@@ -117,11 +136,13 @@ if (want("auth")) {
     try {
       await api("https://api.supabase.com", `/v1/projects/${ref}/config/auth`, {
         method: "PATCH", token: need("SUPABASE_ACCESS_TOKEN"),
-        body: { site_url: siteUrl, uri_allow_list: allowList.join(",") },
+        body: { site_url: siteUrl, uri_allow_list: allowList.join(","), disable_signup: true },
       });
-      out("  updated");
+      state.signupDisabled = true;
+      saveState();
+      out("  updated (new-user sign-up disabled)");
     } catch (e) {
-      out(`  could not be set automatically (${e instanceof Error ? e.message : "error"}). Do it by hand: Supabase → Authentication → URL Configuration → Site URL ${siteUrl}, Redirect URLs ${allowList.join(", ")}`);
+      out(`  could not be set automatically (${e instanceof Error ? e.message : "error"}). Do it by hand: Supabase → Authentication → URL Configuration → Site URL ${siteUrl}, Redirect URLs ${allowList.join(", ")}; and turn OFF "Allow new users to sign up" (Authentication → Sign In / Providers). Do not continue to the seed step until that is done.`);
     }
   });
 }
@@ -139,13 +160,15 @@ if (want("seed")) {
     // "Forgot password" on the panel (the PKCE recovery flow the app supports).
     let userId = state.ownerUserId;
     if (!userId) {
+      // Self sign-up must be closed BEFORE the seed, or anyone holding the (public) anon key
+      // could have registered the owner's e-mail first.
+      if (!state.signupDisabled) fail("Run the auth step first (it disables new-user sign-up), or confirm it is off and set \"signupDisabled\": true in the state file.");
       try {
         const u = await auth("/auth/v1/admin/users", { method: "POST", body: { email: cfg.ownerEmail, email_confirm: true } });
         userId = u.id;
       } catch {
-        const list = await auth("/auth/v1/admin/users?per_page=200");
-        userId = list.users?.find((u) => u.email?.toLowerCase() === cfg.ownerEmail)?.id;
-        if (!userId) fail("Could not create or find the owner user.");
+        // Never adopt a user this script did not create: it could be someone else's account.
+        fail(`Could not create the owner ${cfg.ownerEmail} (it may already exist in this project). If it is YOUR account, add its id as "ownerUserId" to .install/${cfg.slug}.state.json and re-run this step.`);
       }
       state.ownerUserId = userId;
       saveState();
@@ -182,6 +205,7 @@ if (want("vercel")) {
     const token = need("VERCEL_TOKEN");
     if (!state.anonKey) fail("Run the keys step first.");
     const secrets = { supabaseUrl, anonKey: state.anonKey, serviceRoleKey: state.serviceRoleKey, cronSecret: state.cronSecret, resendApiKey: process.env.RESEND_API_KEY };
+    state.vercelProjectName = cfg.vercel.projectName;
     if (!state.vercelProjectId) {
       const p = await api("https://api.vercel.com", `/v10/projects${q}`, {
         method: "POST", token,
