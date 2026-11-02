@@ -12,7 +12,7 @@ const base = {
   supabase: { projectRef: "abcdefghijklmnopqrst" },
   vercel: { projectName: "casa-andina" },
 };
-const secrets = { supabaseUrl: "https://abcdefghijklmnopqrst.supabase.co", anonKey: "anon", serviceRoleKey: "svc", cronSecret: "a".repeat(64) };
+const secrets = { supabaseUrl: "https://abcdefghijklmnopqrst.supabase.co", anonKey: "anon", serviceRoleKey: "svc", cronSecret: "a".repeat(64), healthSecret: "b".repeat(64) };
 
 describe("parseInstallConfig", () => {
   it("normalizes and applies defaults", () => {
@@ -80,7 +80,7 @@ describe("buildVercelEnv", () => {
   it("brands the emails and marks secrets as sensitive and production-only", () => {
     expect(env.EMAIL_BRAND_NAME.value).toBe("Casa Andina");
     expect(env.EMAIL_POWERED_BY.value).toBe("true");
-    for (const k of ["SUPABASE_SERVICE_ROLE_KEY", "CRON_SECRET"]) {
+    for (const k of ["SUPABASE_SERVICE_ROLE_KEY", "CRON_SECRET", "HEALTH_SECRET"]) {
       expect(env[k].type).toBe("sensitive");
       expect(env[k].target).toEqual(["production"]);
     }
@@ -97,6 +97,8 @@ describe("buildVercelEnv", () => {
   it("refuses missing or weak secrets", () => {
     expect(() => buildVercelEnv(cfg, { ...secrets, anonKey: "" })).toThrow(/anonKey/);
     expect(() => buildVercelEnv(cfg, { ...secrets, cronSecret: "short" })).toThrow(/32/);
+    expect(() => buildVercelEnv(cfg, { ...secrets, healthSecret: "short" })).toThrow(/32/);
+    expect(() => buildVercelEnv(cfg, { ...secrets, healthSecret: secrets.cronSecret })).toThrow(/differ/);
   });
 });
 

@@ -10,10 +10,13 @@ export const MIN_CRON_SECRET_LENGTH = 32;
 
 const digest = (value: string) => createHash("sha256").update(value).digest();
 
-export function isCronAuthorized(authorization: string | null, secret: string | undefined): boolean {
+export function isBearerAuthorized(authorization: string | null, secret: string | undefined): boolean {
   if (!secret || secret.length < MIN_CRON_SECRET_LENGTH) return false;
   if (!authorization) return false;
   const match = /^Bearer (.+)$/.exec(authorization);
   if (!match) return false;
   return timingSafeEqual(digest(match[1]), digest(secret));
 }
+
+// /api/cron/* keeps its name; /api/health (SD-1004) uses the same check with its own secret.
+export const isCronAuthorized = isBearerAuthorized;

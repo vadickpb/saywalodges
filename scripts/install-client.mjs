@@ -107,6 +107,7 @@ if (want("keys")) {
     state.serviceRoleKey = find("service_role");
     if (!state.anonKey || !state.serviceRoleKey) fail("The project did not return anon and service_role keys. Copy them from Supabase → Project Settings → API Keys into .install/<slug>.state.json (anonKey, serviceRoleKey).");
     state.cronSecret ??= generateSecret(randomBytes);
+    state.healthSecret ??= generateSecret(randomBytes);
     saveState();
     out("  stored in .install (not printed)");
   });
@@ -196,15 +197,15 @@ if (want("vercel")) {
   const q = cfg.vercel.teamId ? `?teamId=${cfg.vercel.teamId}` : "";
   const qa = cfg.vercel.teamId ? `&teamId=${cfg.vercel.teamId}` : "";
   const dry = () => {
-    const sample = { supabaseUrl, anonKey: "<anon>", serviceRoleKey: "<service-role>", cronSecret: "x".repeat(64) };
+    const sample = { supabaseUrl, anonKey: "<anon>", serviceRoleKey: "<service-role>", cronSecret: "x".repeat(64), healthSecret: "y".repeat(64) };
     for (const v of buildVercelEnv(cfg, sample)) out(`  [dry-run] env ${v.key} (${v.type}) → ${v.target.join(",")}`);
     out(`  [dry-run] project ${cfg.vercel.projectName} from ${cfg.vercel.repo}; domains ${cfg.rootDomain}, ${appHost(cfg)}`);
   };
   if (!apply) dry();
   else {
     const token = need("VERCEL_TOKEN");
-    if (!state.anonKey) fail("Run the keys step first.");
-    const secrets = { supabaseUrl, anonKey: state.anonKey, serviceRoleKey: state.serviceRoleKey, cronSecret: state.cronSecret, resendApiKey: process.env.RESEND_API_KEY };
+    if (!state.anonKey || !state.healthSecret) fail("Run the keys step first.");
+    const secrets = { supabaseUrl, anonKey: state.anonKey, serviceRoleKey: state.serviceRoleKey, cronSecret: state.cronSecret, healthSecret: state.healthSecret, resendApiKey: process.env.RESEND_API_KEY };
     state.vercelProjectName = cfg.vercel.projectName;
     if (!state.vercelProjectId) {
       const p = await api("https://api.vercel.com", `/v10/projects${q}`, {
@@ -232,5 +233,6 @@ out("\nPending by hand (see docs/runbook-instalacion.md):");
 for (const r of dnsChecklist(cfg)) out(`  DNS  ${r.type.padEnd(5)} ${r.host}  →  ${r.value}   (${r.note})`);
 out(`  Cron: schedule POST https://${appHost(cfg)}/api/cron/expire-holds and /ical-sync with the CRON_SECRET stored in .install/${cfg.slug}.state.json`);
 out(`  Owner: open https://${appHost(cfg)}/forgot-password with ${cfg.ownerEmail} to set a password`);
+out(`  Monitoring: create the GitHub Environment health-<same opaque id> with variable HEALTH_URL=https://${appHost(cfg)}/api/health and secret HEALTH_SECRET (value in .install/${cfg.slug}.state.json); runbook step 11`);
 out(`  Updates: create the GitHub Environment supabase-<opaque id, e.g. inst-0002> and add the registry entry (runbook step 10; never use the client slug there, the registry is public), or this client will not receive database updates`);
 out(`  Email: verify the sending domain in Resend${cfg.email.from ? "" : " and set EMAIL_FROM"}`);

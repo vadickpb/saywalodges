@@ -1746,6 +1746,7 @@ export type Database = {
         Returns: undefined;
       };
       expire_holds: { Args: Record<PropertyKey, never>; Returns: number };
+      health_snapshot: { Args: Record<PropertyKey, never>; Returns: Json };
       finish_ical_sync: {
         Args: {
           p_error?: string;
