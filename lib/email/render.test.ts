@@ -3,6 +3,42 @@ import { ZodError } from "zod";
 import { renderEmail } from "./render";
 import { cleanText, httpsUrl } from "./content";
 
+describe("renderEmail · brand", () => {
+  const brand = { name: "Casa Marian", poweredBy: false };
+  it("uses the configured brand in the subject, header and footer, in both languages", () => {
+    const es = renderEmail({ template: "test", lang: "es", props: {} }, brand);
+    expect(es.subject).toBe("Correo de prueba · Casa Marian");
+    expect(es.html).toContain("Casa Marian");
+    expect(es.text).toContain("Enviado por Casa Marian");
+    expect(es.text).toContain("el envío transaccional de Casa Marian");
+    const en = renderEmail({ template: "icalConflict", lang: "en", props: { channel: "airbnb", count: 2, unitName: "Casa" } }, brand);
+    expect(en.subject).toBe("New iCal calendar conflict · Casa Marian");
+    expect(en.text).toContain("Sent by Casa Marian");
+  });
+  it("never mentions the product unless 'powered by' is on", () => {
+    const off = renderEmail({ template: "icalFeedDown", lang: "es", props: { channel: "booking" } }, brand);
+    expect(off.html).not.toContain("Saywa Direct");
+    expect(off.text).not.toContain("Saywa Direct");
+    const on = renderEmail({ template: "icalFeedDown", lang: "es", props: { channel: "booking" } }, { ...brand, poweredBy: true });
+    expect(on.html).toContain("Con tecnología de Saywa Direct.");
+    expect(on.text).toContain("Con tecnología de Saywa Direct.");
+    expect(renderEmail({ template: "test", lang: "en", props: {} }, { ...brand, poweredBy: true }).text).toContain("Powered by Saywa Direct.");
+  });
+  it("does not reinterpret placeholders written inside the brand", () => {
+    const email = renderEmail({ template: "test", lang: "es", props: { name: "Ana" } }, { name: "Casa {name} {unit}", poweredBy: false });
+    expect(email.subject).toBe("Correo de prueba · Casa {name} {unit}");
+    expect(email.text).toContain("Enviado por Casa {name} {unit}");
+  });
+  it("escapes the brand in HTML", () => {
+    const email = renderEmail({ template: "test", lang: "es", props: {} }, { name: "<script>alert(1)</script>", poweredBy: false });
+    expect(email.html).not.toContain("<script>alert(1)</script>");
+    expect(email.html).toContain("&lt;script&gt;");
+  });
+  it("keeps the default brand when none is given", () => {
+    expect(renderEmail({ template: "test", lang: "es", props: {} }).subject).toBe("Correo de prueba · Saywa Direct");
+  });
+});
+
 describe("renderEmail", () => {
   it("renders the Spanish template with lang attribute, subject and plain text", () => {
     const email = renderEmail({ template: "test", lang: "es", props: { name: "Ana" } });

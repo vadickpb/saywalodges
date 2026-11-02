@@ -1,8 +1,35 @@
 import { describe, it, expect } from "vitest";
-import { getEmailTestSecret, isProductionEnv, isRecipientAllowed, parseEmailConfig, parseSender } from "./config";
+import { DEFAULT_BRAND_NAME, getEmailTestSecret, isProductionEnv, isRecipientAllowed, parseEmailBrand, parseEmailConfig, parseSender } from "./config";
 
 const KEY = "re_test_key_not_real";
 const FROM = "Saywa Direct <reservas@mail.example.com>";
+
+describe("parseEmailBrand", () => {
+  it("defaults to the product name, without 'powered by'", () => {
+    expect(parseEmailBrand({})).toEqual({ name: DEFAULT_BRAND_NAME, poweredBy: false });
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "  " })).toEqual({ name: DEFAULT_BRAND_NAME, poweredBy: false });
+    expect(parseEmailBrand({ EMAIL_POWERED_BY: "true" })).toEqual({ name: DEFAULT_BRAND_NAME, poweredBy: false });
+  });
+  it("uses the configured name and only adds 'powered by' when asked", () => {
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "Casa Marian" })).toEqual({ name: "Casa Marian", poweredBy: false });
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "Casa Marian", EMAIL_POWERED_BY: "true" }).poweredBy).toBe(true);
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "Casa Marian", EMAIL_POWERED_BY: "1" }).poweredBy).toBe(true);
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "Casa Marian", EMAIL_POWERED_BY: "no" }).poweredBy).toBe(false);
+  });
+  it("treats a loose spelling of the product name as the product itself", () => {
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "saywa   direct", EMAIL_POWERED_BY: "true" }).poweredBy).toBe(false);
+  });
+  it("cuts by characters, never leaves a trailing space and keeps emoji whole", () => {
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: `${"a".repeat(79)} b` }).name).toBe("a".repeat(79));
+    const name = parseEmailBrand({ EMAIL_BRAND_NAME: "🏔".repeat(100) }).name;
+    expect(Array.from(name)).toHaveLength(80);
+    expect(name).not.toMatch(/[\ud800-\udbff](?![\udc00-\udfff])/);
+  });
+  it("strips control characters (header injection) and caps the length", () => {
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "Casa\r\nBcc: x@evil.test" }).name).toBe("Casa  Bcc: x@evil.test");
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "a".repeat(200) }).name).toHaveLength(80);
+  });
+});
 
 describe("parseSender", () => {
   it("accepts a bare address and a display-name address", () => {
