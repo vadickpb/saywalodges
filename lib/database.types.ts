@@ -1616,6 +1616,64 @@ export type Database = {
           },
         ];
       };
+      whatsapp_messages: {
+        Row: {
+          booking_id: string | null;
+          created_at: string;
+          error_code: string | null;
+          id: string;
+          language: string;
+          mode: string;
+          org_id: string;
+          status: string;
+          status_at: string;
+          template: string;
+          wamid: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          language: string;
+          mode: string;
+          org_id: string;
+          status?: string;
+          status_at?: string;
+          template: string;
+          wamid: string;
+        };
+        Update: {
+          booking_id?: string | null;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          language?: string;
+          mode?: string;
+          org_id?: string;
+          status?: string;
+          status_at?: string;
+          template?: string;
+          wamid?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_booking_fkey";
+            columns: ["booking_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "whatsapp_messages_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1790,6 +1848,21 @@ export type Database = {
           unit_id: string;
           unit_name: string;
         }[];
+      };
+      log_whatsapp_message: {
+        Args: {
+          p_booking_id?: string;
+          p_language: string;
+          p_mode: string;
+          p_org_id: string;
+          p_template: string;
+          p_wamid: string;
+        };
+        Returns: string;
+      };
+      record_whatsapp_status: {
+        Args: { p_at?: string; p_error_code?: string; p_status: string; p_wamid: string };
+        Returns: string;
       };
       regenerate_ical_token: {
         Args: { p_feed_id: string; p_org_id: string };

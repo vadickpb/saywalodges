@@ -1877,15 +1877,22 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   ejemplo precargadas (se puede añadir luego). Nota: `npx supabase` descarga hoy la v3.0.0, sin binario para macOS arm64; usar
   `npx supabase@2.122.0` (la versión del CI).
 
-### [ ] SD-1008 · feat(whatsapp): Cloud API client and webhook
+### [~] SD-1008 · feat(whatsapp): Cloud API client and webhook
 `M` · Depende: SD-1001 · Review: `R+S`
 - **Alcance**: `lib/whatsapp/` con el patrón de `lib/email/` (config, envío, modo simulación); credenciales por
   instalación en variables de entorno (token, phone number id, app secret); webhook `/api/whatsapp/webhook` en `app.`
   (SD-1001) con verificación de `X-Hub-Signature-256` y del token de suscripción; registro de estados de entrega; logs
   sin datos personales (`lib/log.ts`).
 - **Criterios**
-  - [ ] Webhook con firma inválida → `401`; evento duplicado → sin efectos (tests).
-  - [ ] En modo simulación nada sale a Meta y el envío queda registrado (tests, como `lib/email`).
+  - [x] Webhook con firma inválida → `401`; evento duplicado o tardío → sin efectos (`route.test.ts`, `webhook.test.ts`, pgTAP `0025`;
+        probado además de punta a punta contra el servidor de desarrollo y la base local).
+  - [x] En modo simulación nada sale a Meta y el envío queda registrado (`send.test.ts`).
+  - [ ] Un envío real con el número de prueba de Meta y el registro del webhook en su panel. **Pendiente del dueño** (trámite por cliente: `docs/whatsapp.md`).
+- **Hecho** (rama `feat/SD-1008-whatsapp-cloud-api`): `lib/whatsapp/{config,send,webhook}.ts`, `lib/dal/whatsapp.ts`,
+  `app/api/whatsapp/webhook/route.ts`, migración `20261103120000_whatsapp_messages.sql` (tabla sin acceso para anon/authenticated y dos RPC solo
+  para service_role; el estado solo avanza), `docs/whatsapp.md`. Decisiones: solo plantillas (no texto libre); **sin reintento** (no hay clave de
+  idempotencia); el registro **no guarda teléfonos**; no se procesan mensajes entrantes; el consentimiento lo exige el tipo (`optIn: true`) y su
+  registro/comprobación real es SD-1009. La versión de la Graph API (`v21.0`) es configurable y debe verificarse antes del primer envío real.
 
 ### [ ] SD-1009 · feat(whatsapp): booking templates and guest opt-in
 `M` · Depende: SD-1008, SD-403, SD-405, SD-406 · Review: `R+S`
