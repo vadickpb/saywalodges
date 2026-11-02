@@ -1817,15 +1817,23 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   opcional `installation` para desplegar a una sola. Desviación del alcance original: el registro **no** lleva nombre, ref
   ni dominio porque el repo es público; el ref ya vive en `SUPABASE_PROJECT_ID` de cada Environment.
 
-### [ ] SD-1004 · feat(ops): central installation health
+### [~] SD-1004 · feat(ops): central installation health
 `M` · Depende: SD-1003 · Review: `R+S`
 - **Alcance**: `/api/health` en `app.` (SD-1001), protegida con un secreto propio (`HEALTH_SECRET`, cabecera
   `Authorization: Bearer`, comparación en tiempo constante como `lib/cron-auth.ts`); devuelve versión, última migración y
   estado de los cron. Sin el secreto responde `401` vacío y no revela nada. Una tarea programada del vendedor consulta
   cada instalación del registro (SD-1003) y avisa por email si algo falla. Reemplaza la alerta pendiente de SD-606.
 - **Criterios**
-  - [ ] Sin secreto o con secreto incorrecto → `401` sin cuerpo (tests).
-  - [ ] Detener el cron de una instalación de prueba genera un aviso.
+  - [x] Sin secreto o con secreto incorrecto → `401` sin cuerpo (tests: `app/api/health/route.test.ts`); `CRON_SECRET` no sirve.
+  - [x] `health_snapshot()` solo para service_role, solo conteos (pgTAP `0024_health_snapshot.test.sql`).
+  - [ ] Detener el cron de una instalación de prueba genera un aviso. **Pendiente del dueño**: exige crear el Environment
+        `health-<id>` con `HEALTH_URL`/`HEALTH_SECRET` (secretos) e `INSTALLATION_ID` y probar la alerta (docs/health.md → «Probar que la alerta funciona»).
+- **Hecho** (rama `feat/SD-1004-installation-health`): migración `20261102200000_health_snapshot.sql` (RPC de solo lectura),
+  `app/api/health/route.ts`, `lib/domain/health.ts`, `lib/dal/health.ts`, monitor `scripts/check-installation-health.mjs` +
+  `.github/workflows/installation-health.yml` (cada hora, un job por instalación, Environment `health-<id>` sin reviewers para
+  no bloquear las ejecuciones programadas), `docs/health.md`. Los cron no dejan registro: se mide su efecto (holds vencidos,
+  calendarios sin intento reciente); sin calendarios no hay señal del cron de iCal (límite documentado). Alerta = correo de
+  GitHub por ejecución fallida (sin servicios extra). `HEALTH_SECRET` distinto de `CRON_SECRET`.
 
 ### [x] SD-1005 · feat(email): per-installation branding
 `S` · Depende: SD-306 · Review: `R+S` (variables de entorno nuevas)

@@ -1,0 +1,85 @@
+name: Installation health
+
+# Hourly check of every installation in deploy/installations.json (SD-1004, ADR 0010). A failed run is
+# e-mailed to the repository owner by GitHub (Settings → Notifications → Actions): that is the alert.
+#
+# Each installation has a SECOND GitHub Environment, `health-<id>`, with NO required reviewers (a gate
+# would stop every scheduled run waiting for a click) but restricted to the `main` branch. It holds only a
+# read-only monitoring secret: HEALTH_SECRET and HEALTH_URL, BOTH as secrets (a variable is printed in clear in
+# the public run log and would reveal the client's domain), plus the variable INSTALLATION_ID = the registry id. It is separate from
+# `supabase-*` on purpose: the monitoring secret cannot touch a database. See docs/health.md.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      installation:
+        description: "Only this installation id from deploy/installations.json (empty = all)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: installation-health
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: plan (installations)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Build the matrix
+        id: matrix
+        env:
+          INSTALLATION: ${{ inputs.installation }}
+        run: |
+          matrix=$(node scripts/installations-matrix.mjs)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  check:
+    name: health (${{ matrix.id }})
+    needs: plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: health-${{ matrix.id }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 24
+
+      - name: Check
+        env:
+          INSTALLATION_ID: ${{ matrix.id }}
+          # `secrets.*`/`vars.*` fall back to repo/org values when the Environment lacks them: the script refuses
+          # to run unless the Environment itself declares INSTALLATION_ID equal to the registry id.
+          DECLARED_ID: ${{ vars.INSTALLATION_ID }}
+          HEALTH_URL: ${{ secrets.HEALTH_URL }}
+          HEALTH_SECRET: ${{ secrets.HEALTH_SECRET }}
+        run: node scripts/check-installation-health.mjs

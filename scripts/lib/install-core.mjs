@@ -72,11 +72,13 @@ export function authUrls(cfg) {
  * or fetched at run time.
  */
 export function buildVercelEnv(cfg, secrets) {
-  const required = ["supabaseUrl", "anonKey", "serviceRoleKey", "cronSecret"];
+  const required = ["supabaseUrl", "anonKey", "serviceRoleKey", "cronSecret", "healthSecret"];
   for (const k of required) {
     if (!secrets[k]) throw new Error(`missing secret value: ${k}`);
   }
   if (secrets.cronSecret.length < 32) throw new Error("cronSecret must have at least 32 characters");
+  if (secrets.healthSecret.length < 32) throw new Error("healthSecret must have at least 32 characters");
+  if (secrets.healthSecret === secrets.cronSecret) throw new Error("healthSecret must differ from cronSecret");
   const vars = [
     ["DEPLOYMENT_MODE", "installation", false],
     ["ROOT_DOMAIN", cfg.rootDomain, false],
@@ -86,6 +88,7 @@ export function buildVercelEnv(cfg, secrets) {
     ["SUPABASE_URL", secrets.supabaseUrl, false],
     ["SUPABASE_SERVICE_ROLE_KEY", secrets.serviceRoleKey, true],
     ["CRON_SECRET", secrets.cronSecret, true],
+    ["HEALTH_SECRET", secrets.healthSecret, true],
     ["EMAIL_BRAND_NAME", cfg.name, false],
   ];
   if (cfg.email.from) vars.push(["EMAIL_FROM", cfg.email.from, false]);

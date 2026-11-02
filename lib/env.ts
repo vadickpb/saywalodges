@@ -32,6 +32,9 @@ const envSchema = z.object({
   // Server-only (SD-408). Bearer secret for /api/cron/*. Optional so dev/build work
   // without it: when absent or shorter than 32 chars the cron route refuses every call.
   CRON_SECRET: z.string().optional(),
+  // Server-only (SD-1004). Bearer secret for GET /api/health, separate from CRON_SECRET so the monitor can read
+  // status without being able to trigger jobs. Absent or shorter than 32 chars: the route refuses every call.
+  HEALTH_SECRET: z.string().optional(),
   // Server-only (SD-701). "1" sends the CSP as Content-Security-Policy-Report-Only (violations are logged
   // by the browser, nothing is blocked) — for validating a new policy on a preview before enforcing it.
   CSP_REPORT_ONLY: z.string().optional(),
