@@ -1,7 +1,7 @@
 -- SD-1004: public.health_snapshot() — service_role only, counts only, correct staleness rules.
 -- Ids from supabase/seed.sql: org Saywa bf88f504-..., property 131583b5-..., unit ee204001-...0001.
 begin;
-select plan(14);
+select plan(13);
 
 -- ─── Catalog and grants ─────────────────────────────────────────────────────
 select ok((select prosecdef and proconfig @> array['search_path=""'] from pg_proc where oid = 'public.health_snapshot()'::regprocedure),
