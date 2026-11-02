@@ -1773,6 +1773,10 @@ export type Database = {
           start_date: string;
         }[];
       };
+      get_quote_checkout: {
+        Args: { p_host: string; p_token: string };
+        Returns: Json;
+      };
       list_ical_rentals_to_complete: {
         Args: { p_org_id: string };
         Returns: {
