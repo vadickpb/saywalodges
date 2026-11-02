@@ -5,7 +5,8 @@ name: Installation health
 #
 # Each installation has a SECOND GitHub Environment, `health-<id>`, with NO required reviewers (a gate
 # would stop every scheduled run waiting for a click) but restricted to the `main` branch. It holds only a
-# read-only monitoring secret: HEALTH_SECRET (secret) and HEALTH_URL (variable). It is separate from
+# read-only monitoring secret: HEALTH_SECRET and HEALTH_URL, BOTH as secrets (a variable is printed in clear in
+# the public run log and would reveal the client's domain), plus the variable INSTALLATION_ID = the registry id. It is separate from
 # `supabase-*` on purpose: the monitoring secret cannot touch a database. See docs/health.md.
 
 on:
@@ -76,6 +77,9 @@ jobs:
       - name: Check
         env:
           INSTALLATION_ID: ${{ matrix.id }}
-          HEALTH_URL: ${{ vars.HEALTH_URL }}
+          # `secrets.*`/`vars.*` fall back to repo/org values when the Environment lacks them: the script refuses
+          # to run unless the Environment itself declares INSTALLATION_ID equal to the registry id.
+          DECLARED_ID: ${{ vars.INSTALLATION_ID }}
+          HEALTH_URL: ${{ secrets.HEALTH_URL }}
           HEALTH_SECRET: ${{ secrets.HEALTH_SECRET }}
         run: node scripts/check-installation-health.mjs

@@ -1827,7 +1827,7 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   - [x] Sin secreto o con secreto incorrecto → `401` sin cuerpo (tests: `app/api/health/route.test.ts`); `CRON_SECRET` no sirve.
   - [x] `health_snapshot()` solo para service_role, solo conteos (pgTAP `0024_health_snapshot.test.sql`).
   - [ ] Detener el cron de una instalación de prueba genera un aviso. **Pendiente del dueño**: exige crear el Environment
-        `health-<id>` con `HEALTH_URL`/`HEALTH_SECRET` y probar la alerta (docs/health.md → «Probar que la alerta funciona»).
+        `health-<id>` con `HEALTH_URL`/`HEALTH_SECRET` (secretos) e `INSTALLATION_ID` y probar la alerta (docs/health.md → «Probar que la alerta funciona»).
 - **Hecho** (rama `feat/SD-1004-installation-health`): migración `20261102200000_health_snapshot.sql` (RPC de solo lectura),
   `app/api/health/route.ts`, `lib/domain/health.ts`, `lib/dal/health.ts`, monitor `scripts/check-installation-health.mjs` +
   `.github/workflows/installation-health.yml` (cada hora, un job por instalación, Environment `health-<id>` sin reviewers para

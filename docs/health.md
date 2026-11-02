@@ -39,25 +39,36 @@ Una instalación **sin configurar** no falla: deja un aviso amarillo «NOT MONIT
 Cada instalación usa un segundo Environment, `health-<id>`, **distinto** de `supabase-<id>`:
 - **sin** Required reviewers (si no, cada ejecución quedaría esperando un clic),
 - Deployment branches = solo `main`,
-- Variable `HEALTH_URL` = `https://app.<dominio>/api/health` y secreto `HEALTH_SECRET`.
+- **Secretos** `HEALTH_URL` (= `https://app.<dominio>/api/health`) y `HEALTH_SECRET`. `HEALTH_URL` va como secreto, no como variable:
+  las variables se imprimen en claro en el log público de Actions y revelarían el dominio del cliente.
+- Variable `INSTALLATION_ID` = el id del registro (el monitor se niega a enviar el secreto si no coincide: protege contra un
+  Environment autocreado o mal escrito).
 Ese secreto solo permite **leer** conteos: no toca ninguna base ni dispara ningún cron (por eso es distinto de `CRON_SECRET`).
 
 ## Configurar una instalación (pasos exactos)
 1. Mira el valor: `jq -r .healthSecret .install/<slug>.state.json` (lo generó `install-client`; en la instalación nº 1 genéralo
    con `openssl rand -hex 32` y guárdalo también en Vercel como `HEALTH_SECRET`, sensible, solo producción, y redespliega).
-2. Crea el Environment y carga los valores (sustituye `<id>` por el id del registro):
+2. Crea el Environment y carga los valores (sustituye `<id>` por el id del registro). El `PUT` con la política de rama es
+   **obligatorio** aunque el Environment ya exista (GitHub lo autocrea sin protección de rama la primera vez que corre el workflow):
    ```bash
    gh api -X PUT repos/vadickpb/saywalodges/environments/health-<id> --input - <<'JSON'
    {"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}
    JSON
    gh api -X POST repos/vadickpb/saywalodges/environments/health-<id>/deployment-branch-policies -f name=main -f type=branch
-   gh variable set HEALTH_URL --env health-<id> --repo vadickpb/saywalodges --body https://app.<dominio>/api/health
+   gh variable set INSTALLATION_ID --env health-<id> --repo vadickpb/saywalodges --body <id>
+   gh secret set HEALTH_URL    --env health-<id> --repo vadickpb/saywalodges   # pega https://app.<dominio>/api/health
    gh secret set HEALTH_SECRET --env health-<id> --repo vadickpb/saywalodges   # pega el valor del paso 1
    ```
 3. Prueba: Actions → *Installation health* → **Run workflow** (campo `installation` = `<id>`). Debe quedar en verde con
    «Installation <id>: healthy.».
 4. Verifica que GitHub te avisa: Settings (tu perfil) → Notifications → *Actions* → «Send notifications for failed workflows
    only» activado.
+
+## Deuda conocida
+- `/api/health` no tiene límite de peticiones: con un `HEALTH_SECRET` filtrado se podrían forzar tres conteos repetidos. Aceptable
+  a este volumen; si hiciera falta, añadir caché de ~30 s.
+- `deploy-db.yml` guarda `SUPABASE_PROJECT_ID` como variable de Environment, que se imprime en claro en los logs de Actions
+  (el ref no da acceso por sí solo, pero identifica el proyecto). Para instalaciones de clientes conviene pasarlo a secreto.
 
 ## Probar que la alerta funciona
 Cambia a propósito el secreto `HEALTH_SECRET` del Environment `health-<id>` por otro valor y lanza el workflow: debe fallar con

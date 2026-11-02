@@ -36,7 +36,8 @@ export function judge(answer, ctx) {
   if (httpStatus === 503 && reasons.length === 0) reasons.push("degraded without a recognised problem");
   if (b.status !== "ok" && b.status !== "degraded") reasons.push("response is not a health report");
 
-  const last = typeof b.lastMigration === "string" ? b.lastMigration : null;
+  // The body comes from a remote host: only a plain 14-digit version is ever echoed into the log.
+  const last = typeof b.lastMigration === "string" && /^\d{14}$/.test(b.lastMigration) ? b.lastMigration : null;
   if (ctx.latestMigration && b.status && (!last || last < ctx.latestMigration.slice(0, 14))) {
     const due = migrationDate(ctx.latestMigration);
     if (due && ctx.now.getTime() - due.getTime() > MIGRATION_GRACE_MS) {

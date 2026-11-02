@@ -43,6 +43,16 @@ describe("judge", () => {
   });
 });
 
+describe("untrusted response body", () => {
+  it("never echoes a non-numeric lastMigration into the reasons (workflow-command injection)", () => {
+    const evil = "1\n::add-mask::x";
+    const r = judge({ httpStatus: 200, body: { ...okBody, lastMigration: evil } }, { latestMigration: "20261101090000_new.sql", now });
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join("")).not.toContain("::");
+    expect(r.reasons.join("")).toContain("applied none");
+  });
+});
+
 describe("migrationDate", () => {
   it("parses a version prefix and rejects garbage", () => {
     expect(migrationDate("20261102200000_x.sql")?.toISOString()).toBe("2026-11-02T20:00:00.000Z");

@@ -94,7 +94,7 @@ nombres de job de Actions son públicos y no deben revelar quiénes son tus clie
 
 ## 11. Monitoreo (manual, una vez por cliente)
 Para que el mantenimiento sea demostrable y te llegue un correo si algo se cae. Pasos exactos en [`health.md`](health.md)
-(`HEALTH_SECRET` ya lo cargó el script en Vercel; falta crear el Environment `health-<id>` con `HEALTH_URL` y `HEALTH_SECRET`).
+(`HEALTH_SECRET` ya lo cargó el script en Vercel; falta crear el Environment `health-<id>` con los secretos `HEALTH_URL` y `HEALTH_SECRET` y la variable `INSTALLATION_ID`).
 
 ## Verificación rápida
 - `https://<dominio>` muestra el sitio (tras publicar) y `https://app.<dominio>/login` el acceso.

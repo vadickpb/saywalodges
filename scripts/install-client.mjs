@@ -233,6 +233,6 @@ out("\nPending by hand (see docs/runbook-instalacion.md):");
 for (const r of dnsChecklist(cfg)) out(`  DNS  ${r.type.padEnd(5)} ${r.host}  →  ${r.value}   (${r.note})`);
 out(`  Cron: schedule POST https://${appHost(cfg)}/api/cron/expire-holds and /ical-sync with the CRON_SECRET stored in .install/${cfg.slug}.state.json`);
 out(`  Owner: open https://${appHost(cfg)}/forgot-password with ${cfg.ownerEmail} to set a password`);
-out(`  Monitoring: create the GitHub Environment health-<same opaque id> with variable HEALTH_URL=https://${appHost(cfg)}/api/health and secret HEALTH_SECRET (value in .install/${cfg.slug}.state.json); runbook step 11`);
+out(`  Monitoring: create the GitHub Environment health-<same opaque id> with variable INSTALLATION_ID=<that id> and secrets HEALTH_URL=https://${appHost(cfg)}/api/health and HEALTH_SECRET (value in .install/${cfg.slug}.state.json); runbook step 11 / docs/health.md`);
 out(`  Updates: create the GitHub Environment supabase-<opaque id, e.g. inst-0002> and add the registry entry (runbook step 10; never use the client slug there, the registry is public), or this client will not receive database updates`);
 out(`  Email: verify the sending domain in Resend${cfg.email.from ? "" : " and set EMAIL_FROM"}`);
