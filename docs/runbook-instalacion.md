@@ -71,6 +71,27 @@ Resend → **Domains** → añade el dominio de envío (p. ej. `mail.<dominio>`)
 3. Prueba un flujo completo: cotización → enlace → reserva → correo recibido.
 4. Anota la fecha de entrega: empieza la garantía de 3 meses.
 
+## 10. Registrar la instalación para las actualizaciones (manual, una vez por cliente)
+Así las migraciones futuras llegan a este cliente con **tu aprobación** (SD-1003). Sin este paso, el cliente no recibe
+actualizaciones de base de datos.
+Usa un **id opaco** (`inst-0002`, `inst-0003`…), **no** el slug del cliente: el registro, el nombre del Environment y los
+nombres de job de Actions son públicos y no deben revelar quiénes son tus clientes. Donde abajo dice `<id>`, es ese id.
+1. GitHub → Settings → Environments → **New environment** `supabase-<id>`.
+2. **Required reviewers**: tú (deja *Prevent self-review* desactivado). **Deployment branches** → solo `main`. Primero las
+   reglas y después los secretos.
+3. Secretos **del Environment** (no del repo): `SUPABASE_ACCESS_TOKEN` y `SUPABASE_DB_PASSWORD` (el de este proyecto).
+   Variables: `SUPABASE_PROJECT_ID` = el `projectRef` del cliente e `INSTALLATION_ID` = `<id>` (el workflow se niega a desplegar si no coincide con el registro). Por terminal:
+   ```bash
+   gh secret set SUPABASE_ACCESS_TOKEN --env supabase-<id> --repo vadickpb/saywalodges
+   gh secret set SUPABASE_DB_PASSWORD  --env supabase-<id> --repo vadickpb/saywalodges
+   gh variable set SUPABASE_PROJECT_ID --env supabase-<id> --repo vadickpb/saywalodges --body <projectRef>
+   gh variable set INSTALLATION_ID     --env supabase-<id> --repo vadickpb/saywalodges --body <id>
+   ```
+4. Añade `{ "id": "<id>", "environment": "supabase-<id>" }` a `deploy/installations.json` por PR. **No pongas nombre
+   del cliente, dominio ni ref**: el repo es público.
+5. Comprueba: Actions → *Deploy database* → **Run workflow** con `installation` = `<id>`. Debe quedar en «Waiting»;
+   aprueba. **Ojo: no es un simulacro**: el job aplica de verdad las migraciones que falten (en un proyecto recién instalado ya están, así que el «Dry run» debe decir *Remote database is up to date* y no cambia nada).
+
 ## Verificación rápida
 - `https://<dominio>` muestra el sitio (tras publicar) y `https://app.<dominio>/login` el acceso.
 - Cualquier otro host da 404; `https://<dominio>/login` también (las sesiones viven solo en `app.`).

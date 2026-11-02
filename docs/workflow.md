@@ -73,7 +73,9 @@ Cómo aprobar (≈30 segundos):
 1. Abre el correo/notificación de GitHub «Deploy database is waiting for review», o ve a
    `https://github.com/vadickpb/saywalodges/actions/workflows/deploy-db.yml`.
 2. Entra en la ejecución más reciente (estado amarillo «Waiting»).
-3. Pulsa **Review deployments** → marca `supabase-production` → **Approve and deploy**.
+3. Pulsa **Review deployments** → marca el Environment que pide (`supabase-production` es la primera instalación;
+   cada cliente nuevo tiene el suyo, `supabase-<id>`) → **Approve and deploy**. Hay **un job y una aprobación por
+   instalación** (lista en `deploy/installations.json`), de una en una; si una falla, las demás siguen.
 4. Espera a que el job termine en verde. En el paso «Migrations after» verás la migración nueva con su
    versión en las columnas *Local* y *Remote*.
 
@@ -91,6 +93,16 @@ renombre con un timestamp nuevo tras `git rebase origin/main`; no uses `--includ
 
 Si no apruebas: nada se rompe (el código es compatible con el esquema anterior), pero la funcionalidad nueva que
 dependa de la migración no funcionará hasta que apruebes.
+
+### Instalaciones adicionales (SD-1003)
+
+`deploy/installations.json` es el registro y es **público**: solo lleva un `id` y el nombre del Environment, nunca
+nombres de clientes, dominios ni refs de Supabase (el ref vive en la variable `SUPABASE_PROJECT_ID` del Environment).
+Los ids son opacos (`inst-0002`), nunca el nombre del cliente. Cada Environment declara además una variable
+`INSTALLATION_ID` igual al id del registro (**la primera instalación también**: ver abajo). Para añadir una instalación sigue `docs/runbook-instalacion.md` → «Registrar la instalación». Para desplegar a una sola
+(p. ej. reintentar una): Actions → *Deploy database* → **Run workflow** → campo `installation` = su `id`.
+Si un Environment no existe o está vacío, GitHub lo autocrea sin protección y el workflow se detiene en el paso
+«Require a configured environment» antes de tocar nada.
 
 ### Configuración única (una vez, ≈10 minutos)
 
@@ -116,7 +128,8 @@ con un único dueño administrador es aceptable, pero un administrador puede sal
      reconocible (p. ej. `github-deploy-db`) y rótalo de vez en cuando: da acceso de gestión a tu cuenta.
    - Créalos **solo en el environment**, nunca como secretos de repositorio (los de repositorio los lee cualquier workflow).
    - `SUPABASE_DB_PASSWORD`: contraseña de la BD (Supabase → Project Settings → Database).
-3. **Variables** del entorno: `SUPABASE_PROJECT_ID` = el *Reference ID* del proyecto (Supabase → Project Settings → General).
+3. **Variables** del entorno: `SUPABASE_PROJECT_ID` = el *Reference ID* del proyecto (Supabase → Project Settings → General) e
+   `INSTALLATION_ID` = el `id` de esa instalación en `deploy/installations.json` (`saywa-lodges` para este Environment).
 4. Comprobación: Actions → *Deploy database* → **Run workflow**. Debe quedar en «Waiting»; apruébalo y el
    «Dry run» debe decir que la base remota está al día (*Remote database is up to date*).
 
