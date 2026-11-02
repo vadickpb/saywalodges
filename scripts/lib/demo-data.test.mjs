@@ -63,8 +63,8 @@ describe("demo data", () => {
     expect(data.property.site_url).toBe("https://demo.example.org");
     expect(buildDemoData(today).property.site_url).toBe("");
   });
-  it("covers both storage buckets", () => {
-    expect(PRIVATE_BUCKETS).toEqual(["property-photos", "finance-receipts"]);
+  it("covers every storage bucket that holds org files, so the nightly reset leaves none behind", () => {
+    expect(PRIVATE_BUCKETS).toEqual(["property-photos", "finance-receipts", "payment-vouchers"]);
   });
   it("has a table for every insert group", () => {
     for (const k of INSERT_ORDER) expect(TABLE_OF[k]).toMatch(/^[a-z_]+$/);
