@@ -1015,6 +1015,7 @@ export type Database = {
           created_at: string;
           currency: Database["public"]["Enums"]["currency_code"];
           custom_domain: string | null;
+          deposit_percent: number;
           email: string;
           id: string;
           latitude: number | null;
@@ -1052,6 +1053,7 @@ export type Database = {
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];
           custom_domain?: string | null;
+          deposit_percent?: number;
           email?: string;
           id?: string;
           latitude?: number | null;
@@ -1088,6 +1090,7 @@ export type Database = {
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];
           custom_domain?: string | null;
+          deposit_percent?: number;
           email?: string;
           id?: string;
           latitude?: number | null;
@@ -1676,6 +1679,20 @@ export type Database = {
           p_unit_id: string;
         };
         Returns: string;
+      };
+      create_quote: {
+        Args: {
+          p_breakdown: Json;
+          p_check_in: string;
+          p_check_out: string;
+          p_deposit_cents: number;
+          p_guests: number;
+          p_org_id: string;
+          p_total_cents: number;
+          p_unit_id: string;
+          p_valid_hours?: number;
+        };
+        Returns: Json;
       };
       create_rental_entries: {
         Args: {
