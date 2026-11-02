@@ -1,3 +1,4 @@
+import { checkoutPolicies } from "./checkout-policies";
 import type { Dict } from "./en";
 
 const es: Dict = {
@@ -98,6 +99,40 @@ const es: Dict = {
     contact: "Contacto",
     rights: "Todos los derechos reservados.",
     poweredBy: "Reservas directas con Saywa Direct",
+  },
+  checkout: {
+    title: "Completa tu reserva",
+    unusable: "Este enlace de reserva no está disponible",
+    unusableBody: "Contacta al alojamiento por WhatsApp para pedir una nueva cotización.",
+    contact: "Contactar por WhatsApp",
+    name: "Nombre completo",
+    email: "Correo electrónico",
+    phone: "Teléfono (opcional)",
+    terms: "Acepto los términos indicados arriba",
+    submit: "Reservar estas fechas",
+    pending: "Reservando…",
+    total: "Total",
+    deposit: "Adelanto",
+    balance: "Saldo pendiente",
+    stay: "Estancia",
+    guests: "Huéspedes",
+    expires: "Cotización válida hasta",
+    hold: "Retención para pagar: {minutes} minutos después de reservar",
+    policies: "Política de cancelación y términos",
+    validation: "Revisa los campos marcados.",
+    linkUnavailable: "Este enlace de reserva no está disponible. Pide una nueva cotización por WhatsApp.",
+    unbookable: "Esta cotización ya no se puede reservar. Pide una nueva por WhatsApp.",
+    unavailable: "Estas fechas ya están ocupadas. Pide otra cotización por WhatsApp.",
+    generic: "No pudimos completar la reserva. Inténtalo de nuevo.",
+    retry: "Reintentar",
+    timeZone: "(hora de Lima)",
+    fieldErrors: {
+      name: "Escribe tu nombre sin saltos de línea ni caracteres de control o dirección de texto (máximo 200 caracteres).",
+      email: "Escribe un correo electrónico válido.",
+      phone: "Usa entre 5 y 30 caracteres: números, espacios, +, paréntesis o guiones.",
+      terms: "Debes aceptar los términos para reservar.",
+    },
+    policyContent: checkoutPolicies.es,
   },
   bookingStatus: {
     title: "Tu reserva",
