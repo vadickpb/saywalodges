@@ -1317,7 +1317,7 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Pendiente / fuera de alcance**: la pantalla del dueño para **ver** el voucher y aprobar/rechazar es SD-406 (aquí solo el DAL de URL firmada);
   **no existe aún ninguna pantalla para configurar las cuentas de cobro** (Yape/Plin/banco, tabla `property_payment_accounts`): ver SD-411.
 
-### [ ] SD-406 · feat(dashboard): bookings management
+### [~] SD-406 · feat(dashboard): bookings management
 `L` · Depende: SD-405 · Review: `R+S`
 - **Alcance**: lista con filtros (estado, fechas, origen) y detalle; ver voucher; aprobar/rechazar pago; cancelar;
   registrar reserva manual (cerrada por WhatsApp/efectivo); registrar pago de saldo.
@@ -1327,8 +1327,25 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   enviados en el checkout (nombre y teléfono como *snapshot* de la reserva) y avisar cuando no coincidan con la ficha del
   huésped; valorar que la RPC deje de rellenar teléfonos de huéspedes existentes.
 - **Criterios**
-  - [ ] Aprobar el pago confirma la reserva y fija el bloque (sin `expires_at`).
-  - [ ] Reserva manual respeta disponibilidad.
+  - [x] Aprobar el pago confirma la reserva y fija el bloque (sin `expires_at`): comprobado con la sesión del dueño contra Supabase local (reserva `confirmed`,
+        un solo ingreso en finanzas, el reintento no lo duplica; sin tipo de cambio en una reserva en dólares se pide con un aviso claro).
+  - [ ] Reserva manual respeta disponibilidad. **Movido a SD-413.**
+- **Hecho** (rama `feat/SD-406-bookings-management`): `/app/bookings` (lista con filtros por estado —incluido «Comprobante por revisar»— y por llegada, paginada),
+  `/app/bookings/[id]` (reserva, huésped, pagos con su comprobante, aprobar con tipo de cambio opcional, rechazar con motivo, cancelar con motivo, todo con confirmación),
+  `/app/bookings/[id]/voucher/[paymentId]` (redirige a una URL firmada de 60 s; PDF como descarga; 404 para cualquiera sin sesión de miembro),
+  `lib/domain/bookings.ts`, `lib/dal/bookings.ts` (solo sesión del dueño y los RPC `confirm_payment`/`reject_payment`/`cancel_booking`, que vuelven a comprobar
+  pertenencia y estado; **sin service-role ni migración**), `components/dashboard/booking-actions.tsx`. Probado de punta a punta contra `next dev` + Supabase local: lista, filtros,
+  detalle, voucher firmado, aprobar/reintentar/cancelar, y el dueño de otra organización recibe 404/42501 en todo.
+- **Pendiente**: reserva manual, pago de saldo y el *snapshot* del huésped (H4) pasan a SD-413 porque cambian el RPC central de reservas.
+
+### [ ] SD-413 · feat(bookings): manual booking, balance payment and guest snapshot
+`L` · Depende: SD-406 · Review: `R+S`
+- **Alcance**: (a) registrar una reserva manual (cerrada por WhatsApp o efectivo) que respete la disponibilidad (el *exclusion constraint* de `calendar_blocks` manda); (b) registrar el
+  pago de saldo; (c) **H4 de SD-403**: guardar en la reserva el nombre y teléfono enviados en el checkout (*snapshot*), mostrarlos en el detalle y avisar si no coinciden con la ficha del
+  huésped, y valorar que `create_booking_from_quote` deje de rellenar teléfonos de huéspedes existentes. Requiere migración (tocar el RPC central) y pgTAP.
+- **Criterios**
+  - [ ] Reserva manual sobre fechas ocupadas falla; sobre fechas libres crea reserva y bloque.
+  - [ ] El detalle muestra el nombre y teléfono tal como se enviaron en el checkout.
 
 ### [ ] SD-407 · feat(email): booking lifecycle emails
 `M` · Depende: SD-306, SD-406 · Review: `R`

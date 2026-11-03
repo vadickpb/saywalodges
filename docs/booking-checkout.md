@@ -112,3 +112,20 @@ Fuera de esa ventana el `public_token` ya no revela cuentas ni permite subir nad
    `insert into property_payment_accounts(org_id, property_id, kind, holder_name, phone, currency) values (...)` con la moneda de tu reserva.
 3. Sube una foto: la página debe pasar a «Pago en revisión» y desaparecer el formulario.
 4. Comprueba que el archivo NO es público: `GET /storage/v1/object/public/payment-vouchers/...` falla; solo una sesión de miembro obtiene una URL firmada.
+
+## Gestión de reservas del dueño (SD-406)
+
+En el panel, **Reservas** (`/app/bookings`):
+- **Lista** con filtros por estado (Todas, *Comprobante por revisar*, Esperando pago, Confirmadas, Canceladas, Vencidas) y por fecha de llegada; 20 por página.
+  «Comprobante por revisar» son las reservas que esperan tu decisión: **revisa esa lista a diario**, porque un comprobante en revisión mantiene las fechas bloqueadas hasta que decidas.
+- **Detalle** (`/app/bookings/[id]`): datos de la reserva y del huésped, y cada pago con su comprobante.
+  - *Ver comprobante* abre el archivo con una URL firmada de 60 segundos (las imágenes se ven en el navegador; los PDF se descargan). El archivo nunca es público.
+  - *Aprobar pago* confirma la reserva y registra el ingreso en tus finanzas. Si la reserva está en dólares puedes escribir el tipo de cambio (soles por dólar); si lo dejas vacío se usa
+    el último registrado en tus finanzas, y si no hay ninguno el sistema te pide escribirlo.
+  - *Rechazar comprobante* (con motivo opcional) deja que el huésped suba otro mientras la retención siga vigente.
+  - *Cancelar reserva* libera las fechas; los pagos ya aprobados se conservan en finanzas (el reembolso se gestiona fuera del sistema).
+
+### Probarlo en local
+1. `npx supabase@2.122.0 db reset`, `npm run dev` y entra en `http://app.localhost:3000/login` con `owner@saywalodges.com` / `devpassword123` (si tu puerto 3000 está ocupado por otro servidor, usa otro puerto y ajusta `ROOT_DOMAIN`).
+2. Crea una reserva con comprobante (ver «Pago manual con voucher»), abre **Reservas → Comprobante por revisar → la reserva** y prueba aprobar, rechazar y cancelar.
+3. Comprueba que otra organización (`owner@demo.saywadirect.test`) no ve esa reserva ni su comprobante.
