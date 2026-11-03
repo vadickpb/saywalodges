@@ -1349,13 +1349,14 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Criterios**
   - [ ] Ráfaga de 20 reservas desde el mismo origen es bloqueada.
 
-### [ ] SD-411 · feat(dashboard): payment accounts settings
+### [~] SD-411 · feat(dashboard): payment accounts settings
 `S` · Depende: SD-401 · Review: `R+S`
 - **Alcance**: en Ajustes, CRUD de `property_payment_accounts` (Yape, Plin, cuenta bancaria con CCI de 20 dígitos, moneda, instrucciones, activo, orden) para
   que el dueño publique dónde cobrar. Sin cuentas activas en la moneda de la reserva, la página de pago de SD-405 dice al huésped que coordine por WhatsApp.
+- **Hecho**: dominio y tests en `lib/domain/payment-accounts.*`, DAL de sesión y tests en `lib/dal/payment-accounts.*`, acciones en `app/app/settings/actions.*` y UI accesible en `components/dashboard/payment-accounts.tsx` + página de Ajustes. Contexto org/propiedad verificado en servidor, campos incompatibles a NULL y CCI normalizado; sin migración. CRUD probado en navegador local y cuenta USD visible al huésped antes de desactivar, ausente en la siguiente petición tras desactivar. Pendiente revisión de Claude y merge del PR.
 - **Criterios**
-  - [ ] Solo miembros de la org gestionan sus cuentas (RLS ya existente); validación zod (teléfono, CCI, longitudes).
-  - [ ] Una cuenta desactivada deja de mostrarse al huésped de inmediato.
+  - [x] Solo miembros de la org gestionan sus cuentas (RLS ya existente); validación zod (teléfono, CCI, longitudes).
+  - [x] Una cuenta desactivada deja de mostrarse al huésped de inmediato.
 
 ### [ ] SD-412 · chore(privacy): voucher retention and purge
 `S` · Depende: SD-405, SD-406 · Review: `R+S`
