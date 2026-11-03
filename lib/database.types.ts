@@ -1208,6 +1208,7 @@ export type Database = {
           deposit_cents: number;
           expires_at: string;
           guests: number;
+          is_public: boolean;
           id: string;
           org_id: string;
           property_id: string;
@@ -1227,6 +1228,7 @@ export type Database = {
           deposit_cents: number;
           expires_at: string;
           guests: number;
+          is_public?: boolean;
           id?: string;
           org_id: string;
           property_id: string;
@@ -1245,6 +1247,7 @@ export type Database = {
           deposit_cents?: number;
           expires_at?: string;
           guests?: number;
+          is_public?: boolean;
           id?: string;
           org_id?: string;
           property_id?: string;

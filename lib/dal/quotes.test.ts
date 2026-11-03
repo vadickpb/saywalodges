@@ -158,6 +158,8 @@ describe("listOpenQuotes", () => {
     expect(called("quotes", "eq", "org_id", "org-1")).toBe(true);
     expect(called("bookings", "eq", "org_id", "org-1")).toBe(true);
     expect(called("units", "eq", "org_id", "org-1")).toBe(true);
+    // self-service quotes (SD-404) must not push the owner's own links out of the list
+    expect(called("quotes", "eq", "is_public", false)).toBe(true);
     expect(calls.some(([t, m, a]) => t === "quotes" && m === "gt" && a[0] === "expires_at")).toBe(true);
   });
   it("is empty without an active org", async () => {

@@ -1,5 +1,6 @@
 -- SD-404: a guest quotes a stay by themselves from the public site (ADR 0012).
--- Rollback: drop function public.create_public_quote(text, uuid, date, date, integer), private.price_stay(uuid, date, date, integer).
+-- Rollback: drop function public.create_public_quote(text, uuid, date, date, integer), private.price_stay(uuid, date, date, integer);
+--   drop index public.quotes_public_idx; alter table public.quotes drop column is_public.
 --
 -- Trust model
 --  * The caller is ANONYMOUS, so nothing about money may come from the caller. The function takes only the scenario (unit, dates,
@@ -9,10 +10,19 @@
 --  * The unit must belong to a PUBLISHED property whose subdomain/custom domain is the host the page is served from.
 --  * Business outcomes (min nights, capacity, dates taken, missing rate…) come back as {"ok": false, "error": CODE}; only malformed
 --    input or abuse raise errors (22004/22023, 54000).
---  * Flooding: public quotes are marked by created_by IS NULL and capped well below the owner's own caps (create_quote allows 500 open /
---    300 a day for the whole org), so nobody can lock the owner out of quoting. Per-source rate limiting is SD-409 (application layer).
+--  * Abuse (anyone with the public key can call this RPC directly, skipping the website, so only database limits count):
+--      - public quotes are marked is_public and capped well below the owner's own caps (create_quote allows 500 open / 300 a day for
+--        the whole org): 100 a day and 150 open, so nobody can lock the owner out of quoting;
+--      - the chain quote -> booking -> voucher could pin a unit's dates (a voucher under review stops the hold from expiring until the
+--        owner decides), so a unit may have at most 3 `pending_payment` bookings born from public quotes at a time, a public stay is at
+--        most 30 nights and starts at most about two years ahead. Residual risk and the follow-ups are in ADR 0012.
 --  * A quote is never shared between guests: each call creates its own quote with its own token.
 begin;
+
+-- Explicit marker of self-service quotes. NOT derived from created_by (it is set to null when a user is deleted, which would turn that
+-- member's quotes into public ones).
+alter table public.quotes add column is_public boolean not null default false;
+create index quotes_public_idx on public.quotes (org_id, created_at) where is_public;
 
 -- ─── Price engine (SQL port of quoteStay) ────────────────────────────────────
 -- Returns {"ok": true, ...} or {"ok": false, "error": CODE, ...}. Money is whole cents; every amount fits quotes' integer columns.
@@ -32,6 +42,7 @@ declare
   v_extra_guests integer;
   v_day date;
   v_idx integer := 0;
+  v_idx_day integer;
   v_win uuid;
   v_win_priority integer;
   v_ties integer;
@@ -63,7 +74,8 @@ begin
 
   v_extra_guests := greatest(0, p_guests - u.included_guests);
 
-  for v_day in select d::date from generate_series(p_check_in, p_check_out - 1, interval '1 day') d loop
+  for v_idx_day in 0 .. v_count - 1 loop
+    v_day := p_check_in + v_idx_day;
     -- Winning season: highest priority covering the night; two at the same priority would be ambiguous (the exclusion
     -- constraint on seasons already prevents it, kept for parity with the TypeScript engine).
     v_win := null;
@@ -148,43 +160,50 @@ begin
     raise exception 'invalid input' using errcode = '22023';
   end if;
 
-  -- The unit must belong to a published property served from this very host. Unknown unit, wrong host and unpublished property
-  -- all answer the same, so nothing tells them apart.
+  -- The unit must be ACTIVE and belong to a published property served from this very host. Unknown unit, inactive unit, wrong host and
+  -- unpublished property all answer the same, so nothing tells them apart.
   select u.id into v_unit
     from public.units u
     join public.properties p on p.id = u.property_id and p.org_id = u.org_id
-   where u.id = p_unit_id and p.published and nullif(lower(p_host), '') in (p.subdomain, p.custom_domain);
+   where u.id = p_unit_id and u.active and p.published and nullif(lower(p_host), '') in (p.subdomain, p.custom_domain);
   if v_unit is null then return jsonb_build_object('ok', false, 'error', 'UNIT_NOT_FOUND'); end if;
 
-  if not (isfinite(p_check_in) and isfinite(p_check_out)) or p_check_out <= p_check_in or p_check_in < v_today
-     or p_check_out - p_check_in > 60 then
+  -- Separate IFs on purpose: SQL does not guarantee the order in which the terms of one OR are evaluated.
+  if not (isfinite(p_check_in) and isfinite(p_check_out)) then
     return jsonb_build_object('ok', false, 'error', 'INVALID_DATES');
+  end if;
+  -- At most 30 nights, starting today or later, ending within about two years (the horizon the public availability also shows).
+  if p_check_out <= p_check_in or p_check_in < v_today or p_check_out - p_check_in > 30 or p_check_out > v_today + 731 then
+    return jsonb_build_object('ok', false, 'error', 'INVALID_DATES');
+  end if;
+
+  -- Cheap check first. Advisory only: the exclusion constraint on calendar_blocks is the authority when the booking is made (ADR 0003).
+  if exists (select 1 from public.calendar_blocks b
+              where b.unit_id = p_unit_id and b.period && daterange(p_check_in, p_check_out, '[)')) then
+    return jsonb_build_object('ok', false, 'error', 'DATES_UNAVAILABLE');
   end if;
 
   priced := private.price_stay(p_unit_id, p_check_in, p_check_out, p_guests);
   if not (priced ->> 'ok')::boolean then return priced; end if;
   v_org := (priced ->> 'orgId')::uuid;
 
-  -- Advisory only: the exclusion constraint on calendar_blocks is the authority when the booking is made (ADR 0003).
-  if exists (select 1 from public.calendar_blocks b
-              where b.unit_id = p_unit_id and b.period && daterange(p_check_in, p_check_out, '[)')) then
-    return jsonb_build_object('ok', false, 'error', 'DATES_UNAVAILABLE');
-  end if;
-
-  -- Caps well below the owner's (500 open / 300 a day for the whole org) so a flood of public quotes can never block the owner.
+  -- Caps, serialised per org. Public quotes are limited well below the owner's (500 open / 300 a day), and a unit can have at most 3
+  -- pending-payment bookings that came from public quotes, which bounds how much of its calendar an abuser can pin.
   perform pg_advisory_xact_lock(hashtextextended('create_public_quote:' || v_org::text, 0));
-  if (select count(*) from public.quotes where org_id = v_org and created_by is null and expires_at > now()) >= 150
-     or (select count(*) from public.quotes where org_id = v_org and created_by is null and created_at > now() - interval '1 day') >= 100 then
+  if (select count(*) from public.quotes where org_id = v_org and is_public and expires_at > now()) >= 150
+     or (select count(*) from public.quotes where org_id = v_org and is_public and created_at > now() - interval '1 day') >= 100
+     or (select count(*) from public.bookings b join public.quotes q on q.id = b.quote_id and q.org_id = b.org_id
+          where b.unit_id = p_unit_id and b.status = 'pending_payment' and q.is_public) >= 3 then
     raise exception 'too many quotes' using errcode = '54000';
   end if;
 
   v_token := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
   v_expires := now() + interval '24 hours';
   insert into public.quotes (org_id, property_id, unit_id, token, check_in, check_out, guests, currency,
-    total_cents, deposit_cents, breakdown, expires_at, created_by)
+    total_cents, deposit_cents, breakdown, expires_at, created_by, is_public)
   values (v_org, (priced ->> 'propertyId')::uuid, p_unit_id, v_token, p_check_in, p_check_out, p_guests,
     (priced ->> 'currency')::public.currency_code, (priced ->> 'totalCents')::integer, (priced ->> 'depositCents')::integer,
-    priced -> 'breakdown', v_expires, null)
+    priced -> 'breakdown', v_expires, null, true)
   returning id into v_id;
 
   return jsonb_build_object('ok', true, 'token', v_token, 'expires_at', v_expires, 'currency', priced ->> 'currency',
