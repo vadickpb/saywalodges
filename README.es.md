@@ -64,7 +64,7 @@ las migraciones y los datos de ejemplo (**borra los datos locales**); con `-- --
 `npm run local:booking` crea una reserva de prueba con comprobante de pago para probar las pantallas del dueño
 (`-- --sin-comprobante` la deja esperando el pago del huésped).
 
-Los comandos de Supabase usan la **versión fijada que usa el CI**: `npx supabase@2.122.0 <comando>`. Un `npx supabase` a secas descarga la
+Los comandos de Supabase usan la **versión fijada que usa el despliegue de la base de datos de producción**: `npx supabase@2.122.0 <comando>`. Un `npx supabase` a secas descarga la
 última versión, que puede no traer binario para tu equipo (la 3.0.0 no lo tenía para macOS arm64).
 
 Abre `http://saywa-lodges.localhost:3000/es` (o `/en`) para el sitio público,

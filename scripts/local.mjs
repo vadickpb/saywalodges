@@ -5,12 +5,18 @@
 //   npm run local -- --reset      also rebuilds the local database (migrations + sample data). ERASES local data.
 //   npm run local -- --no-dev     prepares everything but does not start the dev server
 //
-// It only ever talks to the LOCAL stack. If your .env.local points to a hosted Supabase project it stops and says so.
+// Works on macOS and Linux (on Windows use WSL). It only ever talks to the LOCAL stack. If your .env.local points to a hosted Supabase project it stops and says so.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import net from "node:net";
-import { SUPABASE_CLI, localEnvVars, mergeEnvFile, parseStatusEnv } from "./lib/local-env.mjs";
+import { OTHER_ENV_FILES, SUPABASE_CLI, environmentConflict, isLocalUrl, localEnvVars, mergeEnvFile, parseStatusEnv } from "./lib/local-env.mjs";
 
+const KNOWN = new Set(["--reset", "--no-dev"]);
+const unknown = process.argv.slice(2).filter((a) => !KNOWN.has(a));
+if (unknown.length > 0) {
+  console.error(`\n✖ Opción desconocida: ${unknown.join(" ")}. Opciones válidas: --reset (reconstruye la base local) y --no-dev (no arranca el servidor).\n`);
+  process.exit(1);
+}
 const args = new Set(process.argv.slice(2));
 const reset = args.has("--reset");
 const noDev = args.has("--no-dev");
@@ -21,6 +27,10 @@ const die = (m) => {
 };
 const cli = (...a) => ["--yes", SUPABASE_CLI, ...a];
 const run = (a, inherit = true) => spawnSync("npx", cli(...a), { stdio: inherit ? "inherit" : ["ignore", "pipe", "pipe"], encoding: "utf8" });
+
+// 0. Nothing in the environment may send the dev server to a hosted project: these beat .env.local.
+const fromShell = environmentConflict(process.env);
+if (fromShell) die(fromShell);
 
 // 1. Docker
 try {
@@ -47,12 +57,21 @@ if (reset) {
 }
 
 // 3. .env.local (only the four Supabase variables; everything else is kept)
+if (!isLocalUrl(keys.apiUrl)) die(`La API de Supabase que informa la CLI (${keys.apiUrl}) no es local. Revisa supabase/config.toml.`);
+const vars = localEnvVars(keys);
+for (const other of OTHER_ENV_FILES) {
+  if (existsSync(other)) {
+    const c = mergeEnvFile(readFileSync(other, "utf8"), vars).conflict;
+    if (c) die(`${other}: ${c}`);
+  }
+}
 const file = ".env.local";
 const before = existsSync(file) ? readFileSync(file, "utf8") : "";
-const merged = mergeEnvFile(before, localEnvVars(keys));
+const merged = mergeEnvFile(before, vars);
 if (merged.conflict) die(`${file}: ${merged.conflict}`);
 if (merged.changed) {
   writeFileSync(file, merged.content, { mode: 0o600 });
+  chmodSync(file, 0o600); // `mode` only applies when the file is created
   say(`▶ ${file} actualizado con las claves de tu Supabase local.`);
 } else {
   say(`▶ ${file} ya estaba al día.`);
@@ -72,6 +91,8 @@ const busy = await new Promise((resolve) => {
 });
 if (busy) die("El puerto 3000 ya está en uso (¿otro `npm run dev` abierto?). Ciérralo con Ctrl+C en su terminal y vuelve a ejecutar `npm run local`, o usa `npm run local -- --no-dev`.");
 say("▶ Iniciando el servidor de desarrollo (Ctrl+C para detenerlo)…\n");
-const dev = spawn("npm", ["run", "dev"], { stdio: "inherit" });
-for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => dev.kill(sig));
-dev.on("exit", (code) => process.exit(code ?? 0));
+// The local values are also passed explicitly, so nothing inherited from the shell can send the server elsewhere.
+const dev = spawn("npm", ["run", "dev"], { stdio: "inherit", env: { ...process.env, ...vars } });
+// Ctrl+C reaches the whole process group already; these cover `kill` and closing the terminal so `next dev` is not left holding port 3000.
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(sig, () => dev.kill(sig));
+dev.on("exit", (code, signal) => process.exit(code ?? (signal === "SIGINT" ? 130 : signal === "SIGTERM" ? 143 : 1)));

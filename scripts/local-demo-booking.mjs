@@ -43,14 +43,17 @@ if (!unit) die("El alojamiento de ejemplo no tiene unidades activas.");
 // A payment account to pay to, so the guest page has something to show (only if none is active in this currency).
 const accounts = (await call(`/rest/v1/property_payment_accounts?property_id=eq.${prop.id}&active=eq.true&currency=eq.${prop.currency}&select=id&limit=1`)).json ?? [];
 if (accounts.length === 0) {
-  await call("/rest/v1/property_payment_accounts", { method: "POST", body: { org_id: prop.org_id, property_id: prop.id, kind: "yape", holder_name: "Titular de Prueba", phone: "51900000001", currency: prop.currency, instructions: "Cuenta de ejemplo (solo local)" }, headers: { prefer: "return=minimal" } });
+  const created = await call("/rest/v1/property_payment_accounts", { method: "POST", body: { org_id: prop.org_id, property_id: prop.id, kind: "yape", holder_name: "Titular de Prueba", phone: "51900000001", currency: prop.currency, instructions: "Cuenta de ejemplo (solo local)" }, headers: { prefer: "return=minimal" } });
+  if (!created.ok) console.warn(`⚠ No pude crear la cuenta de cobro de ejemplo (HTTP ${created.status}); la vista del huésped no mostrará dónde pagar.`);
 }
 
-const GUESTS = [["María Fernández", "51987654321"], ["Carlos Quispe", "51976543210"], ["Ana Torres", "51965432109"], ["Luis Huamán", "51954321098"]];
+// Fictional phone numbers (519000000xx): a local notification must never reach a real person.
+const GUESTS = [["María Fernández", "51900000011"], ["Carlos Quispe", "51900000012"], ["Ana Torres", "51900000013"], ["Luis Huamán", "51900000014"]];
 const [guestName, guestPhone] = GUESTS[Math.floor(Math.random() * GUESTS.length)];
 const stamp = Date.now().toString(36);
 const day = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
+// Amounts are fixed on purpose (a test fixture, local only): the real quotes are priced by lib/domain/pricing.ts.
 // A quote on free dates (try a few windows: the database refuses occupied dates).
 let booking = null;
 for (let attempt = 0; attempt < 8 && !booking; attempt++) {

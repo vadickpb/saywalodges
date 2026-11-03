@@ -177,7 +177,7 @@ npm run local                    # Supabase + .env.local + servidor (Ctrl+C para
 npm run local:booking            # opcional: una reserva de prueba con comprobante
 ```
 
-- Vuelve a `main` con `git checkout main && git pull`. Si cambiaste de rama con el servidor abierto, no hace falta reiniciarlo.
+- Vuelve a `main` con `git checkout main && git pull`. Si cambiaste de rama con el servidor abierto, el código se recarga solo, pero reinícialo si la rama cambió dependencias (`npm install`) o variables de entorno.
 - Si el PR trae **migraciones**, `npm run local -- --reset` aplica todas (borra los datos locales).
 - Los tests de base de datos (`npx supabase@2.122.0 test db`) asumen una base recién reiniciada: ejecútalos después de `db reset`.
 - Cambios menores (documentación, tests, refactors sin efecto visible) no necesitan esta prueba.

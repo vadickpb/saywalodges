@@ -94,9 +94,9 @@ npm run local                  # Supabase in Docker + .env.local + dev server, i
 points to a hosted project: never point a development environment at production) and runs `npm run dev`. Add `-- --reset` to rebuild the
 local database from the migrations and sample data (**erases local data**), or `-- --no-dev` to prepare everything without starting the server.
 `npm run local:booking` creates a test booking with a payment voucher so you can try the owner screens
-(`-- --sin-comprobante` leaves it waiting for the guest's payment).
+(`-- --sin-comprobante`, Spanish for "without voucher", leaves it waiting for the guest's payment). These scripts support macOS and Linux (use WSL on Windows).
 
-Supabase CLI commands are pinned to the version CI uses: run them as `npx supabase@2.122.0 <command>`. A bare `npx supabase` resolves to
+Supabase CLI commands are pinned to the version the production database deploy uses: run them as `npx supabase@2.122.0 <command>`. A bare `npx supabase` resolves to
 the latest release, which may not ship a binary for your machine (v3.0.0 had none for macOS arm64).
 
 Then open:
