@@ -8,8 +8,11 @@ const OTHER = "ff24bacc-47d2-40bc-9210-f860e98892fd";
 
 function client(row: { data: { voucher_path: string | null } | null; error: { code: string } | null }, sign = { data: { signedUrl: "https://x/signed" }, error: null as unknown }) {
   const createSignedUrl = vi.fn().mockResolvedValue(sign);
-  const eq2 = vi.fn().mockReturnValue({ maybeSingle: () => Promise.resolve(row) });
-  const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
+  const chain: Record<string, unknown> = {};
+  const eq2 = vi.fn().mockImplementation(() => chain);
+  chain.eq = eq2;
+  chain.maybeSingle = () => Promise.resolve(row);
+  const eq1 = vi.fn().mockReturnValue(chain);
   const supabase = { from: () => ({ select: () => ({ eq: eq1 }) }), storage: { from: () => ({ createSignedUrl }) } };
   return { supabase: supabase as never, createSignedUrl, eq1, eq2 };
 }
@@ -18,9 +21,20 @@ describe("getVoucherSignedUrl", () => {
   it("signs the organization's own file for one minute and scopes the read to the org", async () => {
     const c = client({ data: { voucher_path: `${ORG}/${"c4".repeat(32)}/id.png` }, error: null });
     expect(await getVoucherSignedUrl(c.supabase, ORG, "pay-1")).toBe("https://x/signed");
-    expect(c.createSignedUrl).toHaveBeenCalledWith(`${ORG}/${"c4".repeat(32)}/id.png`, VOUCHER_URL_TTL_SECONDS);
+    expect(c.createSignedUrl).toHaveBeenCalledWith(`${ORG}/${"c4".repeat(32)}/id.png`, VOUCHER_URL_TTL_SECONDS, undefined);
     expect(VOUCHER_URL_TTL_SECONDS).toBeLessThanOrEqual(60);
     expect(c.eq2).toHaveBeenCalledWith("org_id", ORG);
+  });
+  it("scopes the payment to its booking and asks for an attachment when downloading", async () => {
+    const c = client({ data: { voucher_path: `${ORG}/${"c4".repeat(32)}/id.pdf` }, error: null });
+    await getVoucherSignedUrl(c.supabase, ORG, "pay-1", { bookingId: "book-1", download: true });
+    expect(c.eq2).toHaveBeenCalledWith("booking_id", "book-1");
+    expect(c.createSignedUrl).toHaveBeenCalledWith(`${ORG}/${"c4".repeat(32)}/id.pdf`, VOUCHER_URL_TTL_SECONDS, { download: true });
+  });
+  it("always serves a PDF as an attachment, even when the caller did not ask for a download", async () => {
+    const c = client({ data: { voucher_path: `${ORG}/${"c4".repeat(32)}/id.PDF` }, error: null });
+    await getVoucherSignedUrl(c.supabase, ORG, "pay-1");
+    expect(c.createSignedUrl).toHaveBeenCalledWith(expect.any(String), VOUCHER_URL_TTL_SECONDS, { download: true });
   });
   it("returns null, signing nothing, when the payment is not visible or has no file", async () => {
     for (const data of [null, { voucher_path: null }]) {
