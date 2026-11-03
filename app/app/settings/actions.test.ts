@@ -2,8 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ save: vi.fn(), toggle: vi.fn(), remove: vi.fn(), revalidate: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("next/navigation", () => ({ unstable_rethrow: vi.fn() }));
-vi.mock("@/lib/dal/payment-accounts", () => ({ savePaymentAccount: mocks.save, setPaymentAccountActive: mocks.toggle, deletePaymentAccount: mocks.remove }));
+vi.mock("@/lib/dal/payment-accounts", () => {
+  class NotOwnerError extends Error {}
+  return { savePaymentAccount: mocks.save, setPaymentAccountActive: mocks.toggle, deletePaymentAccount: mocks.remove, NotOwnerError, NOT_OWNER_MESSAGE: "Solo el dueño puede gestionar las cuentas de cobro." };
+});
 import { paymentAccountAction } from "./actions";
+import { NotOwnerError } from "@/lib/dal/payment-accounts";
 const id = "11111111-1111-4111-8111-111111111111";
 function form(over: Record<string, string> = {}) {
   const data = new FormData();
@@ -12,6 +16,16 @@ function form(over: Record<string, string> = {}) {
 }
 beforeEach(() => { vi.resetAllMocks(); });
 describe("payment account actions", () => {
+  it("tells a staff member that only the owner can do this, for every operation", async () => {
+    for (const operation of ["save", "toggle", "delete"]) {
+      mocks.save.mockRejectedValue(new NotOwnerError());
+      mocks.toggle.mockRejectedValue(new NotOwnerError());
+      mocks.remove.mockRejectedValue(new NotOwnerError());
+      const result = await paymentAccountAction({ ok: false }, form({ operation, id }));
+      expect(result).toEqual({ ok: false, formError: "Solo el dueño puede gestionar las cuentas de cobro." });
+    }
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
   it("ignores forged scope and passes normalized fields", async () => {
     expect((await paymentAccountAction({ ok: false }, form({ org_id: "other", property_id: "other" }))).ok).toBe(true);
     expect(mocks.save).toHaveBeenCalledWith(null, expect.objectContaining({ holder_name: "Ana", bank_name: null, phone: "999888777" }));

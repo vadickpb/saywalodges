@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ context: vi.fn(), client: vi.fn() }));
 vi.mock("@/lib/dal/organizations", () => ({ requireActiveOrg: mocks.context }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.client }));
-import { listPaymentAccounts, savePaymentAccount, setPaymentAccountActive, deletePaymentAccount } from "./payment-accounts";
+import { listPaymentAccounts, savePaymentAccount, setPaymentAccountActive, deletePaymentAccount, NotOwnerError, isActiveOrgOwner } from "./payment-accounts";
 import { paymentAccountSchema } from "@/lib/domain/payment-accounts";
 const id = "11111111-1111-4111-8111-111111111111";
 const value = paymentAccountSchema.parse({ kind: "plin", holder_name: "Ana", phone: "999888777", currency: "PEN", instructions: "", active: true, sort_order: 0 });
@@ -19,7 +19,26 @@ function fake(result = { data: [{ id }], error: null } as { data: unknown; error
   mocks.client.mockResolvedValue({ from });
   return { calls, from };
 }
-beforeEach(() => { vi.restoreAllMocks(); mocks.context.mockResolvedValue({ activeOrg: { id: "org" } }); });
+beforeEach(() => { vi.restoreAllMocks(); mocks.context.mockResolvedValue({ activeOrg: { id: "org", role: "owner" } }); });
+describe("owner-only access", () => {
+  it("a staff member can neither read nor write, and the database is never touched", async () => {
+    const { from } = fake();
+    mocks.context.mockResolvedValue({ activeOrg: { id: "org", role: "staff" } });
+    await expect(listPaymentAccounts()).rejects.toBeInstanceOf(NotOwnerError);
+    await expect(savePaymentAccount(null, value)).rejects.toBeInstanceOf(NotOwnerError);
+    await expect(savePaymentAccount(id, value)).rejects.toBeInstanceOf(NotOwnerError);
+    await expect(setPaymentAccountActive(id, false)).rejects.toBeInstanceOf(NotOwnerError);
+    await expect(deletePaymentAccount(id)).rejects.toBeInstanceOf(NotOwnerError);
+    expect(from).not.toHaveBeenCalled();
+    expect(await isActiveOrgOwner()).toBe(false);
+  });
+  it("reports the owner as owner and a user with no active organization as not owner", async () => {
+    expect(await isActiveOrgOwner()).toBe(true);
+    mocks.context.mockResolvedValue({ activeOrg: null });
+    expect(await isActiveOrgOwner()).toBe(false);
+  });
+});
+
 describe("payment accounts DAL", () => {
   it("lists in stable order within the verified property", async () => {
     const { calls } = fake();

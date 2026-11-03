@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { paymentAccountSchema, paymentAccountIdSchema } from "@/lib/domain/payment-accounts";
-import { savePaymentAccount, setPaymentAccountActive, deletePaymentAccount } from "@/lib/dal/payment-accounts";
+import { savePaymentAccount, setPaymentAccountActive, deletePaymentAccount, NotOwnerError, NOT_OWNER_MESSAGE } from "@/lib/dal/payment-accounts";
 import type { FormState } from "../site/_lib/form-state";
 
 export async function paymentAccountAction(_prev: FormState, form: FormData): Promise<FormState> {
@@ -23,6 +23,7 @@ export async function paymentAccountAction(_prev: FormState, form: FormData): Pr
     else if (operation.data === "delete") await deletePaymentAccount(id.data);
   } catch (error) {
     unstable_rethrow(error);
+    if (error instanceof NotOwnerError) return { ok: false, formError: NOT_OWNER_MESSAGE };
     return { ok: false, formError: "No se pudo guardar el cambio. Actualiza la página y vuelve a intentarlo." };
   }
   revalidatePath("/app/settings");
