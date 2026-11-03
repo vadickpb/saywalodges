@@ -87,14 +87,17 @@ Requirements: Node.js ≥ 24 and Docker (used by the Supabase CLI to run Postgre
 
 ```bash
 npm install
-cp .env.example .env.local     # fill in the local Supabase credentials
-npx supabase start             # Postgres + Auth + Storage + Studio in Docker
-npx supabase db reset          # apply migrations and seed data
-npm run dev
+npm run local                  # Supabase in Docker + .env.local + dev server, in one command
 ```
 
-`supabase start` prints the local `API_URL`, `ANON_KEY` and `SERVICE_ROLE_KEY`; use them in `.env.local`.
-Never point a development environment at production.
+`npm run local` starts the local Supabase stack, fills the four Supabase variables of `.env.local` (and refuses to touch the file if it
+points to a hosted project: never point a development environment at production) and runs `npm run dev`. Add `-- --reset` to rebuild the
+local database from the migrations and sample data (**erases local data**), or `-- --no-dev` to prepare everything without starting the server.
+`npm run local:booking` creates a test booking with a payment voucher so you can try the owner screens
+(`-- --sin-comprobante` leaves it waiting for the guest's payment).
+
+Supabase CLI commands are pinned to the version CI uses: run them as `npx supabase@2.122.0 <command>`. A bare `npx supabase` resolves to
+the latest release, which may not ship a binary for your machine (v3.0.0 had none for macOS arm64).
 
 Then open:
 
@@ -109,7 +112,8 @@ Then open:
 | `npm run lint` · `npm run typecheck` | ESLint · TypeScript |
 | `npm run test` | Unit tests (Vitest) |
 | `npm run test:pricing` | Pricing/finance domain tests with a 90 % per-file coverage floor |
-| `npx supabase test db` | pgTAP: RLS, RPCs and constraints |
+| `npm run local` · `npm run local:booking` | Whole local environment in one command · a test booking with a voucher |
+| `npx supabase@2.122.0 test db` | pgTAP: RLS, RPCs and constraints (run `db reset` first: it assumes a fresh database) |
 | `npm run where` | Current branch, PR, CI state and what to do next |
 
 ## Repository map

@@ -22,7 +22,7 @@ elegir ticket (docs/roadmap.md)
   → migración (si aplica; créala tras `git rebase origin/main` y edítala mientras el PR siga abierto)
   → dominio → DAL → acción/ruta (zod) → UI → tests
   → npm run lint && npm run typecheck && npm run test && npm run build
-  → si hubo migración: npx supabase db reset && npx supabase test db
+  → si hubo migración: npx supabase@2.122.0 db reset && npx supabase@2.122.0 test db
   → reviewer (+ security-reviewer si CLAUDE.md lo exige)
   → push → PR (plantilla completa) → CI verde → squash merge
   → si el PR trae migración: el dueño aprueba "Deploy database" (1 clic)
@@ -51,7 +51,7 @@ Por qué había tantas: cada arreglo generaba una migración nueva aunque la ant
 producción. Las reglas que lo evitan:
 
 1. **Una migración por ticket.** Mientras el PR está abierto (la migración aún no está en `main`), se
-   **edita la misma migración** y se repite `npx supabase db reset && npx supabase test db`. No se crea otra
+   **edita la misma migración** y se repite `npx supabase@2.122.0 db reset && npx supabase@2.122.0 test db`. No se crea otra
    para corregir un error propio.
 2. **Una migración que ya está en `main` jamás se edita**: se crea una nueva (`supabase/CLAUDE.md`).
 3. **Cambios aditivos primero.** Vercel despliega el código en cuanto se mergea, y la BD se actualiza cuando el
@@ -59,7 +59,7 @@ producción. Las reglas que lo evitan:
    (nullable o con default), y los `drop`/`rename`/`not null` nuevos van en un ticket posterior
    (patrón *expand → contract*).
 4. **Crear la migración al final, no al principio.** Haz `git fetch && git rebase origin/main` y entonces
-   `npx supabase migration new <slug>`. Así el timestamp es posterior al de todo lo ya mergeado.
+   `npx supabase@2.122.0 migration new <slug>`. Así el timestamp es posterior al de todo lo ya mergeado.
 5. **Los PR con migración se mergean de uno en uno.** Si hay dos en vuelo, el segundo se rebasa sobre `main`
    después de que el primero se mergee.
 
@@ -165,3 +165,19 @@ git fetch --prune
 `~/Documents` se sincroniza con iCloud, que crea copias «archivo 2.ext» ante conflictos. Una copia así dentro de
 `supabase/migrations/` duplica una versión y rompe `db reset`/`db push`. Ubicación recomendada del repo
 principal: una carpeta fuera de `~/Documents`, `~/Desktop` e iCloud Drive (p. ej. `~/Developer/saywa-direct`).
+
+## Probar en local antes de mergear
+
+Todo cambio visible (pantallas, flujos) lo ve el dueño **en su máquina antes de que se mergee**. Quien abre el PR indica la **rama exacta**:
+
+```bash
+git fetch && git checkout <rama-del-pr> && git pull
+npm install                      # solo si cambió package.json
+npm run local                    # Supabase + .env.local + servidor (Ctrl+C para parar)
+npm run local:booking            # opcional: una reserva de prueba con comprobante
+```
+
+- Vuelve a `main` con `git checkout main && git pull`. Si cambiaste de rama con el servidor abierto, no hace falta reiniciarlo.
+- Si el PR trae **migraciones**, `npm run local -- --reset` aplica todas (borra los datos locales).
+- Los tests de base de datos (`npx supabase@2.122.0 test db`) asumen una base recién reiniciada: ejecútalos después de `db reset`.
+- Cambios menores (documentación, tests, refactors sin efecto visible) no necesitan esta prueba.
