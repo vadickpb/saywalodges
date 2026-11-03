@@ -6,7 +6,7 @@
 -- Real two-session concurrency is covered by create_booking_from_quote's row/exclusion locks
 -- (same mechanism as 0014); here replays and conflicts are asserted within one session.
 begin;
-select plan(109);
+select plan(110);
 
 -- ─── Catalog: RLS, privileges, definer hygiene ──────────────────────────────
 select ok((select bool_and(relrowsecurity) from pg_class where oid in (
@@ -331,15 +331,19 @@ select throws_ok($$delete from public.units where id = 'ee204001-0000-4000-8000-
   'A unit with bookings cannot be deleted (no silent cascade to its blocks)');
 select throws_ok($$delete from public.guests where email = 'ana@example.com'$$, '23503', null, 'A guest with bookings cannot be deleted');
 
--- ─── Payment accounts ───────────────────────────────────────────────────────
-select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true);
+-- ─── Payment accounts (owner-only writes since SD-411: see 0027) ────────────
+select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true); -- Saywa staff
 set local role authenticated;
+select throws_ok($$insert into public.property_payment_accounts (org_id, property_id, kind, holder_name, phone)
+  values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'yape', 'Staff attempt', '999000111')$$,
+  '42501', null, 'A staff member cannot add a payment account');
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true); -- Saywa owner
 select lives_ok($$insert into public.property_payment_accounts (org_id, property_id, kind, holder_name, phone)
   values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'yape', 'Saywa Lodges', '999111222')$$,
-  'A member adds a Yape account');
+  'The owner adds a Yape account');
 select lives_ok($$insert into public.property_payment_accounts (org_id, property_id, kind, holder_name, bank_name, account_number, cci, currency)
   values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'bank_account', 'Saywa Lodges', 'BCP', '1912345678901', '00219100123456789012', 'USD')$$,
-  'A member adds a bank account');
+  'The owner adds a bank account');
 select throws_ok($$insert into public.property_payment_accounts (org_id, property_id, kind, holder_name)
   values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'plin', 'No phone')$$,
   '23514', null, 'Yape/Plin accounts require a phone');
@@ -350,7 +354,7 @@ select throws_ok($$insert into public.property_payment_accounts (org_id, propert
 select throws_ok($$insert into public.property_payment_accounts (org_id, property_id, kind, holder_name, phone)
   values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '57f914ac-3890-47c1-9d6d-1492782cf712', 'yape', 'Mismatch', '999111222')$$,
   '23503', null, 'The property must belong to the stated organization');
-select is((select count(*)::int from public.property_payment_accounts), 2, 'The member sees both accounts');
+select is((select count(*)::int from public.property_payment_accounts), 2, 'The owner sees both accounts');
 select lives_ok($$update public.properties set booking_hold_minutes = 30 where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
   'A member can configure the hold duration');
 select throws_ok($$update public.properties set booking_hold_minutes = 5 where id = '131583b5-785e-4127-81f0-e097163c5654'$$,
