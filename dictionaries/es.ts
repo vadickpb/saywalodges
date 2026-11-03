@@ -114,6 +114,7 @@ const es: Dict = {
     pending: "Consultando tu estadía…",
     back: "Volver al sitio",
     contactLink: "Contactar por WhatsApp",
+    retry: "Reintentar",
     empty: "No hay alojamientos disponibles para reservar en línea. Contáctanos por WhatsApp.",
     unitNotFound: "Este alojamiento ya no está disponible. Elige otro o contáctanos.",
     invalidDates: "Elige una llegada desde hoy y una salida posterior, dentro de los próximos 731 días. La estadía máxima es de 30 noches.",

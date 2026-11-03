@@ -34,7 +34,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ ho
         {units?.length ? <QuoteForm lang={lang} t={t} units={units.map(unit => ({ id: unit.id, name: unit.name, maxGuests: unit.max_guests }))} contactUrl={contactUrl} today={todayInLima()} /> : (
           <div className="space-y-5">
             <p role="status">{units === null ? t.generic : t.empty}</p>
-            {units === null && <a href={`/${lang}/cotizar`} className={buttonStyles.outline}>{t.cta}</a>}
+            {units === null && <a href={`/${lang}/cotizar`} className={buttonStyles.outline}>{t.retry}</a>}
             <a href={contactUrl} className={buttonStyles.primary}>{t.contactLink}</a>
           </div>
         )}

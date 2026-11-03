@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import type { Dict } from "@/dictionaries/en";
 import { submitPublicQuote } from "@/app/sites/[host]/[lang]/cotizar/actions";
 import { clampQuoteGuests, quoteErrorText, quoteGuestLimit, type QuoteUnit } from "@/lib/domain/public-quote-form";
+import { addDays } from "@/lib/domain/dates";
 import { buttonStyles } from "./ui";
 
 const controlStyles = "min-h-12 w-full min-w-0 rounded-site border border-site-muted bg-site-bg px-3 py-2 text-site-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent aria-invalid:border-site-fg disabled:opacity-60";
@@ -40,7 +41,7 @@ export function QuoteForm({ lang, t, units, contactUrl, today }: {
 
   return (
     <form ref={formRef} action={action} noValidate aria-busy={pending} className="space-y-6">
-      <div className="min-h-16" aria-live="polite">
+      <div className="min-h-16">
         {errorText && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded-site border border-site-line bg-site-surface p-4 focus-visible:outline-2 focus-visible:outline-site-accent">
           <p>{errorText}</p>
           {state.error === "contact" && <a href={contactUrl} className="mt-2 inline-flex min-h-11 items-center font-semibold underline underline-offset-4">{t.contactLink}</a>}
@@ -66,7 +67,7 @@ export function QuoteForm({ lang, t, units, contactUrl, today }: {
         </div>
         <div className="min-w-0 space-y-2">
           <label htmlFor="checkOut" className="block font-semibold">{t.checkOut}</label>
-          <input {...fieldProps("checkOut")} type="date" min={checkIn || today} value={checkOut} onChange={event => setCheckOut(event.target.value)} />
+          <input {...fieldProps("checkOut")} type="date" min={checkIn ? addDays(checkIn, 1) : today} value={checkOut} onChange={event => setCheckOut(event.target.value)} />
           {fieldError("checkOut")}
         </div>
         <div className="space-y-2 sm:col-span-2">

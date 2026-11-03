@@ -116,6 +116,7 @@ const en = {
     pending: "Checking your stay…",
     back: "Back to the website",
     contactLink: "Contact on WhatsApp",
+    retry: "Try again",
     empty: "There is no accommodation available to book online. Contact us on WhatsApp.",
     unitNotFound: "This accommodation is no longer available. Choose another or contact us.",
     invalidDates: "Choose an arrival from today and a later departure within the next 731 days. The maximum stay is 30 nights.",
