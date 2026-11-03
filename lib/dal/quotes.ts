@@ -123,7 +123,8 @@ export async function listOpenQuotes(): Promise<{ quotes: OpenQuote[]; origin: s
   const { supabase, orgId, propertyId } = ctx;
   const [quotes, property] = await Promise.all([
     supabase.from("quotes").select("id, token, unit_id, check_in, check_out, guests, currency, total_cents, expires_at")
-      .eq("org_id", orgId).gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false }).limit(50),
+      // Self-service quotes (SD-404) are not the owner's to share: leaving them in would let a flood push the owner's own links off the first 50.
+      .eq("org_id", orgId).eq("is_public", false).gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false }).limit(50),
     supabase.from("properties").select("subdomain, custom_domain").eq("id", propertyId).eq("org_id", orgId).single(),
   ]);
   if (quotes.error || property.error) {

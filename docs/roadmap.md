@@ -1286,11 +1286,22 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/booking-checkout.md`.
 
-### [ ] SD-404 · feat(site): self-service quote
+### [~] SD-404 · feat(site): self-service quote
 `M` · Depende: SD-403 · Review: `R+S`
 - **Alcance**: en el sitio, selector de fechas y huéspedes → quote pública → mismo checkout.
 - **Criterios**
-  - [ ] Respeta mínimo de noches y capacidad con mensajes claros.
+  - [x] Respeta mínimo de noches y capacidad: la base lo devuelve como dato (`MIN_NIGHTS` con las noches requeridas, `CAPACITY_EXCEEDED` con el máximo; pgTAP `0028`).
+  - [ ] Pantalla del sitio con mensajes claros en es/en (parte 2, a cargo de Codex).
+- **Hecho (parte 1, backend)** (rama `feat/SD-404-public-quote`, [ADR 0012](adr/0012-public-quote-priced-in-database.md)): `public.create_public_quote(host, unidad, fechas, huéspedes)`,
+  ejecutable por anónimos y **sin ningún importe en la entrada**: la base calcula el precio con `private.price_stay`, un port a SQL de `quoteStay`, fijado a las mismas cifras
+  calculadas a mano por `lib/domain/pricing-parity.test.ts` y `supabase/tests/0028_public_quote.test.sql` (si cambian las reglas de precio hay que cambiar los dos motores).
+  Unidad **activa** de una propiedad **publicada** servida desde el host; máximo 30 noches y ~2 años de horizonte; validez 24 h; fechas ocupadas rechazadas (orientativo: manda el *exclusion constraint*);
+  marca explícita `quotes.is_public`; topes propios (100 por día y 150 abiertas, por debajo de los del dueño) para que una inundación nunca impida al dueño cotizar; **como máximo 3 reservas
+  pendientes de pago nacidas de cotizaciones públicas por unidad** (hallazgo de seguridad: cotizar → reservar → comprobante falso podía fijar el calendario); la lista del dueño excluye las públicas;
+  cada llamada crea su propia cotización. Riesgo que queda abierto (aviso al dueño, caducidad de la revisión, límite por origen): ADR 0012.
+  Dominio `lib/domain/public-quote.ts`, DAL `lib/dal/public/public-quote.ts` y server action `app/sites/[host]/[lang]/cotizar/actions.ts` (redirige al checkout de SD-403).
+- **Parte 2 (Codex)**: página `/[lang]/cotizar` (o sección del sitio) con selector de unidad, fechas y huéspedes, mensajes según `PublicQuoteState`, enlace desde el sitio.
+- **Pendiente (SD-409)**: límite por origen (IP) y captcha en la capa de aplicación (no frena la llamada directa a la RPC), y decidir la caducidad de la revisión de comprobantes de reservas públicas.
 
 ### [~] SD-405 · feat(payments): manual payment with voucher upload
 `M` · Depende: SD-403 · Review: `R+S`
