@@ -39,25 +39,27 @@ describe("states and allowed actions", () => {
 
 describe("action input schemas", () => {
   it("approve: optional exchange rate with sane bounds", () => {
-    expect(approvePaymentSchema.parse({ paymentId: ID, fxRate: "" })).toEqual({ paymentId: ID, fxRate: null });
-    expect(approvePaymentSchema.parse({ paymentId: ID, fxRate: "3.7512" })).toEqual({ paymentId: ID, fxRate: 3.7512 });
-    for (const bad of ["0", "-3", "3,7", "abc", "1001", "3.75123", "1e3"]) {
-      expect(approvePaymentSchema.safeParse({ paymentId: ID, fxRate: bad }).success, bad).toBe(false);
+    expect(approvePaymentSchema.parse({ bookingId: ID, paymentId: ID, fxRate: "" })).toEqual({ bookingId: ID, paymentId: ID, fxRate: null });
+    expect(approvePaymentSchema.parse({ bookingId: ID, paymentId: ID, fxRate: "3.7512" })).toEqual({ bookingId: ID, paymentId: ID, fxRate: 3.7512 });
+    for (const bad of ["0", "-3", "3,7", "abc", "100", "1001", "3.75123", "1e3"]) {
+      expect(approvePaymentSchema.safeParse({ bookingId: ID, paymentId: ID, fxRate: bad }).success, bad).toBe(false);
     }
-    expect(approvePaymentSchema.safeParse({ paymentId: "nope", fxRate: "" }).success).toBe(false);
+    expect(approvePaymentSchema.safeParse({ bookingId: ID, paymentId: "nope", fxRate: "" }).success).toBe(false);
+    expect(approvePaymentSchema.safeParse({ bookingId: "../../x", paymentId: ID, fxRate: "" }).success).toBe(false);
+    expect(approvePaymentSchema.parse({ bookingId: ID, paymentId: ID, fxRate: "99.9999" }).fxRate).toBe(99.9999);
   });
   it("reject/cancel: optional trimmed reason, no control or bidi characters, max 500", () => {
-    expect(rejectPaymentSchema.parse({ paymentId: ID, reason: "  borroso " }).reason).toBe("borroso");
+    expect(rejectPaymentSchema.parse({ bookingId: ID, paymentId: ID, reason: "  borroso " }).reason).toBe("borroso");
     expect(cancelBookingSchema.parse({ bookingId: ID, reason: "" }).reason).toBe("");
-    expect(rejectPaymentSchema.safeParse({ paymentId: ID, reason: "a\nb" }).success).toBe(false);
-    expect(rejectPaymentSchema.safeParse({ paymentId: ID, reason: "x‮y" }).success).toBe(false);
+    expect(rejectPaymentSchema.safeParse({ bookingId: ID, paymentId: ID, reason: "a\nb" }).success).toBe(false);
+    expect(rejectPaymentSchema.safeParse({ bookingId: ID, paymentId: ID, reason: "x‮y" }).success).toBe(false);
     expect(cancelBookingSchema.safeParse({ bookingId: ID, reason: "a".repeat(501) }).success).toBe(false);
   });
 });
 
 describe("bookingActionError", () => {
   it("maps known codes and never anything else", () => {
-    expect(bookingActionError("approve", "22023")).toMatch(/tipo de cambio/);
+    expect(bookingActionError("approve", "22023")).toMatch(/tipo de cambio.*menor que 100/);
     expect(bookingActionError("cancel", "22023")).toMatch(/motivo/);
     expect(bookingActionError("approve", "55000")).toMatch(/cambió de estado/);
     expect(bookingActionError("reject", "42501")).toMatch(/permiso/);

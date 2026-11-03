@@ -32,15 +32,23 @@ describe("approvePaymentAction", () => {
     await approvePaymentAction(form({ bookingId: B, paymentId: P, fxRate: "" }));
     expect(dal.approvePayment).toHaveBeenCalledWith(ctx, P, null);
     dal.approvePayment.mockClear();
-    for (const bad of [{ paymentId: "nope", fxRate: "" }, { paymentId: P, fxRate: "-1" }, { paymentId: P, fxRate: "1e3" }]) {
+    for (const bad of [{ paymentId: "nope", fxRate: "" }, { paymentId: P, fxRate: "-1" }, { paymentId: P, fxRate: "1e3" }, { paymentId: P, fxRate: "100" }]) {
       expect((await approvePaymentAction(form({ bookingId: B, ...bad }))).ok).toBe(false);
     }
     expect(dal.approvePayment).not.toHaveBeenCalled();
   });
-  it("returns the DAL's Spanish error and does not refresh when the action failed", async () => {
+  it("returns the DAL's Spanish error and still refreshes the screens, which are stale if the booking changed", async () => {
     dal.approvePayment.mockResolvedValue({ ok: false, error: "La reserva ya cambió de estado." });
     expect(await approvePaymentAction(form({ bookingId: B, paymentId: P, fxRate: "" }))).toEqual({ ok: false, error: "La reserva ya cambió de estado." });
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/bookings/${B}`);
+  });
+  it("never builds a revalidation path from an unvalidated booking id", async () => {
+    for (const bookingId of ["../../x", "", "a/b"]) {
+      expect((await approvePaymentAction(form({ bookingId, paymentId: P, fxRate: "" }))).ok).toBe(false);
+      expect((await rejectPaymentAction(form({ bookingId, paymentId: P, reason: "" }))).ok).toBe(false);
+    }
     expect(revalidatePath).not.toHaveBeenCalled();
+    expect(dal.approvePayment).not.toHaveBeenCalled();
   });
   it("hides the thrown message when something unexpected happens", async () => {
     dal.approvePayment.mockRejectedValue(new Error("connection string postgres://user:pw@host"));

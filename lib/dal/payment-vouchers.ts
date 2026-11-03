@@ -26,7 +26,9 @@ export async function getVoucherSignedUrl(
   // Defence in depth: the folder must be this organization's, whatever the row says.
   if (!path || !path.startsWith(`${orgId}/`)) return null;
 
-  const signed = await supabase.storage.from(VOUCHER_BUCKET).createSignedUrl(path, VOUCHER_URL_TTL_SECONDS, opts.download ? { download: true } : undefined);
+  // A PDF can carry active content and comes from an untrusted guest: it is ALWAYS served as an attachment, whatever the caller asked.
+  const asAttachment = opts.download || path.toLowerCase().endsWith(".pdf");
+  const signed = await supabase.storage.from(VOUCHER_BUCKET).createSignedUrl(path, VOUCHER_URL_TTL_SECONDS, asAttachment ? { download: true } : undefined);
   if (signed.error || !signed.data) {
     console.error("getVoucherSignedUrl: signing failed");
     throw new Error("No se pudo cargar el comprobante.");

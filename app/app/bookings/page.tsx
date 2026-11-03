@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getBookingsContext, listBookings } from "@/lib/dal/bookings";
 import { BOOKING_FILTERS, BOOKING_PAGE_SIZE, FILTER_LABEL, bookingStateLabel, parseBookingQuery, type BookingFilter, type BookingQuery } from "@/lib/domain/bookings";
 import { nightsBetween, showDate } from "@/lib/domain/booking-format";
@@ -25,6 +26,8 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
   if (!ctx) return <Card><CardContent className="p-6 text-sm">No hay una organización activa.</CardContent></Card>;
   const { rows, total } = await listBookings(ctx, query);
   const pages = Math.max(1, Math.ceil(total / BOOKING_PAGE_SIZE));
+  // A bookmark past the last page (or a filter that just emptied the list) goes to the last page instead of showing an empty screen.
+  if (rows.length === 0 && total > 0 && query.page > pages) redirect(href(query, { page: pages }));
 
   return (
     <div className="space-y-4">
@@ -63,7 +66,7 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
                       <span className="space-y-0.5">
                         <span className="block font-medium">{b.guestName}</span>
                         <span className="block text-sm text-muted-foreground">
-                          {b.unitName} · {showDate(b.checkIn)} → {showDate(b.checkOut)} ({nights} {nights === 1 ? "noche" : "noches"}) · {b.guests} huésped(es)
+                          {b.unitName} · {showDate(b.checkIn)} → {showDate(b.checkOut)} ({nights} {nights === 1 ? "noche" : "noches"}) · {b.guests} {b.guests === 1 ? "huésped" : "huéspedes"}
                         </span>
                       </span>
                       <span className="flex items-center gap-3 text-sm">

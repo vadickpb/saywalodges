@@ -68,16 +68,16 @@ const reasonText = z
   .max(500)
   .refine((v) => !/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(v), "caracteres no permitidos");
 
-/** Exchange rate S/ per unit of foreign currency: positive, sane bounds, at most 4 decimals. */
+/** Exchange rate S/ per unit of foreign currency: positive, below 100 (the database refuses anything else), at most 4 decimals. */
 export const fxRateSchema = z
   .string()
   .trim()
   .regex(/^\d{1,4}(\.\d{1,4})?$/)
   .transform(Number)
-  .refine((n) => n > 0 && n <= 1000);
+  .refine((n) => n > 0 && n < 100);
 
-export const approvePaymentSchema = z.object({ paymentId: uuid, fxRate: z.union([z.literal(""), fxRateSchema]).transform((v) => (v === "" ? null : v)) });
-export const rejectPaymentSchema = z.object({ paymentId: uuid, reason: reasonText });
+export const approvePaymentSchema = z.object({ bookingId: uuid, paymentId: uuid, fxRate: z.union([z.literal(""), fxRateSchema]).transform((v) => (v === "" ? null : v)) });
+export const rejectPaymentSchema = z.object({ bookingId: uuid, paymentId: uuid, reason: reasonText });
 export const cancelBookingSchema = z.object({ bookingId: uuid, reason: reasonText });
 
 export type BookingAction = "approve" | "reject" | "cancel";
@@ -91,7 +91,7 @@ export function bookingActionError(action: BookingAction, code: string | undefin
       return "La reserva ya cambió de estado. Actualiza la página para ver su situación actual.";
     case "22023":
       return action === "approve"
-        ? "Falta el tipo de cambio de esta moneda: escríbelo (soles por unidad) e inténtalo de nuevo."
+        ? "No se pudo aprobar: falta el tipo de cambio de esta moneda o no es válido (soles por unidad, mayor que 0 y menor que 100). Escríbelo e inténtalo de nuevo."
         : "Revisa el motivo e inténtalo de nuevo.";
     default:
       return "No se pudo completar la acción. Inténtalo de nuevo en unos minutos.";

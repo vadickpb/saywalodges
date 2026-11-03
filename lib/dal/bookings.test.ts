@@ -51,15 +51,23 @@ describe("listBookings", () => {
     expect(calls).toContainEqual(["lte", ["check_in", "2026-12-31"]]);
     expect(calls).toContainEqual(["range", [40, 59]]);
   });
-  it("'needs_review' is only the pending bookings that have a voucher under review; none means an empty list without a second query", async () => {
-    const none = client({ payments: { data: [], error: null } });
-    expect(await listBookings(none.ctx, { filter: "needs_review", from: null, to: null, page: 1 })).toEqual({ rows: [], total: 0 });
-    // the bookings query was never executed (no page window was applied)
-    expect(none.used.bookings?.calls.some(([m]) => m === "range") ?? false).toBe(false);
-    const some = client({ payments: { data: [{ booking_id: "b1" }], error: null }, bookings: { data: [], error: null, count: 0 } });
-    await listBookings(some.ctx, { filter: "needs_review", from: null, to: null, page: 1 });
-    expect(some.used.bookings.calls).toContainEqual(["eq", ["status", "pending_payment"]]);
-    expect(some.used.bookings.calls).toContainEqual(["in", ["id", ["b1"]]]);
+  it("'needs_review' is ONE query: pending bookings joined to a payment under review (no id list in the URL, no cap)", async () => {
+    const c = client({ bookings: { data: [], error: null, count: 0 } });
+    await listBookings(c.ctx, { filter: "needs_review", from: null, to: null, page: 1 });
+    expect(c.used.payments).toBeUndefined();
+    expect(c.used.bookings.calls).toContainEqual(["select", [expect.stringContaining("payments!inner(id)"), { count: "exact" }]]);
+    expect(c.used.bookings.calls).toContainEqual(["eq", ["payments.status", "pending_review"]]);
+    expect(c.used.bookings.calls).toContainEqual(["eq", ["status", "pending_payment"]]);
+  });
+  it("a page past the end reports the real total instead of failing, so the screen can go to the last page", async () => {
+    let call = 0;
+    const out = { data: null, error: { code: "PGRST103" } as { code?: string }, count: undefined };
+    const head = { data: null, error: null, count: 45 };
+    const used: ReturnType<typeof query>[] = [];
+    const supabase = { from: () => { const r = query(call++ === 0 ? out : head); used.push(r); return r.q; }, rpc: vi.fn() };
+    const res = await listBookings({ supabase: supabase as never, orgId: ORG }, { filter: "all", from: null, to: null, page: 99 });
+    expect(res).toEqual({ rows: [], total: 45 });
+    expect(used[1].calls).toContainEqual(["select", ["id", { count: "exact", head: true }]]);
   });
   it("fails with a generic message and no database text", async () => {
     const c = client({ bookings: { data: null, error: { code: "XX000" } } });

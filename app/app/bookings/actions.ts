@@ -20,10 +20,9 @@ async function run(fn: (ctx: NonNullable<Awaited<ReturnType<typeof getBookingsCo
     // The DAL already logged a closed machine code. Never forward the thrown message.
     return { ok: false, error: "No se pudo completar la acción. Inténtalo de nuevo en unos minutos." };
   }
-  if (outcome.ok) {
-    revalidatePath("/app/bookings");
-    revalidatePath(`/app/bookings/${bookingId}`);
-  }
+  // Also after a failure: a state error (the booking already changed) means the screen is stale and must show the current state.
+  revalidatePath("/app/bookings");
+  revalidatePath(`/app/bookings/${bookingId}`);
   return outcome;
 }
 
@@ -31,14 +30,14 @@ export async function approvePaymentAction(formData: FormData): Promise<ActionRe
   const v = readText(formData, ["bookingId", "paymentId", "fxRate"]);
   const parsed = approvePaymentSchema.safeParse(v);
   if (!parsed.success) return INVALID;
-  return run((ctx) => approvePayment(ctx, parsed.data.paymentId, parsed.data.fxRate), v.bookingId ?? "");
+  return run((ctx) => approvePayment(ctx, parsed.data.paymentId, parsed.data.fxRate), parsed.data.bookingId);
 }
 
 export async function rejectPaymentAction(formData: FormData): Promise<ActionResult> {
   const v = readText(formData, ["bookingId", "paymentId", "reason"]);
   const parsed = rejectPaymentSchema.safeParse(v);
   if (!parsed.success) return INVALID;
-  return run((ctx) => rejectPayment(ctx, parsed.data.paymentId, parsed.data.reason), v.bookingId ?? "");
+  return run((ctx) => rejectPayment(ctx, parsed.data.paymentId, parsed.data.reason), parsed.data.bookingId);
 }
 
 export async function cancelBookingAction(formData: FormData): Promise<ActionResult> {

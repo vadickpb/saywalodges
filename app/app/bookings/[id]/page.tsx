@@ -33,13 +33,13 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         <CardContent className="space-y-4 text-sm">
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
             <dt className="text-muted-foreground">Alojamiento</dt><dd>{b.unitName}</dd>
-            <dt className="text-muted-foreground">Estadía</dt><dd>{showDate(b.checkIn)} → {showDate(b.checkOut)} ({nights} {nights === 1 ? "noche" : "noches"}) · {b.guests} huésped(es)</dd>
+            <dt className="text-muted-foreground">Estadía</dt><dd>{showDate(b.checkIn)} → {showDate(b.checkOut)} ({nights} {nights === 1 ? "noche" : "noches"}) · {b.guests} {b.guests === 1 ? "huésped" : "huéspedes"}</dd>
             <dt className="text-muted-foreground">Total</dt><dd>{formatPrice(b.totalCents, b.currency)}</dd>
             <dt className="text-muted-foreground">Adelanto</dt><dd>{formatPrice(b.depositCents, b.currency)}</dd>
             <dt className="text-muted-foreground">Creada</dt><dd>{showStamp(b.createdAt)}</dd>
             {b.status === "pending_payment" && b.expiresAt && (<><dt className="text-muted-foreground">Retiene fechas hasta</dt><dd>{showStamp(b.expiresAt)}</dd></>)}
             {b.confirmedAt && (<><dt className="text-muted-foreground">Confirmada</dt><dd>{showStamp(b.confirmedAt)}</dd></>)}
-            {b.cancelledAt && (<><dt className="text-muted-foreground">Cancelada</dt><dd>{showStamp(b.cancelledAt)}{b.cancelReason ? ` · ${b.cancelReason}` : ""}</dd></>)}
+            {b.cancelledAt && (<><dt className="text-muted-foreground">Cancelada</dt><dd>{showStamp(b.cancelledAt)}{b.cancelReason ? <> · <bdi>{b.cancelReason}</bdi></> : null}</dd></>)}
           </dl>
           <div>
             <h3 className="font-medium">Huésped</h3>
@@ -65,15 +65,15 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     <span>{PAYMENT_STATUS_LABEL[p.status]}</span>
                   </div>
                   <p className="text-muted-foreground">
-                    Registrado {showStamp(p.createdAt)}{p.reference ? ` · Operación: ${p.reference}` : ""}{p.reviewedAt ? ` · Revisado ${showStamp(p.reviewedAt)}` : ""}
+                    Registrado {showStamp(p.createdAt)}{p.reference ? <> · Operación: <bdi>{p.reference}</bdi></> : null}{p.reviewedAt ? ` · Revisado ${showStamp(p.reviewedAt)}` : ""}
                   </p>
-                  {p.rejectReason && <p className="text-muted-foreground">Motivo del rechazo: {p.rejectReason}</p>}
+                  {p.rejectReason && <p className="text-muted-foreground">Motivo del rechazo: <bdi>{p.rejectReason}</bdi></p>}
                   {p.hasVoucher && (
                     <p className="mt-1 flex gap-4">
                       <a className="underline" href={`/app/bookings/${b.id}/voucher/${p.id}`} target="_blank" rel="noopener noreferrer">
                         Ver comprobante<span className="sr-only"> (se abre en una pestaña nueva)</span>
                       </a>
-                      <a className="underline" href={`/app/bookings/${b.id}/voucher/${p.id}?descargar=1`}>Descargar</a>
+                      <a className="underline" href={`/app/bookings/${b.id}/voucher/${p.id}?descargar=1`}>Descargar<span className="sr-only"> el comprobante de {formatPrice(p.amountCents, p.currency)}</span></a>
                     </p>
                   )}
                   {canReview(b.status, p.status) && (

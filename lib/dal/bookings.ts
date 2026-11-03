@@ -1,6 +1,4 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
 import { log } from "@/lib/log";
 import { requireActiveOrg } from "./organizations";
 import { createClient } from "@/lib/supabase/server";
@@ -10,7 +8,6 @@ import {
 
 // Bookings management (SD-406). Everything goes through the owner's own session: reads are limited by RLS (members of the active
 // organization) and the three actions are SECURITY DEFINER RPCs that re-check membership and state. The service role is not used.
-type Client = SupabaseClient<Database>;
 export const BOOKINGS_ERROR = "No se pudieron cargar las reservas. Intenta de nuevo.";
 
 export async function getBookingsContext() {
@@ -37,31 +34,31 @@ export type BookingRow = {
 };
 
 const BOOKING_COLUMNS = "id, status, check_in, check_out, guests, currency, total_cents, deposit_cents, expires_at, created_at, unit_id, guest_id";
+// PostgREST answers 416 when the requested page starts past the last row (a stale bookmark, or a filter that just emptied the list).
+const OUT_OF_RANGE = "PGRST103";
 const fail = (where: string, code: string | undefined): never => {
   log("error", "bookings.read_failed", { code: code ?? "UNKNOWN", outcome: where });
   throw new Error(BOOKINGS_ERROR);
 };
 
-async function pendingReviewBookingIds(supabase: Client, orgId: string): Promise<string[]> {
-  const { data, error } = await supabase.from("payments").select("booking_id").eq("org_id", orgId).eq("status", "pending_review").limit(1000);
-  if (error) fail("pending_review", error.code);
-  return (data ?? []).map((p) => p.booking_id);
-}
-
 export async function listBookings(ctx: Context, query: BookingQuery): Promise<{ rows: BookingRow[]; total: number }> {
   const { supabase, orgId } = ctx;
-  let q = supabase.from("bookings").select(BOOKING_COLUMNS, { count: "exact" }).eq("org_id", orgId);
-  if (query.filter === "needs_review") {
-    const ids = await pendingReviewBookingIds(supabase, orgId);
-    if (ids.length === 0) return { rows: [], total: 0 };
-    q = q.eq("status", "pending_payment").in("id", ids);
-  } else if (query.filter !== "all") {
-    q = q.eq("status", query.filter);
-  }
+  // "needs_review": pending bookings with a voucher under review, in ONE query (inner join on payments): no id list travels in the URL and
+  // there is no cap that could silently hide some. At most one voucher is under review per booking (unique index), so no duplicates.
+  const needsReview = query.filter === "needs_review";
+  let q = needsReview
+    ? supabase.from("bookings").select(`${BOOKING_COLUMNS}, payments!inner(id)`, { count: "exact" }).eq("org_id", orgId).eq("payments.status", "pending_review").eq("status", "pending_payment")
+    : supabase.from("bookings").select(BOOKING_COLUMNS, { count: "exact" }).eq("org_id", orgId);
+  const status = query.filter === "all" || query.filter === "needs_review" ? null : query.filter;
+  if (status) q = q.eq("status", status);
   if (query.from) q = q.gte("check_in", query.from);
   if (query.to) q = q.lte("check_in", query.to);
   const start = (query.page - 1) * BOOKING_PAGE_SIZE;
   const { data, count, error } = await q.order("created_at", { ascending: false }).order("id").range(start, start + BOOKING_PAGE_SIZE - 1);
+  if (error?.code === OUT_OF_RANGE) {
+    // Past the last page: report the real total so the page can send the user to the last one instead of showing an error.
+    return { rows: [], total: await countBookings(ctx, query) };
+  }
   if (error) fail("list", error.code);
   const bookings = data ?? [];
   if (bookings.length === 0) return { rows: [], total: count ?? 0 };
@@ -89,6 +86,21 @@ export async function listBookings(ctx: Context, query: BookingQuery): Promise<{
       unitName: unitName.get(b.unit_id) ?? "—", guestName: guestName.get(b.guest_id) ?? "—", hasVoucherToReview: toReview.has(b.id),
     })),
   };
+}
+
+async function countBookings(ctx: Context, query: BookingQuery): Promise<number> {
+  const { supabase, orgId } = ctx;
+  const needsReview = query.filter === "needs_review";
+  let q = needsReview
+    ? supabase.from("bookings").select("id, payments!inner(id)", { count: "exact", head: true }).eq("org_id", orgId).eq("payments.status", "pending_review").eq("status", "pending_payment")
+    : supabase.from("bookings").select("id", { count: "exact", head: true }).eq("org_id", orgId);
+  const status = query.filter === "all" || query.filter === "needs_review" ? null : query.filter;
+  if (status) q = q.eq("status", status);
+  if (query.from) q = q.gte("check_in", query.from);
+  if (query.to) q = q.lte("check_in", query.to);
+  const { count, error } = await q;
+  if (error) fail("count", error.code);
+  return count ?? 0;
 }
 
 export type PaymentRow = {

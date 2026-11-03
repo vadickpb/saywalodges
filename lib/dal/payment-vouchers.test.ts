@@ -31,6 +31,11 @@ describe("getVoucherSignedUrl", () => {
     expect(c.eq2).toHaveBeenCalledWith("booking_id", "book-1");
     expect(c.createSignedUrl).toHaveBeenCalledWith(`${ORG}/${"c4".repeat(32)}/id.pdf`, VOUCHER_URL_TTL_SECONDS, { download: true });
   });
+  it("always serves a PDF as an attachment, even when the caller did not ask for a download", async () => {
+    const c = client({ data: { voucher_path: `${ORG}/${"c4".repeat(32)}/id.PDF` }, error: null });
+    await getVoucherSignedUrl(c.supabase, ORG, "pay-1");
+    expect(c.createSignedUrl).toHaveBeenCalledWith(expect.any(String), VOUCHER_URL_TTL_SECONDS, { download: true });
+  });
   it("returns null, signing nothing, when the payment is not visible or has no file", async () => {
     for (const data of [null, { voucher_path: null }]) {
       const c = client({ data, error: null });

@@ -1336,12 +1336,16 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   `lib/domain/bookings.ts`, `lib/dal/bookings.ts` (solo sesión del dueño y los RPC `confirm_payment`/`reject_payment`/`cancel_booking`, que vuelven a comprobar
   pertenencia y estado; **sin service-role ni migración**), `components/dashboard/booking-actions.tsx`. Probado de punta a punta contra `next dev` + Supabase local: lista, filtros,
   detalle, voucher firmado, aprobar/reintentar/cancelar, y el dueño de otra organización recibe 404/42501 en todo.
+- **Decisión de permisos pendiente (hallazgo de la revisión de seguridad)**: hoy `confirm_payment`, `reject_payment` y `cancel_booking` solo exigen ser **miembro**, así que un usuario
+  `staff` puede aprobar pagos (escribe un ingreso en el libro del dueño, con un tipo de cambio que él elige), confirmar sin que el dinero haya llegado y cancelar reservas confirmadas.
+  Recomendación: aprobar y cancelar solo para `owner` (`private.is_owner` en los RPC, como `complete_ical_rental`) y ocultar esos botones al staff; se hace en SD-413, que ya toca estos RPC.
+  Hasta entonces, no des el rol `staff` a nadie de confianza limitada en una instalación con reservas reales.
 - **Pendiente**: reserva manual, pago de saldo y el *snapshot* del huésped (H4) pasan a SD-413 porque cambian el RPC central de reservas.
 
 ### [ ] SD-413 · feat(bookings): manual booking, balance payment and guest snapshot
 `L` · Depende: SD-406 · Review: `R+S`
 - **Alcance**: (a) registrar una reserva manual (cerrada por WhatsApp o efectivo) que respete la disponibilidad (el *exclusion constraint* de `calendar_blocks` manda); (b) registrar el
-  pago de saldo; (c) **H4 de SD-403**: guardar en la reserva el nombre y teléfono enviados en el checkout (*snapshot*), mostrarlos en el detalle y avisar si no coinciden con la ficha del
+  pago de saldo; (c) **permisos**: confirmar/cancelar solo para `owner` en los RPC (migración + pgTAP) y botones ocultos al staff (ver SD-406); (d) **H4 de SD-403**: guardar en la reserva el nombre y teléfono enviados en el checkout (*snapshot*), mostrarlos en el detalle y avisar si no coinciden con la ficha del
   huésped, y valorar que `create_booking_from_quote` deje de rellenar teléfonos de huéspedes existentes. Requiere migración (tocar el RPC central) y pgTAP.
 - **Criterios**
   - [ ] Reserva manual sobre fechas ocupadas falla; sobre fechas libres crea reserva y bloque.

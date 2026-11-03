@@ -4,8 +4,8 @@ import { getBookingsContext } from "@/lib/dal/bookings";
 import { getVoucherSignedUrl } from "@/lib/dal/payment-vouchers";
 
 // Opens a stored payment voucher for a member (SD-406). The file is private: this route checks the session, the organization and that
-// the payment belongs to this booking, then redirects to a 60-second signed URL. PDFs are served as an attachment (no inline rendering of
-// active content in the owner's browser); images open inline. Anyone else gets the same bare 404.
+// the payment belongs to this booking, then redirects to a 60-second signed URL. A PDF is ALWAYS an attachment (decided in the DAL: no inline
+// rendering of active content from an untrusted guest); an image opens inline unless `?descargar=1`. Anyone else gets the same bare 404.
 const idSchema = z.string().uuid();
 const NOT_FOUND = () => new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
 

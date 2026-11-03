@@ -19,9 +19,14 @@ function useConfirmedAction(action: Run, fields: () => Record<string, string>, s
     const formData = new FormData();
     for (const [k, v] of Object.entries(fields())) formData.set(k, v);
     startTransition(async () => {
-      const result = await action(formData);
-      if (!result.ok) toast.error(result.error);
-      else toast.success(success);
+      try {
+        const result = await action(formData);
+        if (!result.ok) toast.error(result.error);
+        else toast.success(success);
+      } catch {
+        // Network down or the action threw: say so instead of failing silently.
+        toast.error("No se pudo completar la acción. Revisa tu conexión e inténtalo de nuevo.");
+      }
     });
   }
   return { open, setOpen, pending, run };
@@ -36,7 +41,7 @@ export function ReviewPayment({ bookingId, paymentId, amountLabel, foreignCurren
   const reject = useConfirmedAction(rejectPaymentAction, () => ({ bookingId, paymentId, reason }), "Comprobante rechazado.");
   const busy = approve.pending || reject.pending;
   return (
-    <div className="mt-3 grid gap-4 rounded-lg border p-4 md:grid-cols-2">
+    <div className="mt-3 grid gap-4 rounded-lg border p-4 md:grid-cols-2" aria-busy={busy}>
       <div className="space-y-2">
         <h4 className="font-medium">Aprobar</h4>
         {foreignCurrency && (
@@ -46,7 +51,7 @@ export function ReviewPayment({ bookingId, paymentId, amountLabel, foreignCurren
             <p className="text-xs text-muted-foreground">Si lo dejas vacío se usa el último tipo de cambio registrado en tus finanzas.</p>
           </div>
         )}
-        <Button type="button" disabled={busy} onClick={() => approve.setOpen(true)}>Aprobar pago</Button>
+        <Button type="button" disabled={busy} onClick={() => approve.setOpen(true)}>{approve.pending ? "Aprobando…" : "Aprobar pago"}</Button>
         <ConfirmDialog open={approve.open} onOpenChange={approve.setOpen} title="¿Aprobar este pago?"
           description={`Se confirmará la reserva y se registrará el ingreso de ${amountLabel} en tus finanzas. Verifica antes que el dinero llegó a tu cuenta.`}
           confirmLabel="Aprobar y confirmar" cancelLabel="Volver" onConfirm={approve.run} />
@@ -55,7 +60,7 @@ export function ReviewPayment({ bookingId, paymentId, amountLabel, foreignCurren
         <h4 className="font-medium">Rechazar</h4>
         <label htmlFor={`reason-${paymentId}`} className="text-sm">Motivo (opcional)</label>
         <Textarea id={`reason-${paymentId}`} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={2} />
-        <Button type="button" variant="outline" disabled={busy} onClick={() => reject.setOpen(true)}>Rechazar comprobante</Button>
+        <Button type="button" variant="outline" disabled={busy} onClick={() => reject.setOpen(true)}>{reject.pending ? "Rechazando…" : "Rechazar comprobante"}</Button>
         <ConfirmDialog open={reject.open} onOpenChange={reject.setOpen} title="¿Rechazar este comprobante?"
           description="El huésped podrá subir otro mientras la retención de fechas siga vigente."
           confirmLabel="Rechazar" cancelLabel="Volver" destructive onConfirm={reject.run} />
@@ -72,7 +77,7 @@ export function CancelBooking({ bookingId, confirmed }: { bookingId: string; con
       <h3 className="font-medium">Cancelar la reserva</h3>
       <label htmlFor="cancel-reason" className="text-sm">Motivo (opcional)</label>
       <Textarea id="cancel-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={2} />
-      <Button type="button" variant="outline" disabled={cancel.pending} onClick={() => cancel.setOpen(true)}>Cancelar reserva</Button>
+      <Button type="button" variant="outline" disabled={cancel.pending} onClick={() => cancel.setOpen(true)}>{cancel.pending ? "Cancelando…" : "Cancelar reserva"}</Button>
       <ConfirmDialog open={cancel.open} onOpenChange={cancel.setOpen} title="¿Cancelar esta reserva?"
         description={confirmed
           ? "Las fechas quedarán libres. Los pagos ya aprobados se conservan en tus finanzas: el reembolso se gestiona fuera del sistema."
