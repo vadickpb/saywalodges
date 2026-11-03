@@ -169,6 +169,8 @@ export default async function SitePage({
             dict={dict.availability}
             waUrl={waUrl}
             waLabel={dict.rates.availabilityCta}
+            quoteHref={`/${lang}/cotizar`}
+            quoteLabel={dict.publicQuote.cta}
             units={units.map((unit) => ({ id: unit.id, name: unit.name }))}
             unitId={unitId}
             nav={monthNav}

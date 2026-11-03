@@ -1291,7 +1291,7 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Alcance**: en el sitio, selector de fechas y huéspedes → quote pública → mismo checkout.
 - **Criterios**
   - [x] Respeta mínimo de noches y capacidad: la base lo devuelve como dato (`MIN_NIGHTS` con las noches requeridas, `CAPACITY_EXCEEDED` con el máximo; pgTAP `0028`).
-  - [ ] Pantalla del sitio con mensajes claros en es/en (parte 2, a cargo de Codex).
+  - [x] Pantalla del sitio con mensajes claros en es/en (parte 2): `/[lang]/cotizar`, formulario accesible, capacidad por unidad y acceso desde disponibilidad; continúa al checkout existente.
 - **Hecho (parte 1, backend)** (rama `feat/SD-404-public-quote`, [ADR 0012](adr/0012-public-quote-priced-in-database.md)): `public.create_public_quote(host, unidad, fechas, huéspedes)`,
   ejecutable por anónimos y **sin ningún importe en la entrada**: la base calcula el precio con `private.price_stay`, un port a SQL de `quoteStay`, fijado a las mismas cifras
   calculadas a mano por `lib/domain/pricing-parity.test.ts` y `supabase/tests/0028_public_quote.test.sql` (si cambian las reglas de precio hay que cambiar los dos motores).
