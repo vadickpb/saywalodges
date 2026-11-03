@@ -1,18 +1,19 @@
-import { verifySession } from "@/lib/dal/session";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { isActiveOrgOwner, listPaymentAccounts } from "@/lib/dal/payment-accounts";
+import { PaymentAccounts } from "@/components/dashboard/payment-accounts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Empty placeholder — no ticket owns this yet (account/org settings).
 export default async function SettingsPage() {
-  await verifySession();
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Ajustes</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">Próximamente.</p>
-      </CardContent>
-    </Card>
-  );
+  // Payment accounts decide where customers send their money: owner only (the database enforces it as well).
+  if (!(await isActiveOrgOwner())) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Ajustes</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Solo el dueño puede gestionar las cuentas de cobro. Pídele que lo haga o que cambie tu rol.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  const accounts = await listPaymentAccounts();
+  return <PaymentAccounts accounts={accounts} />;
 }
