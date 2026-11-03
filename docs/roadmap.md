@@ -1357,6 +1357,8 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Criterios**
   - [x] Solo miembros de la org gestionan sus cuentas (RLS ya existente); validación zod (teléfono, CCI, longitudes).
   - [x] Una cuenta desactivada deja de mostrarse al huésped de inmediato.
+- **Seguridad (revisión R+S)**: solo el **dueño** gestiona las cuentas, en la app (página, DAL y acciones) **y** en la base de datos (migración `20261103210000_payment_accounts_owner_only.sql`: políticas de insertar/actualizar/borrar con `private.is_owner`; lectura sigue abierta a miembros; pgTAP `0027`). Un `staff` que cambiara el Yape o la cuenta desviaría los pagos de los huéspedes, y también podría hacerlo llamando a la API con su sesión.
+- **Pendiente (SD-605)**: no hay registro de quién cambió una cuenta ni de qué cuenta vio cada huésped; conviene una tabla de auditoría con disparador y aviso al dueño cuando cambie el destino de pago.
 
 ### [ ] SD-412 · chore(privacy): voucher retention and purge
 `S` · Depende: SD-405, SD-406 · Review: `R+S`
