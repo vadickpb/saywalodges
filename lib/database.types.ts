@@ -1738,6 +1738,10 @@ export type Database = {
         };
         Returns: string;
       };
+      create_public_quote: {
+        Args: { p_check_in: string; p_check_out: string; p_guests: number; p_host: string; p_unit_id: string };
+        Returns: Json;
+      };
       create_quote: {
         Args: {
           p_breakdown: Json;
