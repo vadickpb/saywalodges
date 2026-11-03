@@ -83,3 +83,32 @@ commit. La migración es aditiva; sin ella el checkout muestra error genérico c
   el checkout no estará operativo. No ejecutar `supabase db push` contra producción.
 - Para la prueba local completa, usar los pasos anteriores en un equipo con Docker; el flujo con BD no se
   pudo ejecutar en la máquina actual. Sin esta prueba queda pendiente la comprobación interactiva completa.
+
+## Pago manual con voucher (SD-405)
+
+Tras reservar, el huésped llega a `/[lang]/reserva/[public_token]`. Mientras la reserva sea **pagable** (estado `pending_payment`, retención vigente y sin
+comprobante en revisión) la página muestra el adelanto, las cuentas activas de la propiedad en la moneda de la reserva y el formulario del comprobante.
+Fuera de esa ventana el `public_token` ya no revela cuentas ni permite subir nada (hallazgo H2 de la revisión de SD-403).
+
+- **Subida**: el navegador sube el archivo (JPG, PNG, WebP o PDF, máx. 5 MB) **directo** al bucket privado `payment-vouchers`, en
+  `<org_id>/<public_token>/<uuid>.<ext>`. La política de Storage solo lo permite para esa carpeta, mientras la reserva es pagable y hasta 5 archivos por reserva.
+- **Registro**: el servidor llama a `submit_payment_voucher`, que comprueba la carpeta, que el archivo exista y que no haya otro en revisión, y crea el pago
+  `pending_review` con el **monto y la moneda de la reserva**. Un comprobante en revisión mantiene la retención (el barrido de `expire_holds` lo respeta).
+- **Lectura**: solo miembros de la organización, con URL firmada de 60 s (`lib/dal/payment-vouchers.ts`). Nadie puede modificar ni borrar un comprobante por la API.
+
+### Riesgos conocidos y su mitigación
+- **Un comprobante basura mantiene la retención**: mientras un pago está `pending_review`, el barrido no libera las fechas; si alguien con el enlace sube un
+  archivo falso, las fechas quedan bloqueadas hasta que el dueño lo rechace. Por diseño (un comprobante real no debe perder la reserva). Mitigación: el dueño debe
+  revisar a tiempo; SD-406 destacará los comprobantes con muchas horas en revisión y SD-1009 avisará por WhatsApp de cada comprobante nuevo.
+- **Archivos sin limpieza**: no hay purga de comprobantes huérfanos, rechazados ni de organizaciones borradas (SD-412). El tope de ~5 archivos por reserva no impide
+  subidas paralelas que lo superen un poco; lo acota el límite de reservas anónimas (SD-409).
+- **Tipo de archivo declarado**: Storage valida el `Content-Type` que declara el navegador, no los bytes. Las URLs firmadas se sirven desde el origen de Supabase (no desde la app),
+  pero SD-406 debe mostrar imágenes con `<img>` y abrir los PDF como descarga.
+
+### Probarlo en local
+1. `npx supabase@2.122.0 db reset` y `npm run dev` con las variables de `docs/booking-checkout.md`.
+2. En el panel crea una cotización, ábrela como huésped y reserva; entra a la página de la reserva. Sin cuentas configuradas verás el aviso de coordinar por WhatsApp
+   (la pantalla para configurarlas es SD-411). Para ver el panel completo inserta una cuenta de prueba:
+   `insert into property_payment_accounts(org_id, property_id, kind, holder_name, phone, currency) values (...)` con la moneda de tu reserva.
+3. Sube una foto: la página debe pasar a «Pago en revisión» y desaparecer el formulario.
+4. Comprueba que el archivo NO es público: `GET /storage/v1/object/public/payment-vouchers/...` falla; solo una sesión de miembro obtiene una URL firmada.

@@ -1814,6 +1814,10 @@ export type Database = {
         };
         Returns: boolean;
       };
+      get_booking_payment_info: {
+        Args: { p_host: string; p_token: string };
+        Returns: Json;
+      };
       get_booking_status: {
         Args: { p_host: string; p_token: string };
         Returns: Json;
@@ -1891,6 +1895,16 @@ export type Database = {
       set_hero_photo: {
         Args: { p_photo_id: string; p_property_id: string };
         Returns: number;
+      };
+      submit_payment_voucher: {
+        Args: {
+          p_host: string;
+          p_method: Database["public"]["Enums"]["payment_method"];
+          p_reference?: string;
+          p_token: string;
+          p_voucher_path: string;
+        };
+        Returns: Json;
       };
     };
     Enums: {

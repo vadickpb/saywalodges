@@ -82,7 +82,7 @@ export function buildDemoData(today, { rootDomain } = {}) {
 const SUBDOMAIN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 const CUSTOM_DOMAIN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const RESERVED = ["app", "www", "api", "admin", "dashboard", "mail", "ftp", "assets", "static", "cdn", "support", "help", "blog", "status", "docs"];
-export const PRIVATE_BUCKETS = ["property-photos", "finance-receipts"];
+export const PRIVATE_BUCKETS = ["property-photos", "finance-receipts", "payment-vouchers"];
 
 /** @returns {string[]} human-readable problems; empty = valid */
 export function validateDemoData(data) {

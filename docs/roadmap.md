@@ -1251,7 +1251,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     - Sin revisión `reviewer`/`security-reviewer` (pedido explícito): obligatoria antes del PR según `CLAUDE.md`.
     - Migración sin aplicar en remoto: aplicarla es del dueño antes de cualquier código que dependa de ella.
 
-### [~] SD-402 · feat(dashboard): quote builder with WhatsApp share
+### [x] SD-402 · feat(dashboard): quote builder with WhatsApp share
 `M` · Depende: SD-401 · Review: `R+S`
 - **Alcance**: cotizar (unidad, fechas, huéspedes) → `quoteStay` en servidor → guardar quote con token y vencimiento;
   botón "Copiar para WhatsApp" con mensaje es/en y link; lista de cotizaciones abiertas.
@@ -1276,7 +1276,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - **Despliegue**: la migración `20261101151809_create_quote.sql` debe aplicarse antes de usar `/app/quotes`: sin ella la
     página de cotizaciones falla (el resto del panel no depende de ella).
 
-### [ ] SD-403 · feat(site): booking link checkout
+### [x] SD-403 · feat(site): booking link checkout
 `L` · Depende: SD-402 · Review: `R+S`
 - **Alcance**: `/[lang]/reservar/[token]`: resumen de importes, políticas, formulario del huésped (zod), aceptación de
   términos → RPC → redirección a `/[lang]/reserva/[public_token]`.
@@ -1284,7 +1284,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [x] Token inválido o vencido → página clara con botón de WhatsApp.
   - [x] Doble envío del formulario no crea dos reservas.
 
-Implementado en SD-403; pendiente de revisiones R+S y del merge de #46. Prueba y despliegue: `docs/booking-checkout.md`.
+Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/booking-checkout.md`.
 
 ### [ ] SD-404 · feat(site): self-service quote
 `M` · Depende: SD-403 · Review: `R+S`
@@ -1292,18 +1292,30 @@ Implementado en SD-403; pendiente de revisiones R+S y del merge de #46. Prueba y
 - **Criterios**
   - [ ] Respeta mínimo de noches y capacidad con mensajes claros.
 
-### [ ] SD-405 · feat(payments): manual payment with voucher upload
+### [~] SD-405 · feat(payments): manual payment with voucher upload
 `M` · Depende: SD-403 · Review: `R+S`
 - **Alcance**: página de reserva muestra instrucciones (Yape/Plin/transferencia) y monto del adelanto; subida de
   voucher con signed upload URL a bucket privado (jpeg/png/webp/pdf ≤ 5 MB); payment `pending_review`.
 - **Criterios**
-  - [ ] Voucher accesible solo para miembros de la org (URL firmada de corta duración).
-  - [ ] Subir voucher a una reserva ajena o expirada falla.
-  - [ ] **Hallazgo H2 de la revisión de seguridad de SD-403:** el `public_token` de la reserva lo recibe cualquiera que
+  - [x] Voucher accesible solo para miembros de la org (URL firmada de 60 s): bucket privado, `select` solo para miembros, sin política de update/delete
+        (pgTAP `0026`, `lib/dal/payment-vouchers.test.ts`; comprobado con un dueño, el dueño de otra org y el anónimo).
+  - [x] Subir voucher a una reserva ajena o expirada falla (pgTAP `0026`: carpeta de otra org, token desconocido, hold vencido, 6.º archivo, método `cash`).
+  - [x] **Hallazgo H2 de la revisión de seguridad de SD-403:** el `public_token` de la reserva lo recibe cualquiera que
         tenga el enlace de la cotización (`get_quote_checkout` y el replay de `create_booking_from_quote` lo devuelven sin
         comprobar identidad, incluso con la cotización vencida). Subir vouchers o mostrar cuentas de pago **no puede
         depender solo de `public_token`**: acotarlo (p. ej. solo mientras la reserva esté en `pending_payment` y no haya
-        vencido) o exigir una prueba adicional, y cubrirlo con pgTAP.
+        vencido) o exigir una prueba adicional, y cubrirlo con pgTAP. Resuelto: `get_booking_payment_info` devuelve `NULL` (y la subida se rechaza)
+        salvo que la reserva esté en `pending_payment`, con el hold vigente y sin voucher en revisión.
+- **Hecho** (rama `feat/SD-405-payment-voucher`): migración `20261103180000_payment_vouchers.sql` (bucket privado `payment-vouchers`, política de subida
+  acotada a `<org>/<public_token>/<uuid>.<jpg|png|webp|pdf>` con máx. 5 archivos por reserva, RPC `get_booking_payment_info` y `submit_payment_voucher`),
+  `lib/domain/payment-voucher.ts`, `lib/dal/public/payment-voucher.ts`, `lib/dal/payment-vouchers.ts` (URL firmada para miembros),
+  `components/site/voucher-form.tsx`, panel de pago en `/[lang]/reserva/[public_token]`. El archivo sube **directo del navegador** al bucket (puede
+  superar el límite de 4,5 MB de una petición al servidor); el servidor solo registra el pago: **el monto y la moneda salen de la reserva**, nunca del formulario.
+  Probado de punta a punta contra `next dev` + Supabase local (página, subida con clave anónima, rechazos, registro, lectura firmada).
+- **Para SD-406**: mostrar el voucher con `<img>` (imágenes) o como descarga (`createSignedUrl(..., { download: true })` en PDF); pasar a `getVoucherSignedUrl` el cliente de sesión y
+  el `orgId` de la membresía verificada (nunca de un parámetro); destacar los comprobantes con muchas horas `pending_review` (retienen las fechas hasta que el dueño decida).
+- **Pendiente / fuera de alcance**: la pantalla del dueño para **ver** el voucher y aprobar/rechazar es SD-406 (aquí solo el DAL de URL firmada);
+  **no existe aún ninguna pantalla para configurar las cuentas de cobro** (Yape/Plin/banco, tabla `property_payment_accounts`): ver SD-411.
 
 ### [ ] SD-406 · feat(dashboard): bookings management
 `L` · Depende: SD-405 · Review: `R+S`
@@ -1336,6 +1348,23 @@ Implementado en SD-403; pendiente de revisiones R+S y del merge de #46. Prueba y
 - **Alcance**: rate limiting / BotID en crear reserva, cotizar y subir voucher; límites de holds activos por IP/teléfono.
 - **Criterios**
   - [ ] Ráfaga de 20 reservas desde el mismo origen es bloqueada.
+
+### [ ] SD-411 · feat(dashboard): payment accounts settings
+`S` · Depende: SD-401 · Review: `R+S`
+- **Alcance**: en Ajustes, CRUD de `property_payment_accounts` (Yape, Plin, cuenta bancaria con CCI de 20 dígitos, moneda, instrucciones, activo, orden) para
+  que el dueño publique dónde cobrar. Sin cuentas activas en la moneda de la reserva, la página de pago de SD-405 dice al huésped que coordine por WhatsApp.
+- **Criterios**
+  - [ ] Solo miembros de la org gestionan sus cuentas (RLS ya existente); validación zod (teléfono, CCI, longitudes).
+  - [ ] Una cuenta desactivada deja de mostrarse al huésped de inmediato.
+
+### [ ] SD-412 · chore(privacy): voucher retention and purge
+`S` · Depende: SD-405, SD-406 · Review: `R+S`
+- **Alcance**: cron con service-role (como `docs/cron.md`) que borra de `payment-vouchers`: archivos sin pago asociado con más de 24 h, comprobantes de pagos rechazados o de reservas
+  expiradas/canceladas pasado un plazo, y objetos de organizaciones borradas; define el plazo de conservación de los aprobados (Ley 29733) y lo documenta.
+  Opcional: límite de revisión (p. ej. 48 h) tras el cual un pago `pending_review` deja de retener las fechas o se marca urgente.
+- **Criterios**
+  - [ ] Un archivo huérfano de más de 24 h desaparece; uno asociado a un pago aprobado no.
+  - [ ] El job es idempotente y no registra rutas ni datos personales.
 
 ### [ ] SD-410 · test(e2e): booking flow
 `M` · Depende: SD-406 · Review: `R`
