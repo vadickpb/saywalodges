@@ -7,6 +7,7 @@ import { cn } from "cn";
 const TABS = [
   { href: "/app/site", label: "Ajustes" },
   { href: "/app/site/appearance", label: "Apariencia" },
+  { href: "/app/site/guide", label: "Guía privada" },
   { href: "/app/site/units", label: "Unidades" },
   { href: "/app/site/spaces", label: "Espacios" },
   { href: "/app/site/amenities", label: "Comodidades" },

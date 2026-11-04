@@ -1,3 +1,5 @@
+import { getPublicHeroVideo } from "@/lib/dal/hero-media";
+import { guestGuideCopy } from "@/dictionaries/guest-guide";
 import { notFound } from "next/navigation";
 import { getDictionary, hasLocale } from "@/dictionaries";
 import { getSiteByHost } from "@/lib/dal/public/site";
@@ -74,6 +76,8 @@ export default async function SitePage({
 
   const { property, photos, spaces, amenities, distances, units, rates } = data;
   const { content } = property;
+  const videoUrl = await getPublicHeroVideo(property.orgId, lang);
+  const mediaCopy = guestGuideCopy(lang);
   const dict = await getDictionary(lang);
   const waUrl = whatsappUrl(property, lang);
   const fromLabel = (cents: number) =>
@@ -133,6 +137,9 @@ export default async function SitePage({
           dict={dict.hero}
           name={property.name}
           heroUrl={photos.hero}
+          videoUrl={videoUrl}
+          videoLabel={mediaCopy.video}
+          videoFallback={mediaCopy.videoError}
           region={pick(content.region, lang)}
           headline={pick(content.headline, lang)}
           tagline={pick(content.tagline, lang)}

@@ -1979,3 +1979,22 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   coinciden con `main`; el complemento de cobertura no introduce esos avisos. Evaluar exposición real,
   actualizar dependencias y verificar rutas/host/auth en un ticket propio, antes de ampliar la publicación.
   Informe consultado el 2026-10-23; no se ejecutó `npm audit fix` ni actualizaciones generales en SD-206.
+
+## Prioridad del dueño — Guía privada y video de portada (2026-11-04)
+
+Entrega integrada PP-08/09; especificación en `docs/plan-personalizacion-premium.md` y ADR 0018.
+No cambia los estados de los demás tickets ni su trabajo guardado.
+
+### [x] PP-08 · feat: private house guide
+- Editor owner en `/app/site/guide`: títulos, instrucciones, pasos, secciones ordenables/ocultables e imágenes privadas.
+- Borrador/publicación con control de concurrencia. Enlaces aleatorios con contraseña, vencimiento y revocación.
+- Huésped en `/{lang}/guia/{token}` sin cuenta; contenido e imágenes comprueban sesión/publicación/revocación.
+- Límites persistentes de intentos y sesiones, noindex/no-referrer y sin caché compartida.
+- Verificado con unitarios, pgTAP y flujo HTTP local. Despliegue pendiente de aprobar la migración por el workflow.
+
+### [x] PP-09 · feat: hero video
+- Owner sube y previsualiza video privado en `/app/site/appearance`; elige foto o video y publica explícitamente.
+- MP4 H.264 sin audio hasta 30 MB / 60 s; validación de contenedor/duración/pista y registro exclusivo del servidor.
+- Foto principal como poster/fallback; controles manuales, reproducción inline y soporte Range.
+- Borradores privados; volver a foto retira el video de la ruta pública. Sin transcodificación ni videos con voz en esta entrega.
+- Verificado con unitarios, pgTAP y upload/publicación/lectura HTTP local. Despliegue de BD pendiente del workflow.

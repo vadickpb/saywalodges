@@ -1,3 +1,4 @@
+import { HeroVideo } from "./hero-video";
 import { BedDouble, MapPin, MessageCircle, Users } from "lucide-react";
 import type { Dict } from "@/dictionaries/en";
 import { format } from "@/lib/domain/format";
@@ -7,6 +8,9 @@ type Props = {
   dict: Dict["hero"];
   name: string;
   heroUrl: string;
+  videoUrl?: string | null;
+  videoLabel?: string;
+  videoFallback?: string;
   region: string;
   headline: string;
   tagline: string;
@@ -16,7 +20,7 @@ type Props = {
   waUrl: string;
 };
 
-export function Hero({ dict, name, heroUrl, region, headline, tagline, capacity, bedrooms, locality, waUrl }: Props) {
+export function Hero({ dict, name, heroUrl, videoUrl, videoLabel, videoFallback, region, headline, tagline, capacity, bedrooms, locality, waUrl }: Props) {
   const facts = [
     capacity ? { icon: Users, text: format(dict.guests, { count: capacity }) } : null,
     bedrooms > 0
@@ -54,6 +58,8 @@ export function Hero({ dict, name, heroUrl, region, headline, tagline, capacity,
           {headline || name}
         </h1>
         {tagline && <p className="mt-5 max-w-2xl text-lg leading-relaxed opacity-90 sm:text-xl">{tagline}</p>}
+
+        {videoUrl && heroUrl && <div className="mt-6 max-w-xl"><HeroVideo src={videoUrl} poster={heroUrl} label={videoLabel ?? name} fallback={videoFallback ?? name} /></div>}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <a href={waUrl} target="_blank" rel="noopener noreferrer" className={buttonStyles.light}>

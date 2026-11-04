@@ -65,6 +65,7 @@ export function buildCsp({ nonce, isDev, supabaseUrl }: CspOptions): string {
     // Attribute-only: it grants no script execution and no <style> element injection. See ADR-0011.
     ["style-src-attr", ["'unsafe-inline'"]],
     ["img-src", ["'self'", "data:", "blob:", supabase, ...payments.img]],
+    ["media-src", ["'self'", supabase]],
     ["font-src", ["'self'"]],
     ["connect-src", ["'self'", supabase, ...payments.connect]],
     ["frame-src", payments.frame.length ? [...payments.frame] : ["'none'"]],

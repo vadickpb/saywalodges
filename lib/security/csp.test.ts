@@ -52,6 +52,7 @@ describe("buildCsp (production)", () => {
     const csp = prod();
     expect(directive(csp, "connect-src")).toBe(`connect-src 'self' ${SUPABASE}`);
     expect(directive(csp, "img-src")).toBe(`img-src 'self' data: blob: ${SUPABASE}`);
+    expect(directive(csp, "media-src")).toBe(`media-src 'self' ${SUPABASE}`);
     expect(csp).not.toMatch(/\*|\shttps:(\s|;|$)|\shttp:(\s|;|$)/);
   });
 
