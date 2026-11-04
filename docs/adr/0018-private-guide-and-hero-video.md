@@ -44,6 +44,9 @@ Vista previa con cookie de owner. Ruta pública solo si ese video está seleccio
 propiedad; Storage también comprueba esa selección. Las rutas soportan Range para avanzar
 el video, no exponen credenciales y no cachean respuestas. Reproducción manual, sin autoplay,
 con controles nativos y foto alternativa; funciona igualmente con movimiento reducido.
+Las respuestas completas se transmiten como stream sin Content-Length; cada respuesta Range
+se limita a 4 MiB para no superar el límite de respuestas bufferizadas de Vercel.
+Referencia: [streaming recomendado por Vercel](https://vercel.com/kb/guide/how-to-bypass-vercel-body-size-limit-serverless-functions).
 Volver a foto cierra la ruta pública del video. Los objetos previos se conservan; limpieza y cuotas
 por almacenamiento total quedan para una entrega posterior, sin borrar recursos referenciados.
 
