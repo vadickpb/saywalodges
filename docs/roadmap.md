@@ -1794,6 +1794,17 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
         `docs/workflow.md`).
   - [ ] Una ejecución manual de *Deploy database* queda en «Waiting» y el *Dry run* confirma que la base remota está al día.
 
+### [~] SD-901 · chore(workflow): automated pipeline with risk-based review
+`M` · Depende: SD-900 · Review: `R+S`
+- **Alcance**: cola de trabajo por lotes (`docs/cola.md`), decisiones del dueño (`docs/decisiones-pendientes.md`), guía del dueño
+  (`docs/guia-dueno.md`), manual del coordinador (`docs/coordinador.md`), etiqueta de riesgo por PR y auto-merge de riesgo bajo
+  (`.github/workflows/pr-risk.yml`, `scripts/lib/pr-risk.mjs`), Dependabot semanal.
+- **Pendiente del dueño**: aprobar la excepción `risk:low` en `AGENTS.md`/`CLAUDE.md`; proteger `main`, permitir auto-merge y crear la variable `AUTO_MERGE=true` (guía, «Configuración única»).
+- **Siguiente**: SD-903 (versiones con `release-please`; `main` → demo, versión → clientes).
+- **Criterios**
+  - [x] Un PR que toca `supabase/`, `lib/dal/`, `actions.ts`, `package.json` o `.github/` queda `risk:high` (tests de `pr-risk`).
+  - [ ] Un PR solo de UI con CI verde se mergea sin intervención (tras la configuración única).
+
 ## Fase 10 — Instalación por cliente (ADR 0010)
 
 Orden: SD-1005 y SD-1006 son independientes. El resto sigue la cadena SD-1001 → SD-1002 → SD-1003 / SD-1007 → SD-1004.

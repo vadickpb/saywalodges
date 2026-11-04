@@ -1,0 +1,23 @@
+# SD-901: weekly dependency updates. package*.json and .github/ are high risk
+# (scripts/lib/pr-risk.mjs), so these PRs are never auto-merged: Claude reviews
+# them in the weekly maintenance pass (docs/cola.md).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Lima
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: chore(deps)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore(ci)
