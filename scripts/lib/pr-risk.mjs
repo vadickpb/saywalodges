@@ -14,8 +14,9 @@ const LOW_RISK_PATHS = [
   /^README(\.[a-z]{2})?\.md$/,
   /^dictionaries\/[^/]+\.ts$/,
   /^components\/(site|dashboard|ui|marketing)\/[^/]+\.tsx?$/,
-  // Presentational route files only (no route.ts, actions.ts, proxy, auth).
-  /^app\/(sites|app)\/.+\/(page|layout|loading|error|not-found)\.tsx$/,
+  // Route files (page/layout) are NOT here: they already hold sinks such as
+  // dangerouslySetInnerHTML or DAL calls that a diff-only scan cannot see, so
+  // changing one unchanged-context line could be dangerous. They get a review.
   /^e2e\/.+\.(ts|tsx)$/,
   /\.test\.(ts|tsx|mjs)$/,
   /^public\/.+\.(png|jpe?g|webp|avif|ico|woff2?)$/,
@@ -28,6 +29,9 @@ const ALWAYS_HIGH = [
   /^\.github\//,
   /^\.claude\//,
   /^(AGENTS|CLAUDE)\.md$/,
+  // Components that already carry a sink (they call server actions or take
+  // uploads), which a diff-only scan cannot see.
+  /^components\/site\/voucher-form\.tsx$/,
 ];
 
 // Added lines that signal server-side or security-relevant code.
@@ -41,6 +45,8 @@ const SENSITIVE_CONTENT = [
   /process\.env/,
   /\bfetch\(/,
   /\beval\(|new Function\(/,
+  /\binnerHTML\b|insertAdjacentHTML|document\.write/,
+  /from ["'][^"']*\/actions["']/,
   /from ["']@\/lib\/(cron-auth|security|log|env|email\/send|whatsapp|ical)/,
 ];
 

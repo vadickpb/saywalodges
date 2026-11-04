@@ -7,8 +7,6 @@ describe("classifyPr", () => {
   it("treats presentational UI, copy, docs, tests and images as low risk", () => {
     expect(classifyPr([
       ui("components/site/quote-form.tsx"),
-      ui("app/sites/[host]/[lang]/cotizar/page.tsx"),
-      ui("app/app/bookings/page.tsx"),
       ui("dictionaries/es.ts"),
       ui("docs/roadmap.md"),
       ui("lib/domain/dates.test.ts"),
@@ -34,6 +32,10 @@ describe("classifyPr", () => {
     "app/api/cron/expire-holds/route.ts",
     "app/sites/[host]/[lang]/cotizar/actions.ts",
     "app/(platform)/login/page.tsx",
+    "app/sites/[host]/[lang]/layout.tsx",
+    "app/sites/[host]/[lang]/cotizar/page.tsx",
+    "app/app/bookings/page.tsx",
+    "components/site/voucher-form.tsx",
     "app/(platform)/auth/callback/route.ts",
     "scripts/lib/demo-data.mjs",
     "scripts/check-installation-health.mjs",
@@ -62,6 +64,8 @@ describe("classifyPr", () => {
     ['+await fetch("https://x", { method: "POST" });'],
     ['+await supabase.rpc("approve_payment");'],
     ['+import "server-only";'],
+    ["+el.innerHTML = value;"],
+    ['+import { submit } from "./actions";'],
   ])("flags low-risk paths that add sensitive code: %s", (patch) => {
     expect(classifyPr([ui("components/site/hero.tsx", patch)]).risk).toBe("high");
   });
