@@ -150,6 +150,13 @@ coordinador (Claude Code) sigue [`docs/coordinador.md`](coordinador.md); el due�
   Un fallo se convierte en un ticket de arreglo al frente de la cola.
 - **Decisiones de negocio**: se anotan en [`docs/decisiones-pendientes.md`](decisiones-pendientes.md) y no
   bloquean el lote.
+- **Clasificación por defecto `high`**: solo es `risk:low` lo que está en una lista corta (UI presentacional,
+  diccionarios, docs, tests, imágenes) y cuyas líneas añadidas no introducen código de servidor, service-role,
+  `process.env`, `fetch`, `rpc` ni HTML crudo. Los renombres se juzgan por ambas rutas, borrar un test es `high` y
+  un PR que no apunta a `main` nunca es `low`. Cada ejecución desarma primero el auto-merge.
+- **Riesgo residual**: si GitHub Actions falla justo en el paso de desarme tras un push nuevo, un auto-merge ya
+  armado podría seguir activo. Mitigación pendiente (SD-903): un *commit status* `risk-gate` obligatorio en la
+  protección de `main`.
 - Un merge hecho por el auto-merge de GitHub no dispara workflows de `push` a `main` (limitación de
   `GITHUB_TOKEN`). Por eso las migraciones son siempre `risk:high` y las mergea un agente, lo que sí dispara
   *Deploy database*.

@@ -7,13 +7,16 @@ name: PR risk
 # Security: pull_request_target runs THIS workflow as it is on main, with the
 # base checkout. The PR's code is never checked out or executed here; the file
 # list comes from the API. A PR therefore cannot rewrite its own classifier.
+# Every run first disarms auto-merge, so a push that fails to classify can
+# never ride an earlier "low" decision. Renames are judged by both paths,
+# added lines are scanned for server code, and only PRs into main qualify.
 # Auto-merge stays off until the owner sets the repository variable
 # AUTO_MERGE=true, which must only be done after branch protection on main
 # requires the CI checks (docs/guia-dueno.md, "Configuración única").
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
 
 permissions:
   contents: write
@@ -30,6 +33,17 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
+      # Fail safe: a new push or a base change first cancels any armed
+      # auto-merge; it is re-armed only at the end if the new head is low.
+      - name: Disarm auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if gh pr view "$PR" -R "$GITHUB_REPOSITORY" --json autoMergeRequest --jq '.autoMergeRequest != null' | grep -q true; then
+            gh pr merge "$PR" -R "$GITHUB_REPOSITORY" --disable-auto
+          fi
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.pull_request.base.sha }}
@@ -44,9 +58,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" --jq '.[].filename' > files.txt
-          risk="$(node scripts/pr-risk.mjs < files.txt)"
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" \
+            --jq '.[] | {filename, previous_filename, status, patch}' | jq -s . > files.json
+          risk="$(node scripts/pr-risk.mjs "$CHANGED" < files.json)"
+          # Only PRs into the default branch may ever be low risk.
+          if [ "$BASE_REF" != "$DEFAULT_BRANCH" ]; then risk=high; fi
           echo "risk=${risk}" >> "$GITHUB_OUTPUT"
           echo "PR #${PR}: risk ${risk}"
 
@@ -61,18 +81,10 @@ jobs:
           other=$([ "$RISK" = high ] && echo low || echo high)
           gh pr edit "$PR" -R "$GITHUB_REPOSITORY" --add-label "risk:${RISK}" --remove-label "risk:${other}"
 
-      - name: Auto-merge (low risk only)
+      - name: Arm auto-merge (low risk only)
+        if: steps.risk.outputs.risk == 'low' && vars.AUTO_MERGE == 'true' && github.event.pull_request.draft == false
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
-          RISK: ${{ steps.risk.outputs.risk }}
-          ENABLED: ${{ vars.AUTO_MERGE }}
-          DRAFT: ${{ github.event.pull_request.draft }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          if [ "$RISK" = low ] && [ "$ENABLED" = true ] && [ "$DRAFT" = false ]; then
-            gh pr merge "$PR" -R "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$HEAD"
-          else
-            # A new push that turned the PR high risk must cancel a pending auto-merge.
-            gh pr merge "$PR" -R "$GITHUB_REPOSITORY" --disable-auto 2>/dev/null || true
-          fi
+        run: gh pr merge "$PR" -R "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$HEAD"
