@@ -12,6 +12,8 @@ type Props = {
   dict: Dict["availability"];
   waUrl: string;
   waLabel: string;
+  quoteHref: string;
+  quoteLabel: string;
   units: Unit[];
   unitId: string;
   nav: MonthNavigation;
@@ -70,7 +72,7 @@ function MonthLink({ to, label, children }: { to: string | null; label: string; 
 // Free / occupied nights per unit. Server-rendered and navigated with plain links
 // (?unit=…&month=…), so it works without JavaScript and the page never receives
 // anything but dates already reduced to a status.
-export function Availability({ dict, waUrl, waLabel, units, unitId, nav, weeks }: Props) {
+export function Availability({ dict, waUrl, waLabel, units, unitId, nav, weeks, quoteHref, quoteLabel }: Props) {
   const { year, month } = parseIsoMonth(nav.month);
   const monthName = dict.months[month - 1] ?? "";
   const title = format(dict.monthLabel, { month: monthName, year });
@@ -159,10 +161,13 @@ export function Availability({ dict, waUrl, waLabel, units, unitId, nav, weeks }
           )}
         </div>
 
-        <a href={waUrl} target="_blank" rel="noopener noreferrer" className={`${buttonStyles.primary} mt-8`}>
-          <MessageCircle className="size-4" aria-hidden="true" />
-          {waLabel}
-        </a>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href={quoteHref} className={buttonStyles.primary}>{quoteLabel}</Link>
+          <a href={waUrl} target="_blank" rel="noopener noreferrer" className={buttonStyles.outline}>
+            <MessageCircle className="size-4" aria-hidden="true" />
+            {waLabel}
+          </a>
+        </div>
       </Container>
     </section>
   );
