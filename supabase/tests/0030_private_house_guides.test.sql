@@ -1,0 +1,84 @@
+begin;
+select no_plan();
+delete from public.house_guides;
+-- Fixture: immutable image ID maps to a private object; no real guest information.
+insert into public.house_guide_images(id,org_id,storage_path) values
+ ('11111111-1111-4111-8111-111111111111','bf88f504-051f-4fdc-ab73-4fa12d715817','bf88f504-051f-4fdc-ab73-4fa12d715817/11111111-1111-4111-8111-111111111111.jpg');
+insert into public.house_guide_images(id,org_id,storage_path) values
+ ('22222222-2222-4222-8222-222222222222','ff24bacc-47d2-40bc-9210-f860e98892fd','ff24bacc-47d2-40bc-9210-f860e98892fd/22222222-2222-4222-8222-222222222222.jpg');
+select set_config('test.guide', '{"title":"Guest guide","sections":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","title":"Arrival","text":"PRIVATE ARRIVAL","steps":["Side door"],"visible":true,"images":[{"id":"11111111-1111-4111-8111-111111111111","alt":"Entrance","caption":"Side entrance"}]},{"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","title":"Hidden","text":"HIDDEN CONTENT","steps":[],"visible":false,"images":[]}]}',true);
+select set_config('request.jwt.claims','{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}',true);
+set local role authenticated;
+select is(public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817',current_setting('test.guide')::jsonb,0,false),1,'Owner saves draft');
+select throws_ok($$select public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817',current_setting('test.guide')::jsonb,null,true)$$,'22023',null,'NULL version cannot bypass concurrency');
+select throws_ok($$select public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817',current_setting('test.guide')::jsonb,1,null)$$,'22023',null,'NULL publication rejected');
+select ok((select published is null from public.house_guides where org_id='bf88f504-051f-4fdc-ab73-4fa12d715817'),'Draft is not published');
+select throws_ok($$select public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817',current_setting('test.guide')::jsonb,0,true)$$,'40001',null,'Concurrent stale save rejected');
+select throws_ok($$select public.save_house_guide('ff24bacc-47d2-40bc-9210-f860e98892fd',current_setting('test.guide')::jsonb,0,true)$$,'42501',null,'Cross org write rejected');
+select is(public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817',current_setting('test.guide')::jsonb,1,true),2,'Owner publishes');
+select throws_ok($$select public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817',jsonb_set(current_setting('test.guide')::jsonb,'{sections,0,images,0,id}','"22222222-2222-4222-8222-222222222222"'),2,true)$$,'22023',null,'Image from other tenant rejected');
+select throws_ok($$select public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817','{"title":"x","sections":42}',2,true)$$,'22023',null,'Malformed guide rejected');
+select throws_ok($$select public.create_house_guide_link('bf88f504-051f-4fdc-ab73-4fa12d715817','Stay',repeat('a',64),'short',now()+interval '7 days')$$,'22023',null,'Weak password rejected');
+select throws_ok($$select public.create_house_guide_link('bf88f504-051f-4fdc-ab73-4fa12d715817','Stay',repeat('a',64),repeat('é',40),now()+interval '7 days')$$,'22023',null,'Bcrypt byte truncation prevented');
+select lives_ok($$select public.create_house_guide_link('bf88f504-051f-4fdc-ab73-4fa12d715817','Stay',repeat('a',64),'private-password-2026',now()+interval '7 days')$$,'Owner creates password protected link');
+select ok((select password_hash not like '%private-password%' from public.house_guide_links where token_hash=repeat('a',64)),'Password not stored in plaintext');
+-- A draft edit does not affect readers of the published revision.
+select is(public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817',jsonb_set(current_setting('test.guide')::jsonb,'{sections,0,text}','"NEW DRAFT"'),2,false),3,'Subsequent draft saved');
+reset role;
+set local role anon;
+select throws_like($$select * from public.house_guides$$,'%permission denied%','Anon cannot query guide table');
+select throws_like($$select * from public.house_guide_links$$,'%permission denied%','Anon cannot query credentials');
+select throws_like($$select * from private.house_guide_sessions$$,'%permission denied%','Sessions inaccessible');
+select is(public.read_house_guide('saywa-lodges',repeat('a',64),repeat('b',64)),null::jsonb,'No content before password');
+select is(public.unlock_house_guide('demo',repeat('a',64),'private-password-2026',repeat('b',64)),false,'Link does not work on another tenant');
+select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'incorrect-password',repeat('b',64)),false,'Wrong password denied');
+select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'private-password-2026',repeat('b',64)),true,'Correct password creates session');
+select is(public.read_house_guide('saywa-lodges',repeat('a',64),repeat('b',64))->'sections'->0->>'text','PRIVATE ARRIVAL','Reads published content, not new draft');
+select is(jsonb_array_length(public.read_house_guide('saywa-lodges',repeat('a',64),repeat('b',64))->'sections'),1,'Hidden sections excluded');
+select is(public.read_house_guide('demo',repeat('a',64),repeat('b',64)),null::jsonb,'Session cannot read other host');
+select is((select count(*) from public.house_guide_images),0::bigint,'Images hidden without session header');
+select set_config('request.headers',jsonb_build_object('x-guide-session',repeat('b',64))::text,true);
+select is((select count(*) from public.house_guide_images),1::bigint,'Visitor sees only own published image');
+select ok(private.can_read_house_guide_image('bf88f504-051f-4fdc-ab73-4fa12d715817/11111111-1111-4111-8111-111111111111.jpg'),'Storage policy permits authorized image');
+select ok(not private.can_read_house_guide_image('ff24bacc-47d2-40bc-9210-f860e98892fd/22222222-2222-4222-8222-222222222222.jpg'),'Other tenant image denied');
+reset role;
+-- A staff member cannot edit or revoke.
+select set_config('request.jwt.claims','{"sub":"bd6a1c86-01e2-40a4-ba79-4e28b373e880"}',true);
+set local role authenticated;
+select is((select count(*) from public.house_guides),0::bigint,'Foreign owner cannot see private guide');
+reset role;
+select set_config('request.jwt.claims','{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}',true);
+set local role authenticated;
+select ok(public.revoke_house_guide_link('bf88f504-051f-4fdc-ab73-4fa12d715817',(select id from public.house_guide_links where token_hash=repeat('a',64))),'Owner revokes link');
+reset role;set local role anon;
+select is(public.read_house_guide('saywa-lodges',repeat('a',64),repeat('b',64)),null::jsonb,'Revocation immediately denies existing session');
+select is((select count(*) from public.house_guide_images),0::bigint,'Revocation immediately denies images');
+select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'private-password-2026',repeat('c',64)),false,'Revoked link cannot log in');
+reset role;
+update public.house_guide_links set revoked_at=null,expires_at=now()-interval '1 second';
+set local role anon;
+select is(public.read_house_guide('saywa-lodges',repeat('a',64),repeat('b',64)),null::jsonb,'Expired link denies existing session');
+reset role;
+update public.house_guide_links set expires_at=now()+interval '1 day',failed_attempts=10;
+set local role anon;
+select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'private-password-2026',repeat('c',64)),false,'Rate limit persists even across valid attempts');
+reset role;
+update public.house_guide_links set attempt_window=now()-interval '16 minutes';
+set local role anon;
+select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'private-password-2026',repeat('c',64)),true,'Rate limit resets after window');
+reset role;
+update private.house_guide_sessions set expires_at=now()-interval '1 second';
+set local role anon;
+select is(public.read_house_guide('saywa-lodges',repeat('a',64),repeat('c',64)),null::jsonb,'Expired session denied');
+reset role;
+update public.house_guide_links set total_attempts=50;
+set local role anon;
+select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'private-password-2026',repeat('d',64)),false,'Total attempts bounded even with correct password');
+reset role;
+update public.house_guide_links set total_attempts=0;
+insert into private.house_guide_sessions(session_hash,org_id,link_id,expires_at)
+select md5(n::text)||md5('session'||n::text),'bf88f504-051f-4fdc-ab73-4fa12d715817',id,now()+interval '1 day'
+from public.house_guide_links,generate_series(1,100) n;
+set local role anon;
+select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'private-password-2026',repeat('e',64)),false,'Active session count bounded');
+select * from finish();rollback;

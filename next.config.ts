@@ -17,6 +17,8 @@ const isLocalSupabase = supabaseUrl.hostname === "127.0.0.1" || supabaseUrl.host
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.18.12"],
   compress: true,
+  // Never print private guide text, passwords or link tokens in development logs.
+  logging: { serverFunctions: false, incomingRequests: { ignore: [/\/guia\//] } },
 
   // Photo uploads go through server actions. 4.5 MB matches Vercel's request
   // body cap; the app itself accepts images up to 4 MB (MAX_UPLOAD_BYTES).
@@ -52,6 +54,8 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: staticSecurityHeaders(process.env.NODE_ENV === "production"),
       },
+      { source: "/:lang/guia/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }, { key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
+      { source: "/sites/:host/:lang/guia/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }, { key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
     ];
   },
 };

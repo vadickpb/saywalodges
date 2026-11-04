@@ -33,7 +33,87 @@ export type Database = {
     };
   };
   public: {
-    Tables: {
+    Tables: {"house_guide_images": {
+                  Row: {
+                    "created_at": string,"id": string,"org_id": string,"storage_path": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id": string,"org_id": string,"storage_path": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"org_id"?: string,"storage_path"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "house_guide_images_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"house_guide_links": {
+                  Row: {
+                    "attempt_window": string,"created_at": string,"expires_at": string,"failed_attempts": number,"id": string,"label": string,"org_id": string,"password_hash": string,"revoked_at": string | null,"token_hash": string,"total_attempts": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempt_window"?: string,"created_at"?: string,"expires_at": string,"failed_attempts"?: number,"id"?: string,"label": string,"org_id": string,"password_hash": string,"revoked_at"?: string | null,"token_hash": string,"total_attempts"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "attempt_window"?: string,"created_at"?: string,"expires_at"?: string,"failed_attempts"?: number,"id"?: string,"label"?: string,"org_id"?: string,"password_hash"?: string,"revoked_at"?: string | null,"token_hash"?: string,"total_attempts"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "house_guide_links_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"house_guides": {
+                  Row: {
+                    "created_at": string,"draft": NonNullable<Json>,"id": string,"org_id": string,"published": Json | null,"updated_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"draft": NonNullable<Json>,"id"?: string,"org_id": string,"published"?: Json | null,"updated_at"?: string,"version"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"draft"?: NonNullable<Json>,"id"?: string,"org_id"?: string,"published"?: Json | null,"updated_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "house_guides_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: true
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"property_hero_media": {
+                  Row: {
+                    "created_at": string,"mode": string,"org_id": string,"updated_at": string,"video_path": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"mode"?: string,"org_id": string,"updated_at"?: string,"video_path"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"mode"?: string,"org_id"?: string,"updated_at"?: string,"video_path"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "property_hero_media_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: true
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },
       amenities: {
         Row: {
           desc_en: string;
@@ -1682,6 +1762,27 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+"create_house_guide_link":
+{ Args: { "p_expires_at": string,"p_label": string,"p_org_id": string,"p_password": string,"p_token_hash": string }; Returns: string
+                           },
+"read_house_guide":
+{ Args: { "p_host": string,"p_session_hash": string,"p_token_hash": string }; Returns: Json
+                           },
+"register_verified_hero_video":
+{ Args: { "p_org_id": string,"p_path": string,"p_user_id": string }; Returns: boolean
+                           },
+"revoke_house_guide_link":
+{ Args: { "p_id": string,"p_org_id": string }; Returns: boolean
+                           },
+"save_hero_media":
+{ Args: { "p_mode": string,"p_org_id": string,"p_video_path": string }; Returns: boolean
+                           },
+"save_house_guide":
+{ Args: { "p_content": Json,"p_org_id": string,"p_publish": boolean,"p_version": number }; Returns: number
+                           },
+"unlock_house_guide":
+{ Args: { "p_host": string,"p_password": string,"p_session_hash": string,"p_token_hash": string }; Returns: boolean
+                           }
       begin_ical_sync: {
         Args: { p_feed_id: string; p_org_id: string };
         Returns: Json;

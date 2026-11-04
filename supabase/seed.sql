@@ -391,3 +391,8 @@ INSERT INTO public.unit_rates (id, org_id, property_id, unit_id, season_id, nigh
 SELECT ('ee205011-0000-4000-8000-' || to_char(start_date, 'YYYYMMDD') || '0000')::uuid,
   org_id, property_id, 'ee204001-0000-4000-8000-000000000001', id, 50000, NULL, 0, 1
 FROM inserted;
+
+-- PP-08: sample drafts only. No private guide or access link is published by seed.
+insert into public.house_guides(org_id,draft) values
+ ('bf88f504-051f-4fdc-ab73-4fa12d715817','{"title":"Guía de Saywa Lodges","sections":[]}'),
+ ('ff24bacc-47d2-40bc-9210-f860e98892fd','{"title":"Demo house guide","sections":[]}');
