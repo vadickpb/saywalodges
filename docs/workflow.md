@@ -133,6 +133,35 @@ con un único dueño administrador es aceptable, pero un administrador puede sal
 4. Comprobación: Actions → *Deploy database* → **Run workflow**. Debe quedar en «Waiting»; apruébalo y el
    «Dry run» debe decir que la base remota está al día (*Remote database is up to date*).
 
+## Modo automático (SD-901)
+
+El trabajo avanza por **lotes** aprobados por el dueño, en el orden de [`docs/cola.md`](cola.md). El
+coordinador (Claude Code) sigue [`docs/coordinador.md`](coordinador.md); el dueño, [`docs/guia-dueno.md`](guia-dueno.md).
+
+- **Riesgo por PR**: el workflow `PR risk` etiqueta cada PR con `risk:high` o `risk:low` según los archivos
+  (`scripts/lib/pr-risk.mjs`, la misma lista que dispara al `security-reviewer`). Corre como
+  `pull_request_target` sin ejecutar el código del PR, así que un PR no puede cambiar su propia clasificación.
+- **`risk:low`** (UI, textos, docs, tests puros): basta la autorrevisión del implementador en contexto limpio
+  y el CI verde. Con la variable de repositorio `AUTO_MERGE=true` y `main` protegida, GitHub lo mergea solo.
+  *Requiere que el dueño apruebe la excepción en `AGENTS.md`* (hoy dice que siempre revisa el otro agente).
+- **`risk:high`**: revisión de Claude (`reviewer`, + `security-reviewer` cuando aplica), una ronda, merge con CI
+  verde y `--match-head-commit`. Si el implementador fue Claude, revisa Codex o los subagentes.
+- **Prueba del dueño**: una vez por lote sobre la demo (o en local), con la lista que prepara el coordinador.
+  Un fallo se convierte en un ticket de arreglo al frente de la cola.
+- **Decisiones de negocio**: se anotan en [`docs/decisiones-pendientes.md`](decisiones-pendientes.md) y no
+  bloquean el lote.
+- **Clasificación por defecto `high`**: solo es `risk:low` lo que está en una lista corta (componentes
+  presentacionales, diccionarios, docs, tests, imágenes; las `page.tsx`/`layout.tsx` de `app/` **no**, porque ya
+  contienen puntos sensibles que un análisis de líneas añadidas no ve) y cuyas líneas añadidas no introducen código de servidor, service-role,
+  `process.env`, `fetch`, `rpc` ni HTML crudo. Los renombres se juzgan por ambas rutas, borrar un test es `high` y
+  un PR que no apunta a `main` nunca es `low`. Cada ejecución desarma primero el auto-merge.
+- **Riesgo residual**: si GitHub Actions falla justo en el paso de desarme tras un push nuevo, un auto-merge ya
+  armado podría seguir activo. Mitigación pendiente (SD-903): un *commit status* `risk-gate` obligatorio en la
+  protección de `main`.
+- Un merge hecho por el auto-merge de GitHub no dispara workflows de `push` a `main` (limitación de
+  `GITHUB_TOKEN`). Por eso las migraciones son siempre `risk:high` y las mergea un agente, lo que sí dispara
+  *Deploy database*.
+
 ## Protocolo de cierre: «Te toca a ti»
 
 Todo ticket (o tarea) termina con este bloque, siempre, aunque esté vacío:
