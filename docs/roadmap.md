@@ -1965,9 +1965,9 @@ Producción: aprobar *Deploy database* tras un futuro merge; hasta entonces la B
 Este encargo termina con PR abierto, sin merge ni cambios de BD remota.
 
 
-### [ ] PP-11 · fix: PDF del dueño, impresión y texto para WhatsApp
+### [x] PP-11 · fix: PDF del dueño, impresión y texto para WhatsApp
 
-Seguimiento de PP-10 (mergeado en #85). Implementación en `feat/PP-11-guide-pdf-fixes`; se entrega con PR abierto, sin merge.
+Seguimiento de PP-10 (mergeado en #85). Implementado en `feat/PP-11-guide-pdf-fixes`, PR #86, para despliegue automático a producción tras el merge.
 
 - [x] «Descargar PDF» en el editor abre `/app/site/guide/imprimir`, exclusiva del dueño, con la guía publicada y fotos autorizadas por organización.
 - [x] Título «Guía – <alojamiento>»; impresión automática tras cargar fotos y fuentes, con botón para reintentar.
@@ -1980,4 +1980,4 @@ Seguimiento de PP-10 (mergeado en #85). Implementación en `feat/PP-11-guide-pdf
 - [x] Lint, typecheck, 118 archivos / 1615 tests Vitest y build locales. Revisiones funcional y de seguridad aprobadas.
 - [x] Chromium local (`app.localhost:3011`, `saywa-lodges.localhost:3011`): PDF owner y huésped, fotos privadas y caption sin alt, secciones ocultas, título y primera página con contenido; guía larga con paginación.
 - [x] Texto publicado independiente del borrador, partes de 4057/2420 caracteres, es/en y fallback manual; mensaje personalizado con saltos de línea reales y nombre conservado al editar el formulario.
-- [x] PR abierto, sin merge. No requiere pasos de producción ni cambios de BD.
+- [x] Entrega mediante PR #86 con CI verde y despliegue automático. No requiere pasos manuales de producción ni cambios de BD.
