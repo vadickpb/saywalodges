@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const rpc = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({ secret: "s3cret-s3cret-s3cret" as string | undefined, ip: "203.0.113.7" }));
-vi.mock("@/lib/supabase/anon", () => ({ getSupabaseAnon: () => ({ rpc }) }));
+vi.mock("@/lib/supabase/admin", () => ({ getSupabaseAdmin: () => ({ rpc }) }));
 vi.mock("@/lib/env", () => ({ env: { get CRON_SECRET() { return state.secret; } } }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-vercel-forwarded-for": state.ip }) }));
 import { allowPublicRequest, clientIpFrom, rateKey } from "./rate-limit";
@@ -11,9 +11,15 @@ import { allowPublicRequest, clientIpFrom, rateKey } from "./rate-limit";
 beforeEach(() => { rpc.mockReset(); state.secret = "s3cret-s3cret-s3cret"; state.ip = "203.0.113.7"; });
 
 describe("clientIpFrom", () => {
-  it("prefers the platform header and takes the first address", () => {
-    expect(clientIpFrom(new Headers({ "x-vercel-forwarded-for": "1.2.3.4", "x-forwarded-for": "9.9.9.9" }))).toBe("1.2.3.4");
+  it("trusts the Vercel header only on Vercel and takes the first address", () => {
+    expect(clientIpFrom(new Headers({ "x-vercel-forwarded-for": "1.2.3.4", "x-forwarded-for": "9.9.9.9" }), true)).toBe("1.2.3.4");
+    expect(clientIpFrom(new Headers({ "x-vercel-forwarded-for": "1.2.3.4", "x-forwarded-for": "9.9.9.9" }), false)).toBe("9.9.9.9");
     expect(clientIpFrom(new Headers({ "x-forwarded-for": "5.6.7.8, 10.0.0.1" }))).toBe("5.6.7.8");
+  });
+  it("keys IPv6 on the /64 prefix, expanding ::", () => {
+    expect(clientIpFrom(new Headers({ "x-real-ip": "2001:db8:1:2:aaaa:bbbb:cccc:dddd" }), false)).toBe("2001:0db8:0001:0002::/64");
+    expect(clientIpFrom(new Headers({ "x-real-ip": "2001:db8:1:2::9" }), false)).toBe("2001:0db8:0001:0002::/64");
+    expect(clientIpFrom(new Headers({ "x-real-ip": "2001:db8::1" }), false)).toBe("2001:0db8:0000:0000::/64");
   });
   it("falls back to a shared bucket for missing or malformed values", () => {
     expect(clientIpFrom(new Headers())).toBe("unknown");
@@ -55,8 +61,10 @@ describe("allowPublicRequest", () => {
     rpc.mockResolvedValue({ data: "no", error: null });
     expect(await allowPublicRequest("quote")).toBe(true);
   });
-  it("does nothing without a configured secret (local dev)", async () => {
+  it("does nothing with a missing or too short secret (local dev)", async () => {
     state.secret = undefined;
+    expect(await allowPublicRequest("quote")).toBe(true);
+    state.secret = "short";
     expect(await allowPublicRequest("quote")).toBe(true);
     expect(rpc).not.toHaveBeenCalled();
   });

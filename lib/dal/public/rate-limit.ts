@@ -1,12 +1,14 @@
 import "server-only";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
-import { getSupabaseAnon } from "@/lib/supabase/anon";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 import { log } from "@/lib/log";
 
 // Request-rate limiting for the public guest actions (SD-409). Counters live in the database (check_public_rate_limit) so the limit
 // holds across serverless instances without an external service. The key is an HMAC of the caller, so no IP or email is stored.
+// The RPC is executable by service_role only (anon could flood the table), so this DAL is the one place that calls it with the
+// admin client: a deliberate, minimal exception to "service-role only in webhooks/cron/RPCs" (it never reads or writes business data).
 export type RateScope = "quote" | "checkout" | "voucher";
 
 // Per caller IP. Generous for a shared Wi-Fi, tight enough to stop a script.
@@ -18,11 +20,19 @@ export const RATE_LIMITS: Record<RateScope, { limit: number; windowSeconds: numb
 // Per guest e-mail on top of the IP limit, so rotating IPs does not help to hold many dates for one contact.
 export const CHECKOUT_PER_EMAIL = { limit: 5, windowSeconds: 3600 };
 
-// Vercel overwrites these headers with the real client address; on other hosts the proxy must do the same (docs/cron.md).
-export function clientIpFrom(h: Pick<Headers, "get">): string {
-  const raw = h.get("x-vercel-forwarded-for") ?? h.get("x-real-ip") ?? h.get("x-forwarded-for") ?? "";
+// Vercel overwrites x-vercel-forwarded-for with the real client address; it is trusted only when running on Vercel. On other hosts the
+// proxy must set x-real-ip / x-forwarded-for AND strip any incoming x-vercel-forwarded-for (docs/cron.md).
+export function clientIpFrom(h: Pick<Headers, "get">, onVercel = Boolean(process.env.VERCEL)): string {
+  const raw = (onVercel ? h.get("x-vercel-forwarded-for") : null) ?? h.get("x-real-ip") ?? h.get("x-forwarded-for") ?? "";
   const ip = raw.split(",")[0]?.trim() ?? "";
-  return /^[0-9a-fA-F:.]{3,45}$/.test(ip) ? ip : "unknown";
+  if (!/^[0-9a-fA-F:.]{3,45}$/.test(ip)) return "unknown";
+  // A single IPv6 subscriber owns a whole /64: key on the prefix so rotating the host part does not reset the budget.
+  if (ip.includes(":") && !ip.includes(".")) {
+    const [head = "", tail = ""] = ip.split("::");
+    const groups = [...(head ? head.split(":") : []), ...(ip.includes("::") ? Array(Math.max(0, 8 - (head ? head.split(":").length : 0) - (tail ? tail.split(":").length : 0))).fill("0") : []), ...(tail ? tail.split(":") : [])];
+    return groups.slice(0, 4).map(g => g.toLowerCase().padStart(4, "0")).join(":") + "::/64";
+  }
+  return ip;
 }
 
 export function rateKey(secret: string, scope: string, value: string): string {
@@ -31,9 +41,12 @@ export function rateKey(secret: string, scope: string, value: string): string {
 
 async function consume(scope: RateScope, value: string, limit: number, windowSeconds: number): Promise<boolean> {
   const secret = env.CRON_SECRET;
-  // No secret configured (local dev): do not block, but say so once per call in the logs.
-  if (!secret) return true;
-  const { data, error } = await getSupabaseAnon().rpc("check_public_rate_limit", {
+  // No usable secret (local dev): do not block. In production this means rate limiting is OFF, so say it loudly in the logs.
+  if (!secret || secret.length < 32) {
+    if (process.env.NODE_ENV === "production") log("error", "ratelimit.disabled", { outcome: "no_secret" });
+    return true;
+  }
+  const { data, error } = await getSupabaseAdmin().rpc("check_public_rate_limit", {
     p_scope: scope, p_key_hash: rateKey(secret, scope, value), p_limit: limit, p_window_seconds: windowSeconds,
   });
   // Fail open: a counter outage must not take bookings down (the database caps from SD-403/404 still apply).

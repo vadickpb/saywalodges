@@ -14,10 +14,8 @@ create index public_rate_limits_window_idx on public.public_rate_limits (window_
 alter table public.public_rate_limits enable row level security;
 revoke all on public.public_rate_limits from public, anon, authenticated;
 
--- Counts one request and answers whether it is still within the limit. The scope is a closed list and every number is bounded,
--- so a direct anonymous caller cannot create unbounded keys per call; stale windows are purged opportunistically.
--- Residual risk (documented in docs/cron.md): a direct caller can still add rows with random keys; that is the same cost as
--- spamming the public site and the 2-day purge bounds it.
+-- Counts one request and answers whether it is still within the limit. Only the server (service_role, called from lib/dal) may
+-- execute it; the scope is a closed list and every number is bounded. Stale windows are purged opportunistically.
 create function public.check_public_rate_limit(p_scope text, p_key_hash text, p_limit integer, p_window_seconds integer)
 returns boolean language plpgsql security definer set search_path = '' as $$
 declare v_start timestamptz; v_hits integer;
@@ -40,6 +38,8 @@ begin
 end;
 $$;
 revoke all on function public.check_public_rate_limit(text,text,integer,integer) from public;
-grant execute on function public.check_public_rate_limit(text,text,integer,integer) to anon, authenticated, service_role;
+-- Server-only: an anonymous caller must not be able to write counter rows (flooding) or move other callers' counters.
+revoke all on function public.check_public_rate_limit(text,text,integer,integer) from anon, authenticated;
+grant execute on function public.check_public_rate_limit(text,text,integer,integer) to service_role;
 
 commit;
