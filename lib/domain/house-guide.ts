@@ -2,11 +2,19 @@ import { z } from "zod";
 
 // Private content has a separate schema: never put this in properties.content,
 // which is deliberately readable by anonymous visitors.
-export const guideImageSchema = z.object({
+export const guideImageSchema = z.preprocess((input) => {
+  // The persisted format requires alt text; derive it when only a name was entered.
+  if (typeof input === "object" && input !== null && "alt" in input &&
+      typeof input.alt === "string" && !input.alt.trim() &&
+      "caption" in input && typeof input.caption === "string") {
+    return { ...input, alt: input.caption.trim().slice(0, 240) };
+  }
+  return input;
+}, z.object({
   id: z.uuid(),
   alt: z.string().trim().min(1).max(240),
   caption: z.string().trim().max(500).default(""),
-}).strict();
+}).strict());
 
 export const guideSectionSchema = z.object({
   id: z.uuid(),

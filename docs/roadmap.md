@@ -1963,3 +1963,21 @@ Chromium local (`app.localhost:3010` y `saywa-lodges.localhost:3010`): generar/e
 mensaje es/en, imágenes privadas, sección oculta y estilos de impresión. Autorrevisión completa y revisores funcional/de seguridad aprobados.
 Producción: aprobar *Deploy database* tras un futuro merge; hasta entonces la BD anterior rechaza contraseñas de 6–11 caracteres.
 Este encargo termina con PR abierto, sin merge ni cambios de BD remota.
+
+
+### [x] PP-11 · fix: PDF del dueño, impresión y texto para WhatsApp
+
+Seguimiento de PP-10 (mergeado en #85). Implementado en `feat/PP-11-guide-pdf-fixes`, PR #86, para despliegue automático a producción tras el merge.
+
+- [x] «Descargar PDF» en el editor abre `/app/site/guide/imprimir`, exclusiva del dueño, con la guía publicada y fotos autorizadas por organización.
+- [x] Título «Guía – <alojamiento>»; impresión automática tras cargar fotos y fuentes, con botón para reintentar.
+- [x] Impresión sin mínimos de altura ni envoltorios flex/grid; secciones largas divisibles para evitar la primera página vacía.
+- [x] Fotos de hasta 45 % del ancho y 65 mm de alto, completas, agrupadas por fila y con nombre debajo.
+- [x] Campo «Nombre / referencia de la imagen» guardado como caption; fallback a alt en huésped, vista previa y PDF. Caption sin alt deriva una descripción compatible con la BD existente.
+- [x] «Nombre del huésped» sigue guardado como label; mensaje es/en con huésped, alojamiento, enlace y contraseña; botones de copia conservados.
+- [x] «Copiar como texto (WhatsApp)»: guía publicada, secciones visibles, títulos con asteriscos, pasos y referencias de fotos es/en; partes de hasta 4096 caracteres y fallback de copia manual. Generador puro con Vitest, sin añadir enlaces ni contraseñas.
+- [x] Sin migraciones ni dependencias nuevas.
+- [x] Lint, typecheck, 118 archivos / 1615 tests Vitest y build locales. Revisiones funcional y de seguridad aprobadas.
+- [x] Chromium local (`app.localhost:3011`, `saywa-lodges.localhost:3011`): PDF owner y huésped, fotos privadas y caption sin alt, secciones ocultas, título y primera página con contenido; guía larga con paginación.
+- [x] Texto publicado independiente del borrador, partes de 4057/2420 caracteres, es/en y fallback manual; mensaje personalizado con saltos de línea reales y nombre conservado al editar el formulario.
+- [x] Entrega mediante PR #86 con CI verde y despliegue automático. No requiere pasos manuales de producción ni cambios de BD.
