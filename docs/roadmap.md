@@ -1394,21 +1394,37 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Seguridad (revisión R+S)**: solo el **dueño** gestiona las cuentas, en la app (página, DAL y acciones) **y** en la base de datos (migración `20261103210000_payment_accounts_owner_only.sql`: políticas de insertar/actualizar/borrar con `private.is_owner`; lectura sigue abierta a miembros; pgTAP `0027`). Un `staff` que cambiara el Yape o la cuenta desviaría los pagos de los huéspedes, y también podría hacerlo llamando a la API con su sesión.
 - **Pendiente (SD-605)**: no hay registro de quién cambió una cuenta ni de qué cuenta vio cada huésped; conviene una tabla de auditoría con disparador y aviso al dueño cuando cambie el destino de pago.
 
-### [ ] SD-412 · chore(privacy): voucher retention and purge
+### [~] SD-412 · chore(privacy): voucher retention and purge
 `S` · Depende: SD-405, SD-406 · Review: `R+S`
 - **Alcance**: cron con service-role (como `docs/cron.md`) que borra de `payment-vouchers`: archivos sin pago asociado con más de 24 h, comprobantes de pagos rechazados o de reservas
   expiradas/canceladas pasado un plazo, y objetos de organizaciones borradas; define el plazo de conservación de los aprobados (Ley 29733) y lo documenta.
   Opcional: límite de revisión (p. ej. 48 h) tras el cual un pago `pending_review` deja de retener las fechas o se marca urgente.
 - **Criterios**
-  - [ ] Un archivo huérfano de más de 24 h desaparece; uno asociado a un pago aprobado no.
-  - [ ] El job es idempotente y no registra rutas ni datos personales.
+  - [x] Un archivo huérfano de más de 24 h desaparece; uno asociado a un pago aprobado no.
+  - [x] El job es idempotente y no registra rutas ni datos personales.
+
+- **Implementado**: `/api/cron/voucher-purge` con `CRON_SECRET`, service-role, lotes de hasta 100 vía Storage API;
+  selección pura y revalidación atómica mediante marcas privadas para impedir asociación concurrente al borrar.
+  Huérfanos/orgs borradas >24 h; rechazados o reservas cerradas >30 días. Aprobados y `pending_review` siempre protegidos.
+  Tests de dominio, orquestación, auth y pgTAP. Sin DELETE SQL de objetos ni datos personales en logs.
+- **Pendiente**: aprobación de *Deploy database* y programación externa diaria (`docs/cron.md`). El dueño debe decidir
+  el plazo para aprobados (propuesta: 5 años; Ley 29733 art. 8 no lo fija) y, al decidirlo, **crear un ticket para
+  habilitar su borrado** (hoy no está habilitado). Seguimiento menor: tras purgar un comprobante rechazado, el panel
+  muestra el botón de ver comprobante y falla; devolver «comprobante eliminado» en `getVoucherSignedUrl`.
 
 ### [ ] SD-410 · test(e2e): booking flow
 `M` · Depende: SD-406 · Review: `R`
-- **Alcance**: Playwright en CI contra Supabase local: owner cotiza → huésped reserva → sube voucher → owner aprueba
+- **Alcance**: Playwright en CI contra Supabase local: el huésped cotiza en /cotizar → reserva → sube voucher → owner aprueba
   → reserva confirmada y fechas bloqueadas.
 - **Criterios**
   - [ ] Corre en CI en < 5 min y es estable (3 ejecuciones seguidas en verde).
+- **Implementado**: Playwright/Chromium contra Supabase local; huésped cotiza en `/es/cotizar`, reserva,
+  sube un PNG real y el dueño aprueba desde `/app/bookings` en otra sesión. Comprueba confirmación pública,
+  importe persistido, bloqueo permanente y rechazo de una cotización solapada. Fixtures con UUID y limpieza;
+  sin cambios de producción ni migraciones. Job independiente con límite de 5 min y tres pasadas sin retries.
+- **Ejecución y diagnóstico**: [booking-e2e.md](booking-e2e.md), `npm run test:e2e -- --repeat-each=3`.
+- **Verificado localmente**: tres pasadas consecutivas en verde (29,6 s), sin fixtures residuales; lint, typecheck, build y 1436 tests unitarios en verde. Revisiones funcional y de seguridad sin hallazgos importantes.
+- **Pendiente**: comprobar la duración real del job remoto del PR.
 
 ---
 
