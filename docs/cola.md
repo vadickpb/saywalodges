@@ -17,14 +17,17 @@ El proceso completo está en [`docs/workflow.md`](workflow.md#modo-automático-s
   tickets están `hecho` y el dueño revisó la demo.
 - Como máximo **3 tickets en curso a la vez**, y nunca dos que toquen los mismos archivos.
 
-## Lote 1 · Cerrar el flujo de reservas (en curso)
+## Lote 1 · Cerrar el flujo de reservas (cerrado)
 
 | Ticket | Qué | Quién | Estado |
 |---|---|---|---|
-| SD-407 | Emails del ciclo de la reserva + aviso al dueño de cada comprobante | Codex | en curso (`feat/SD-407-booking-emails`) |
-| SD-410 | E2E Playwright del flujo completo en CI | Codex | en curso (`test/SD-410-e2e-booking`) |
-| SD-412 | Purga de comprobantes huérfanos/rechazados | Codex (+ revisión de seguridad de Claude) | en curso (`feat/SD-412-voucher-purge`) |
+| SD-407 | Emails del ciclo de la reserva + aviso al dueño de cada comprobante | Codex | hecho (#74) |
+| SD-410 | E2E Playwright del flujo completo en CI | Codex | hecho (#76) |
+| SD-412 | Purga de comprobantes huérfanos/rechazados | Codex (+ revisión de seguridad de Claude) | hecho (#75) |
 | SD-901 | Trabajo automático: cola, riesgo, auto-merge, guía del dueño | Claude | hecho (#64) |
+
+Cierre de implementación: PRs #74, #76 y #75 mergeados. La decisión de conservación y la puesta en operación de SD-412
+siguen abiertas en el roadmap; el cierre del lote no acredita una prueba de la demo por el dueño.
 
 ## Lote 2 · Saywa Lodges en producción con huéspedes reales
 
@@ -57,7 +60,9 @@ SD-501 → SD-502 → SD-503 → SD-504 → SD-505, en ese orden (cada uno depen
 ## Después (sin lote)
 
 SD-1006 (web de ventas, necesita precio aprobado), SD-601 y SD-602 (CRM y check-in), SD-807 (ingresos
-automáticos), SD-307 (sincronización iCal programada), SD-703 (portafolio), SD-1001 pendiente (`siteOrigin`).
+automáticos), SD-307 (sincronización iCal programada), SD-703 (portafolio), SD-1001 pendiente (`siteOrigin`),
+SD-108 (límites/privilegios en BD), SD-414 (FK de reservas),
+SD-415 (concurrencia en CI), SD-416 (comprobante purgado) SD-417 (borrado de aprobados tras decidir el plazo) y SD-418 (aviso de revisión demorada).
 
 ## Mantenimiento semanal (lunes, automático)
 
