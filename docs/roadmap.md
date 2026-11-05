@@ -189,65 +189,13 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [x] pgTAP por tabla: owner de `demo` no lee ni escribe datos de `saywa-lodges`.
   - [x] `anon` no ve propiedades `published = false`.
-  - [ ] `get_advisors` (security) sin alertas de RLS — **no verificable desde aquí**: el remoto todavía
-        no tiene esta migración (Claude no tiene `db push`). Pendiente de que el usuario la aplique
-        (`npx supabase db push` o pegarla en el SQL Editor) y luego corra `get_advisors` para confirmar.
-- **Nota de cierre**: "owner de demo no lee datos de saywa-lodges" se verificó con precisión — un
-  supuesto inicial equivocado trataba "puede leer contenido publicado de otra org" como fallo; no lo
-  es, es el diseño correcto (contenido publicado es público por definición). Lo que sí se verificó de
-  punta a punta contra Supabase local, con sesiones reales (login real vía GoTrue con las contraseñas
-  sembradas en SD-101, no solo políticas leídas): un no-miembro nunca puede escribir una fila ajena
-  (`UPDATE`/`DELETE` afectan 0 filas), nunca puede leer una fila **no publicada** de otra org, y un
-  miembro sigue viendo y pudiendo escribir su propia org incluso sin publicar. Se añadió
-  `is_property_published()` (mismo patrón que `is_member()`) para que la policy de `select` de las
-  tablas hijas no dependa de una interacción implícita con la RLS de `properties`.
-
-  **Dos rondas de `reviewer`/`security-reviewer` encontraron 4 huecos reales en la primera versión de
-  este ticket, los 4 corregidos antes de cerrar** (no quedaron para después):
-  1. El hallazgo de SD-101 sobre consistencia `org_id` padre↔hijo solo se cerró a medias: la FK
-     compuesta `(property_id, org_id)` no cubría `photos.room_id`, que seguía con FK simple a
-     `rooms(id)` — un miembro podía insertar/mover una foto propia apuntando `room_id` a un room de
-     otra org. Arreglado con `unique(id, property_id)` en `rooms` + FK compuesta
-     `(room_id, property_id) references rooms(id, property_id)` en `photos`.
-  2. `is_member()`/`is_property_published()` quedaban invocables vía `/rest/v1/rpc/...` (`EXECUTE`
-     a `PUBLIC` por defecto) — exactamente el patrón que el advisor de seguridad de Supabase marca.
-     Movidas a un schema `private` (no listado en `api.schemas` de `supabase/config.toml`), con
-     `usage`/`execute` otorgado explícitamente; las policies (SQL dentro de Postgres, no HTTP) siguen
-     funcionando igual. Verificado: `/rpc/is_member` ahora da 404.
-  3. Cualquier `authenticated` podía `INSERT` una propiedad nueva reclamando cualquier `subdomain`
-     libre, o `UPDATE` el propio `subdomain`/`custom_domain` — choca con que SD-603 asigna la creación
-     de tenants a un superadmin y SD-604 exige verificación de dominio. Arreglado quitando el `GRANT
-     INSERT` de `properties` para `authenticated` (la creación queda solo para `service_role`) y
-     pasando el `UPDATE` a privilegios por columna, excluyendo `id`/`org_id`/`slug`/`subdomain`/`custom_domain`.
-  4. `organizations`/`memberships` no habían recibido el mismo `revoke all` que las 6 tablas de
-     negocio, así que conservaban el `GRANT` amplio heredado del default del schema — el commit
-     original afirmaba incorrectamente que ya estaban angostas. Corregido.
-
-  `supabase/tests/0003_org_isolation.test.sql` quedó con 19 asserts: el patrón real de SD-101 (org
-  propia + `property_id` ajeno, que ejercita la FK compuesta — la primera versión del test probaba
-  la dirección equivocada, que RLS bloqueaba antes de llegar a la FK), el caso de `photos.room_id`,
-  los 2 `check` de `subdomain`/`custom_domain` (3 asserts), el `GRANT` narrowing de `properties`
-  (creación/`subdomain` denegados) y de una tabla de negocio para `anon`, y que un miembro sigue
-  pudiendo leer/escribir lo suyo. Verificado también que el admin actual (usa `service_role`, ignora
-  RLS) sigue funcionando exactamente igual tras todos estos cambios.
-
-  **Segunda ronda de revisión** (sobre los 4 arreglos de arriba, ya commiteados): ambos revisores
-  confirmaron en vivo contra Supabase local que los 4 quedaron cerrados — no solo que se agregó
-  código, sino reconstruyendo el bypass original y viendo que ahora falla. Encontraron un quinto
-  hallazgo (medio, no explotable hoy): sin login real todavía (SD-103), nadie externo puede obtener
-  sesión, pero una vez que la haya, `authenticated` puede escribir `properties` directo por
-  PostgREST sin pasar por el zod de `app/api/admin` — concretamente, `maps_url`/`airbnb_url` se
-  pintan como `href`/`src` de iframe en el sitio público (`components/Location.tsx`, `Footer.tsx`,
-  `Availability.tsx`), así que un valor `javascript:` ahí es XSS almacenado contra los huéspedes de
-  ese tenant. Arreglado con `check` a nivel de BD (`https://` o vacío) en `maps_url`, `airbnb_url` y
-  `site_url` — la capa que vale sin importar qué código escriba ahí en el futuro (server action,
-  RPC, o REST directo). Verificado con una sesión real, no solo pgTAP: un `PATCH` directo con
-  `maps_url: "javascript:alert(1)"` devuelve 400 con el nombre del constraint. `supabase/tests/0003_org_isolation.test.sql`
-  quedó con 22 asserts (se agregó también `hasnt_function` confirmando que `public.is_member` ya no
-  existe, y el caso de `photos.room_id` vía `UPDATE`, no solo `INSERT`). Pendiente, anotado para
-  cuando exista la DAL (SD-104): replicar a nivel de BD los límites de longitud de zod, y algunos
-  tests de introspección de privilegios (`table_privs_are`/`column_privs_are`) que quedaron fuera
-  por ser más pulido que hallazgo real.
+  - [ ] `get_advisors` (security) sin alertas de RLS en remoto: falta evidencia registrada.
+- **Hecho**: RLS, grants mínimos y FKs compuestas de propiedad/org y foto/habitación; helpers en schema `private`.
+  Contenido publicado es público; solo miembros escriben su org. Alta y dominio de propiedades reservados a service-role.
+  Checks HTTPS en `maps_url`, `airbnb_url` y `site_url`; aislamiento y privilegios en `0003_org_isolation.test.sql` (22 aserciones).
+  Revisiones R+S y comprobación local con sesiones reales registradas en el historial de SD-102.
+- **Pendiente**: verificar el advisor de seguridad remoto tras el despliegue aprobado por el dueño (`docs/workflow.md`).
+- **Seguimiento**: límites de longitud en BD e introspección de privilegios pasan a SD-108.
 
 ### [x] SD-103 · feat(auth): Supabase Auth and data access layer
 `M` · Depende: SD-101 · Review: `R+S`
@@ -544,6 +492,13 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
     nuevo — fuera del alcance literal original, pero es la única página real donde un usuario logueado puede
     ver el sistema, así que se incluyó deliberadamente para que no quedara una isla con el estilo viejo.
   - `lint`/`typecheck`/`test` (35/35)/`build` en verde. Sin migraciones → sin `supabase test db`.
+
+### [ ] SD-108 · security(db): field length limits and privilege assertions
+`S` · Depende: SD-104 · Review: `R+S`
+- **Alcance**: replicar en BD los límites de longitud de zod pendientes de SD-102 y añadir introspección de grants.
+- **Criterios**
+  - [ ] Escrituras directas que superan los límites se rechazan también sin pasar por la DAL (pgTAP).
+  - [ ] `table_privs_are`/`column_privs_are` fijan los privilegios mínimos de las tablas afectadas.
 
 ---
 
@@ -879,21 +834,15 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
   - [x] Un color con contraste insuficiente muestra advertencia antes de guardar (`contrastWarnings` en vivo
     en el editor; no bloquea el guardado). Verificado por tipos/build y tests de dominio; **no probado aún en
     navegador** (ver nota).
-  - [ ] Un miembro de otra org no puede editar el tema (test pgTAP `0021_site_appearance_isolation`, escrito
-    pero **sin ejecutar**: Docker no disponible en local; lo ejecutará el job `db` de CI).
+  - [x] Un miembro de otra org no puede editar el tema (`0021_site_appearance_isolation`; job `db` verde en PR #41).
   - [ ] Lighthouse móvil ≥ 90 en rendimiento y accesibilidad (medido en un deploy de preview). **Sin medir**:
     se sigue verificando con `scripts/lighthouse-mobile.mjs` en CI; este ticket no declara puntajes.
-- **Notas (provisional, sin push)**:
-  - Ruta `/app/site/appearance` (pestaña «Apariencia»): preset, 3 colores hex (selector + texto, validados),
-    par tipográfico, radio, vista previa con `themeToCssVars` (fuentes aproximadas con pila del sistema),
-    textos es/en, destacados y FAQ. Sin CSS libre. Reseñas: solo aviso, sigue sin fuente de datos.
-  - Server action `saveAppearance`: un único campo JSON `payload` validado por `parseAppearancePayload`
-    (`lib/domain/site-appearance.ts`, reutiliza `themeSchema`/`contentSchema`; FAQ y destacados completos en
-    ambos idiomas). La org sale de `requireActiveOrg()`, nunca del formulario; el DAL escribe con
-    `.eq("org_id")` y exige exactamente 1 fila. Mismo permiso que «Información» (cualquier miembro, vía RLS).
-  - El tema se guarda solo con las diferencias respecto del preset elegido.
-  - **Migración pendiente para el dueño**: `20261030211752_site_appearance_write_grant.sql` (aditiva:
-    `grant update (theme, content)` a `authenticated`). Debe aplicarse en producción **antes** del deploy.
+- **Hecho**: editor `/app/site/appearance`, validación compartida de tema/contenido es/en y vista previa sin CSS libre (PR #41).
+  La org sale de `requireActiveOrg`; DAL y RLS acotan la escritura. El tema guarda solo diferencias respecto del preset.
+  Migración aditiva `20261030211752_site_appearance_write_grant.sql`; tests de dominio y pgTAP en CI verde.
+  Reseñas siguen sin fuente de datos: no se inventan testimonios.
+- **Pendiente**: comprobar la advertencia en navegador y medir Lighthouse móvil ≥ 90 en rendimiento y accesibilidad en preview.
+  Los resultados de CI sobre tenants sembrados no sustituyen esa medición. Despliegue de BD por el workflow con aprobación.
 
 ---
 
@@ -1203,7 +1152,7 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 ## Fase 4 — Cotizador, reservas y pago manual (M4 🎯)
 
-### [~] SD-401 · feat(db): guests, quotes, bookings and payments
+### [x] SD-401 · feat(db): guests, quotes, bookings and payments
 `L` · Depende: SD-205, SD-301 · Review: `R+S`
 - **Alcance**: tablas `guests`, `quotes`, `bookings`, `payments`; RPC `create_booking_from_quote` (transacción:
   valida quote vigente, libera holds vencidos, upsert guest, crea booking `pending_payment` + bloque con
@@ -1212,44 +1161,13 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Criterios**
   - [x] pgTAP: reservar fechas ocupadas falla; quote vencida falla; hold vencido libera fechas.
   - [x] Transiciones de estado inválidas rechazadas (p. ej. confirmar una cancelada).
-- **Avance** (implementado localmente; sin commit remoto, push ni PR; **sin revisión R+S**, omitida por petición del usuario)
-  - Migración `20261029185857_booking_schema.sql` (aditiva, rollback en su cabecera): `guests`, `quotes`, `bookings`,
-    `payments`, `property_payment_accounts` y `properties.booking_hold_minutes` (15–4320, por defecto 120).
-    FKs compuestas con `org_id` (unidad/propiedad, huésped, quote); `quote_id` único en `bookings` (una quote → una
-    reserva); `payments` fija la moneda de la reserva por FK; un solo pago `pending_review` por reserva. Borrar una
-    unidad, huésped o quote con reservas falla (`NO ACTION`): resuelve el borrado en cascada de bloques anotado en SD-301.
-  - Permisos: `anon` sin ningún privilegio de tabla (PII de huéspedes, cuentas de cobro). Los miembros solo **leen**
-    guests/quotes/bookings/payments; las cuentas de cobro son CRUD de miembros por RLS. Toda mutación es por RPC
-    `security definer` (`search_path = ''`) o `service_role`. Triggers `guard_booking_update`/`guard_payment_update`
-    fijan términos inmutables (importes, fechas, unidad…) y la máquina de estados incluso para escritores privilegiados:
-    `pending_payment → confirmed|cancelled|expired`, `confirmed → cancelled`, `pending_review → approved|rejected`.
-  - `create_booking_from_quote(token, nombre, email, teléfono)`: ejecutable por `anon` (el token de 32+ caracteres es la
-    capacidad; devuelve solo ids/estado, sin PII). Bloquea la quote (`FOR UPDATE`), reproduce la reserva existente si la
-    hay (idempotente), valida vigencia (`SD001`), unidad activa, aforo y moneda, libera holds vencidos de esa unidad, hace
-    upsert del huésped (nunca sobrescribe nombre/teléfono existentes) y crea reserva + bloque; los importes salen
-    **solo** de la quote guardada. Solape → `23P01` del constraint (la transacción entera revierte, incluido el huésped).
-  - `confirm_payment`/`reject_payment`/`cancel_booking(org, id, …)`: miembros de la org; orden de bloqueo reserva → pago;
-    repetir la misma operación devuelve `replayed: true`; transición inválida → `55000`; pago menor al adelanto no
-    confirma (`22023`); cancelar libera el bloque y rechaza el voucher en revisión. `expire_holds()`: solo `service_role`.
-    Una reserva con voucher `pending_review` **no** se expira (el huésped ya pagó); queda a decisión del dueño.
-  - Tests: `0019_booking_schema.test.sql` (**109 aserciones**): catálogo/grants, fecha ocupada, quote vencida/desconocida/
-    mal formada, datos inválidos, moneda y aforo, hold vencido que libera fechas, voucher que lo protege, `expire_holds`,
-    máquina de estados (RPC y triggers), idempotencia, aislamiento org A/B y cross-org, `anon` sin lecturas.
-  - Evidencia local (2026-10-29): `supabase db reset` OK; `supabase test db` **17 archivos / 648 aserciones**;
-    `scripts/test-calendar-concurrency.py` 21/21; `lint`, `typecheck`, `test` (42 archivos / 687 tests, tras integrar origin/main con SD-308) y `build`
-    (placeholders de CI, sin `.env*`) OK con Node 26.9.0 (CI usa 24). Tipos regenerados con `supabase gen types --local`
-    y formateados con prettier. **Concurrencia real (manual, dos sesiones `psql` locales, no automatizada):** A retiene su
-    transacción abierta con quote A; B (quote distinta, fechas solapadas) espera y falla con `23P01` al confirmar A; dos
-    llamadas simultáneas con la misma quote producen una sola reserva (la segunda devuelve `replayed: true`).
-  - **Pendiente / decisiones para el dueño**
-    - No hay RPC para crear quotes ni payments (los tests los insertan como propietario de la tabla): son SD-402 y
-      SD-405. Esos escritores deben bloquear primero la fila de la reserva (como las RPCs) para no competir con el barrido.
-    - `calendar_blocks.booking_id` sigue **sin FK** a `bookings`: ~27 inserciones de `source = 'booking'` en tests de
-      SD-301/303/304/305/803 usan UUID aleatorios. Añadir la FK exige reescribir esos fixtures; propuesto como ticket aparte.
-    - La prueba de concurrencia real no está en CI (extender `scripts/test-calendar-concurrency.py`).
-    - Reembolsos de pagos aprobados al cancelar y pagos parciales (suma < adelanto) quedan fuera de alcance.
-    - Sin revisión `reviewer`/`security-reviewer` (pedido explícito): obligatoria antes del PR según `CLAUDE.md`.
-    - Migración sin aplicar en remoto: aplicarla es del dueño antes de cualquier código que dependa de ella.
+- **Hecho**: esquema y RPCs transaccionales, importes de la quote, estados/idempotencia, holds y aislamiento org; pgTAP `0019_booking_schema.test.sql` y PR #35 mergeado.
+- **Decisiones**: quote única por reserva; términos inmutables; voucher en revisión protege el hold; importes nunca vienen del cliente.
+  Mutaciones por RPC, `anon` sin lecturas de tablas; pagos aprobados no se reembolsan automáticamente al cancelar.
+  Quote bloqueada antes de reservar; reserva bloqueada antes del pago; una quote/reserva y un pago en revisión/reserva.
+  FKs de moneda/org y `NO ACTION` evitan borrar unidades/huéspedes/quotes con reservas. Quotes/vouchers: SD-402/405; cuentas solo owner: SD-411.
+- **Seguimiento**: FK de `calendar_blocks.booking_id` en SD-414; concurrencia del RPC en CI en SD-415.
+  Reembolsos y pagos parciales inferiores al adelanto siguen fuera del alcance de este ticket.
 
 ### [x] SD-402 · feat(dashboard): quote builder with WhatsApp share
 `M` · Depende: SD-401 · Review: `R+S`
@@ -1286,24 +1204,19 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 
 Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/booking-checkout.md`.
 
-### [~] SD-404 · feat(site): self-service quote
+### [x] SD-404 · feat(site): self-service quote
 `M` · Depende: SD-403 · Review: `R+S`
 - **Alcance**: en el sitio, selector de fechas y huéspedes → quote pública → mismo checkout.
 - **Criterios**
   - [x] Respeta mínimo de noches y capacidad: la base lo devuelve como dato (`MIN_NIGHTS` con las noches requeridas, `CAPACITY_EXCEEDED` con el máximo; pgTAP `0028`).
   - [x] Pantalla del sitio con mensajes claros en es/en (parte 2): `/[lang]/cotizar`, formulario accesible, capacidad por unidad y acceso desde disponibilidad; continúa al checkout existente.
-- **Hecho (parte 1, backend)** (rama `feat/SD-404-public-quote`, [ADR 0012](adr/0012-public-quote-priced-in-database.md)): `public.create_public_quote(host, unidad, fechas, huéspedes)`,
-  ejecutable por anónimos y **sin ningún importe en la entrada**: la base calcula el precio con `private.price_stay`, un port a SQL de `quoteStay`, fijado a las mismas cifras
-  calculadas a mano por `lib/domain/pricing-parity.test.ts` y `supabase/tests/0028_public_quote.test.sql` (si cambian las reglas de precio hay que cambiar los dos motores).
-  Unidad **activa** de una propiedad **publicada** servida desde el host; máximo 30 noches y ~2 años de horizonte; validez 24 h; fechas ocupadas rechazadas (orientativo: manda el *exclusion constraint*);
-  marca explícita `quotes.is_public`; topes propios (100 por día y 150 abiertas, por debajo de los del dueño) para que una inundación nunca impida al dueño cotizar; **como máximo 3 reservas
-  pendientes de pago nacidas de cotizaciones públicas por unidad** (hallazgo de seguridad: cotizar → reservar → comprobante falso podía fijar el calendario); la lista del dueño excluye las públicas;
-  cada llamada crea su propia cotización. Riesgo que queda abierto (aviso al dueño, caducidad de la revisión, límite por origen): ADR 0012.
-  Dominio `lib/domain/public-quote.ts`, DAL `lib/dal/public/public-quote.ts` y server action `app/sites/[host]/[lang]/cotizar/actions.ts` (redirige al checkout de SD-403).
-- **Parte 2 (Codex)**: página `/[lang]/cotizar` (o sección del sitio) con selector de unidad, fechas y huéspedes, mensajes según `PublicQuoteState`, enlace desde el sitio.
-- **Pendiente (SD-409)**: límite por origen (IP) y captcha en la capa de aplicación (no frena la llamada directa a la RPC), y decidir la caducidad de la revisión de comprobantes de reservas públicas.
+- **Hecho**: cotización pública calculada en BD y UI es/en hacia checkout (PRs #62/#63); paridad Vitest/pgTAP `0028` según [ADR 0012](adr/0012-public-quote-priced-in-database.md).
+- **Decisiones / seguridad**: sin importes de entrada; unidad activa y propiedad publicada; máximo 30 noches, horizonte ~2 años y vigencia 24 h.
+  Cupos públicos de 100/día, 150 abiertas y 3 reservas pendientes por unidad; cada llamada crea una quote y el panel del dueño las excluye.
+  Precio duplicado en SQL/TypeScript exige mantener ambos motores; el constraint sigue siendo la autoridad sobre solapes.
+- **Seguimiento**: límite por origen, captcha y decisión de caducidad de revisión pública siguen en SD-409 / ADR 0012.
 
-### [~] SD-405 · feat(payments): manual payment with voucher upload
+### [x] SD-405 · feat(payments): manual payment with voucher upload
 `M` · Depende: SD-403 · Review: `R+S`
 - **Alcance**: página de reserva muestra instrucciones (Yape/Plin/transferencia) y monto del adelanto; subida de
   voucher con signed upload URL a bucket privado (jpeg/png/webp/pdf ≤ 5 MB); payment `pending_review`.
@@ -1317,41 +1230,25 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
         depender solo de `public_token`**: acotarlo (p. ej. solo mientras la reserva esté en `pending_payment` y no haya
         vencido) o exigir una prueba adicional, y cubrirlo con pgTAP. Resuelto: `get_booking_payment_info` devuelve `NULL` (y la subida se rechaza)
         salvo que la reserva esté en `pending_payment`, con el hold vigente y sin voucher en revisión.
-- **Hecho** (rama `feat/SD-405-payment-voucher`): migración `20261103180000_payment_vouchers.sql` (bucket privado `payment-vouchers`, política de subida
-  acotada a `<org>/<public_token>/<uuid>.<jpg|png|webp|pdf>` con máx. 5 archivos por reserva, RPC `get_booking_payment_info` y `submit_payment_voucher`),
-  `lib/domain/payment-voucher.ts`, `lib/dal/public/payment-voucher.ts`, `lib/dal/payment-vouchers.ts` (URL firmada para miembros),
-  `components/site/voucher-form.tsx`, panel de pago en `/[lang]/reserva/[public_token]`. El archivo sube **directo del navegador** al bucket (puede
-  superar el límite de 4,5 MB de una petición al servidor); el servidor solo registra el pago: **el monto y la moneda salen de la reserva**, nunca del formulario.
-  Probado de punta a punta contra `next dev` + Supabase local (página, subida con clave anónima, rechazos, registro, lectura firmada).
-- **Para SD-406**: mostrar el voucher con `<img>` (imágenes) o como descarga (`createSignedUrl(..., { download: true })` en PDF); pasar a `getVoucherSignedUrl` el cliente de sesión y
-  el `orgId` de la membresía verificada (nunca de un parámetro); destacar los comprobantes con muchas horas `pending_review` (retienen las fechas hasta que el dueño decida).
-- **Pendiente / fuera de alcance**: la pantalla del dueño para **ver** el voucher y aprobar/rechazar es SD-406 (aquí solo el DAL de URL firmada);
-  **no existe aún ninguna pantalla para configurar las cuentas de cobro** (Yape/Plin/banco, tabla `property_payment_accounts`): ver SD-411.
+- **Hecho**: subida directa a bucket privado, registro de pago con importes del servidor y URL firmada de 60 s; Vitest/pgTAP `0026`, flujo HTTP local y PR #58 mergeado.
+- **Seguridad**: máximo 5 archivos por reserva; ruta org/token/UUID, MIME y tamaño validados; PDF siempre como descarga.
+  No hay cuentas ni subida fuera de `pending_payment`, con hold vencido o con voucher en revisión (H2 de SD-403).
+  El cliente de sesión y la membresía verificada acotan la lectura; sin service-role en acciones de usuario.
+- **Seguimiento**: ver/aprobar/rechazar llegó en SD-406; configurar cuentas llegó en SD-411. Aviso de revisión demorada en SD-418.
 
 ### [~] SD-406 · feat(dashboard): bookings management
 `L` · Depende: SD-405 · Review: `R+S`
 - **Alcance**: lista con filtros (estado, fechas, origen) y detalle; ver voucher; aprobar/rechazar pago; cancelar;
-  registrar reserva manual (cerrada por WhatsApp/efectivo); registrar pago de saldo.
-- **Hallazgo H4 de la revisión de seguridad de SD-403 (diseño heredado de SD-401)**: `create_booking_from_quote` asocia la
-  reserva al huésped existente con el mismo correo y le rellena el teléfono si lo tenía vacío; quien tenga un enlace puede
-  reservar con el correo de un cliente recurrente y dejar su teléfono en la ficha ajena. Mostrar en el detalle los datos
-  enviados en el checkout (nombre y teléfono como *snapshot* de la reserva) y avisar cuando no coincidan con la ficha del
-  huésped; valorar que la RPC deje de rellenar teléfonos de huéspedes existentes.
+  reserva manual, saldo y snapshot se separaron en SD-413 (PR #60).
 - **Criterios**
   - [x] Aprobar el pago confirma la reserva y fija el bloque (sin `expires_at`): comprobado con la sesión del dueño contra Supabase local (reserva `confirmed`,
         un solo ingreso en finanzas, el reintento no lo duplica; sin tipo de cambio en una reserva en dólares se pide con un aviso claro).
-  - [ ] Reserva manual respeta disponibilidad. **Movido a SD-413.**
-- **Hecho** (rama `feat/SD-406-bookings-management`): `/app/bookings` (lista con filtros por estado —incluido «Comprobante por revisar»— y por llegada, paginada),
-  `/app/bookings/[id]` (reserva, huésped, pagos con su comprobante, aprobar con tipo de cambio opcional, rechazar con motivo, cancelar con motivo, todo con confirmación),
-  `/app/bookings/[id]/voucher/[paymentId]` (redirige a una URL firmada de 60 s; PDF como descarga; 404 para cualquiera sin sesión de miembro),
-  `lib/domain/bookings.ts`, `lib/dal/bookings.ts` (solo sesión del dueño y los RPC `confirm_payment`/`reject_payment`/`cancel_booking`, que vuelven a comprobar
-  pertenencia y estado; **sin service-role ni migración**), `components/dashboard/booking-actions.tsx`. Probado de punta a punta contra `next dev` + Supabase local: lista, filtros,
-  detalle, voucher firmado, aprobar/reintentar/cancelar, y el dueño de otra organización recibe 404/42501 en todo.
-- **Decisión de permisos pendiente (hallazgo de la revisión de seguridad)**: hoy `confirm_payment`, `reject_payment` y `cancel_booking` solo exigen ser **miembro**, así que un usuario
-  `staff` puede aprobar pagos (escribe un ingreso en el libro del dueño, con un tipo de cambio que él elige), confirmar sin que el dinero haya llegado y cancelar reservas confirmadas.
-  Recomendación: aprobar y cancelar solo para `owner` (`private.is_owner` en los RPC, como `complete_ical_rental`) y ocultar esos botones al staff; se hace en SD-413, que ya toca estos RPC.
-  Hasta entonces, no des el rol `staff` a nadie de confianza limitada en una instalación con reservas reales.
-- **Pendiente**: reserva manual, pago de saldo y el *snapshot* del huésped (H4) pasan a SD-413 porque cambian el RPC central de reservas.
+- **Hecho**: lista filtrada/paginada, detalle, voucher firmado, aprobación/rechazo y cancelación; DAL de sesión, tests/flujo HTTP local y PR #60 mergeado.
+- **Decisiones / seguridad**: PDF como descarga; sesión y org verificadas en DAL/RPC, sin service-role; aprobación idempotente con ingreso financiero.
+  Los RPC aún permiten aprobar/cancelar a cualquier miembro: restringir a owner y ocultar botones al staff es SD-413.
+  H4 de SD-403: snapshot del checkout y evitar alterar la ficha de un huésped recurrente también es SD-413.
+  Hasta resolver permisos, no asignar staff de confianza limitada en instalaciones con reservas reales.
+- **Pendiente**: filtro por origen de la lista (el dominio y la DAL actuales solo filtran estado y fechas).
 
 ### [ ] SD-413 · feat(bookings): manual booking, balance payment and guest snapshot
 `L` · Depende: SD-406 · Review: `R+S`
@@ -1362,14 +1259,15 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   - [ ] Reserva manual sobre fechas ocupadas falla; sobre fechas libres crea reserva y bloque.
   - [ ] El detalle muestra el nombre y teléfono tal como se enviaron en el checkout.
 
-### [~] SD-407 · feat(email): booking lifecycle emails
+### [x] SD-407 · feat(email): booking lifecycle emails
 `M` · Depende: SD-306, SD-406 · Review: `R`
 - **Alcance**: al huésped: reserva recibida, confirmada, pago rechazado, instrucciones de llegada (X días antes);
   al owner: nueva reserva, voucher recibido.
 - **Criterios**
   - [x] Idioma según la reserva; sin enviar dos veces el mismo email (idempotencia por evento).
-- **Hecho**: seis plantillas es/en con marca por instalación; idioma persistido en checkout; cola transaccional por reserva/evento/payment, claims exclusivos del cron con RLS y deduplicación persistente. Cron de envío y llegada configurable 0–30 días (Lima), fallos aislados con logs sin PII. Vitest y pgTAP de plantillas, claims, permisos y transiciones.
-- **Pendiente**: revisión/merge del PR, aprobación de Deploy database y configuración de instrucciones es/en y scheduler en cada instalación (`docs/cron.md`). Reintentos transitorios y claims abandonados limitados a tres, con claves estables; límite de tres avisos recibidos por destinatario en 24 h. La operación debe revisar fallos definitivos/agotados.
+- **Hecho**: seis emails es/en con marca por instalación, por reserva/evento/pago, cola RLS y deduplicación persistente, cron y llegada 0–30 días Lima; Vitest/pgTAP y PR #74 mergeado.
+- **Operación**: aprobación de Deploy database, instrucciones es/en y scheduler por instalación (`docs/cron.md`); revisar fallos definitivos/agotados.
+  Reintentos transitorios y claims abandonados limitados a tres con claves estables; hasta tres avisos por destinatario en 24 h.
 
 ### [x] SD-408 · feat: hold expiration job and booking status page
 `S` · Depende: SD-401 · Review: `R+S`
@@ -1383,16 +1281,17 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Criterios**
   - [ ] Ráfaga de 20 reservas desde el mismo origen es bloqueada.
 
-### [~] SD-411 · feat(dashboard): payment accounts settings
+### [x] SD-411 · feat(dashboard): payment accounts settings
 `S` · Depende: SD-401 · Review: `R+S`
 - **Alcance**: en Ajustes, CRUD de `property_payment_accounts` (Yape, Plin, cuenta bancaria con CCI de 20 dígitos, moneda, instrucciones, activo, orden) para
   que el dueño publique dónde cobrar. Sin cuentas activas en la moneda de la reserva, la página de pago de SD-405 dice al huésped que coordine por WhatsApp.
-- **Hecho**: dominio y tests en `lib/domain/payment-accounts.*`, DAL de sesión y tests en `lib/dal/payment-accounts.*`, acciones en `app/app/settings/actions.*` y UI accesible en `components/dashboard/payment-accounts.tsx` + página de Ajustes. Contexto org/propiedad verificado en servidor, campos incompatibles a NULL y CCI normalizado; sin migración. CRUD probado en navegador local y cuenta USD visible al huésped antes de desactivar, ausente en la siguiente petición tras desactivar. Pendiente revisión de Claude y merge del PR.
 - **Criterios**
-  - [x] Solo miembros de la org gestionan sus cuentas (RLS ya existente); validación zod (teléfono, CCI, longitudes).
+  - [x] Solo el dueño gestiona las cuentas de su org (app y RLS); validación zod (teléfono, CCI, longitudes).
   - [x] Una cuenta desactivada deja de mostrarse al huésped de inmediato.
-- **Seguridad (revisión R+S)**: solo el **dueño** gestiona las cuentas, en la app (página, DAL y acciones) **y** en la base de datos (migración `20261103210000_payment_accounts_owner_only.sql`: políticas de insertar/actualizar/borrar con `private.is_owner`; lectura sigue abierta a miembros; pgTAP `0027`). Un `staff` que cambiara el Yape o la cuenta desviaría los pagos de los huéspedes, y también podría hacerlo llamando a la API con su sesión.
-- **Pendiente (SD-605)**: no hay registro de quién cambió una cuenta ni de qué cuenta vio cada huésped; conviene una tabla de auditoría con disparador y aviso al dueño cuando cambie el destino de pago.
+- **Hecho**: CRUD de cuentas en Ajustes con CCI normalizado, validación zod y pruebas de aislamiento/desactivación; Vitest, pgTAP `0027` y PR #59 mergeado.
+- **Seguridad**: solo owner escribe en página, DAL, acciones y RLS (`20261103210000_payment_accounts_owner_only.sql`);
+  miembros conservan lectura en BD. Impide al staff desviar pagos cambiando el destino de cobro.
+- **Seguimiento (SD-605)**: auditoría de cambios de cuentas y de la cuenta mostrada al huésped; disparador y aviso al dueño.
 
 ### [~] SD-412 · chore(privacy): voucher retention and purge
 `S` · Depende: SD-405, SD-406 · Review: `R+S`
@@ -1403,28 +1302,50 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   - [x] Un archivo huérfano de más de 24 h desaparece; uno asociado a un pago aprobado no.
   - [x] El job es idempotente y no registra rutas ni datos personales.
 
-- **Implementado**: `/api/cron/voucher-purge` con `CRON_SECRET`, service-role, lotes de hasta 100 vía Storage API;
-  selección pura y revalidación atómica mediante marcas privadas para impedir asociación concurrente al borrar.
-  Huérfanos/orgs borradas >24 h; rechazados o reservas cerradas >30 días. Aprobados y `pending_review` siempre protegidos.
-  Tests de dominio, orquestación, auth y pgTAP. Sin DELETE SQL de objetos ni datos personales en logs.
-- **Pendiente**: aprobación de *Deploy database* y programación externa diaria (`docs/cron.md`). El dueño debe decidir
-  el plazo para aprobados (propuesta: 5 años; Ley 29733 art. 8 no lo fija) y, al decidirlo, **crear un ticket para
-  habilitar su borrado** (hoy no está habilitado). Seguimiento menor: tras purgar un comprobante rechazado, el panel
-  muestra el botón de ver comprobante y falla; devolver «comprobante eliminado» en `getVoucherSignedUrl`.
+- **Hecho**: cron autenticado y borrado por Storage API, lotes de 100 y revalidación atómica; dominio/orquestación/auth/pgTAP y PR #75 mergeado.
+  Huérfanos/orgs borradas >24 h; rechazados o reservas cerradas >30 días. Aprobados y `pending_review` protegidos.
+  Marcas privadas evitan asociación concurrente al borrar; sin DELETE SQL de objetos ni PII en logs.
+- **Pendiente**: definir/documentar el plazo de conservación de aprobados (propuesta no aprobada: 5 años; Ley 29733 art. 8 no lo fija).
+  Aprobar Deploy database y programar ejecución diaria (`docs/cron.md`). El borrado de aprobados, si se decide, es SD-417.
+- **Seguimiento**: mensaje de comprobante eliminado tras purga en SD-416.
 
-### [ ] SD-410 · test(e2e): booking flow
+### [x] SD-410 · test(e2e): booking flow
 `M` · Depende: SD-406 · Review: `R`
 - **Alcance**: Playwright en CI contra Supabase local: el huésped cotiza en /cotizar → reserva → sube voucher → owner aprueba
   → reserva confirmada y fechas bloqueadas.
 - **Criterios**
-  - [ ] Corre en CI en < 5 min y es estable (3 ejecuciones seguidas en verde).
-- **Implementado**: Playwright/Chromium contra Supabase local; huésped cotiza en `/es/cotizar`, reserva,
-  sube un PNG real y el dueño aprueba desde `/app/bookings` en otra sesión. Comprueba confirmación pública,
-  importe persistido, bloqueo permanente y rechazo de una cotización solapada. Fixtures con UUID y limpieza;
-  sin cambios de producción ni migraciones. Job independiente con límite de 5 min y tres pasadas sin retries.
-- **Ejecución y diagnóstico**: [booking-e2e.md](booking-e2e.md), `npm run test:e2e -- --repeat-each=3`.
-- **Verificado localmente**: tres pasadas consecutivas en verde (29,6 s), sin fixtures residuales; lint, typecheck, build y 1436 tests unitarios en verde. Revisiones funcional y de seguridad sin hallazgos importantes.
-- **Pendiente**: comprobar la duración real del job remoto del PR.
+  - [x] Corre en CI en < 5 min y es estable: tres pasadas sin retries en PR #76; job de 3 min 1 s.
+- **Hecho**: Playwright/Chromium con Supabase local recorre cotización, reserva, PNG, aprobación, confirmación y bloqueo; tres pasadas en CI verde y PR #76 mergeado ([diagnóstico](booking-e2e.md)).
+
+### [ ] SD-414 · fix(db): booking calendar referential integrity
+`S` · Depende: SD-401 · Review: `R+S`
+- **Alcance**: añadir la FK compuesta pendiente entre `calendar_blocks` y reservas, ligada a unidad/org; adaptar fixtures con UUID ficticios.
+- **Criterios**
+  - [ ] Un bloque no puede referenciar una reserva inexistente ni de otra unidad/org (pgTAP); fixtures usan reservas reales.
+
+### [ ] SD-415 · test(db): booking RPC concurrency in CI
+`S` · Depende: SD-401 · Review: `R`
+- **Alcance**: automatizar la prueba manual de concurrencia de `create_booking_from_quote` en el runner local de CI.
+- **Criterios**
+  - [ ] Quotes distintas con fechas solapadas producen una sola reserva; llamadas simultáneas de la misma quote son idempotentes.
+
+### [ ] SD-416 · fix(dashboard): purged voucher feedback
+`S` · Depende: SD-412 · Review: `R+S`
+- **Alcance**: resolver el botón de comprobante rechazado cuyo archivo ya se purgó; tratar la ausencia en `getVoucherSignedUrl`.
+- **Criterios**
+  - [ ] Tras purgar un rechazado, el panel informa «comprobante eliminado» y conserva la comprobación de sesión/org.
+
+### [ ] SD-417 · feat(privacy): approved voucher purge after retention
+`S` · Depende: SD-412 · Review: `R+S`
+- **Alcance**: habilitar el borrado de comprobantes aprobados solo después de que el dueño decida el plazo en SD-412.
+- **Criterios**
+  - [ ] El job conserva los aprobados dentro del plazo acordado y purga los vencidos; tests de ambos límites.
+
+### [ ] SD-418 · feat(dashboard): delayed voucher review warning
+`S` · Depende: SD-406 · Review: `R`
+- **Alcance**: destacar comprobantes con muchas horas en `pending_review`, seguimiento de SD-405; conservan las fechas hasta la decisión del dueño.
+- **Criterios**
+  - [ ] El panel diferencia una revisión demorada de una reciente sin liberar el hold ni aprobar/rechazar automáticamente.
 
 ---
 
@@ -1811,13 +1732,16 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
   - [ ] Environment `supabase-production` con *Required reviewers*, secretos y variable configurados (pasos del dueño en
         `docs/workflow.md`).
   - [ ] Una ejecución manual de *Deploy database* queda en «Waiting» y el *Dry run* confirma que la base remota está al día.
+- **Hecho**: proceso único, README/arquitectura, `npm run where` y despliegue con aprobación en PRs #44/#48.
+- **Pendiente**: registrar configuración de `supabase-production` y ejecución manual en espera con dry run al día; sin evidencia en el repo para cerrar ambos criterios.
 
 ### [~] SD-901 · chore(workflow): automated pipeline with risk-based review
 `M` · Depende: SD-900 · Review: `R+S`
 - **Alcance**: cola de trabajo por lotes (`docs/cola.md`), decisiones del dueño (`docs/decisiones-pendientes.md`), guía del dueño
   (`docs/guia-dueno.md`), manual del coordinador (`docs/coordinador.md`), etiqueta de riesgo por PR y auto-merge de riesgo bajo
   (`.github/workflows/pr-risk.yml`, `scripts/lib/pr-risk.mjs`), Dependabot semanal.
-- **Pendiente del dueño**: aprobar la excepción `risk:low` en `AGENTS.md`/`CLAUDE.md`; proteger `main`, permitir auto-merge y crear la variable `AUTO_MERGE=true` (guía, «Configuración única»).
+- **Hecho**: cola, clasificación con tests, auto-merge condicionado y Dependabot en PR #64; excepción `risk:low` aprobada en AGENTS.md (PR #73).
+- **Pendiente**: verificar protección de `main`, auto-merge y `AUTO_MERGE=true`, y registrar un PR de UI mergeado automáticamente (guía, «Configuración única»).
 - **Siguiente**: SD-903 (versiones con `release-please`; `main` → demo, versión → clientes).
 - **Criterios**
   - [x] Un PR que toca `supabase/`, `lib/dal/`, `actions.ts`, `package.json` o `.github/` queda `risk:high` (tests de `pr-risk`).
@@ -1859,22 +1783,11 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
         produce un error claro (`lib/env.test.ts`).
   - [ ] `saywalodges.com` servido como instalación nº 1 en producción (criterio heredado de SD-604). **Diferido**: exige que el
         dueño cambie la configuración y el dominio del proyecto actual.
-  - [ ] `siteOrigin` del cotizador usa `siteHostFor` (diferido hasta que SD-402 / PR #46 esté en `main`).
-- **Hecho** (rama `feat/SD-1001-installation-mode`):
-  - Decisión de enrutado extraída a `lib/domain/host-routing.ts` (pura, con tests); `proxy.ts` solo la aplica. En modo
-    `platform` el comportamiento es el de antes (fijado con tests de caracterización, también a través del `proxy` real en
-    `proxy.test.ts`); la única diferencia es que una respuesta 404 ya no refresca la cookie de sesión.
-  - `DEPLOYMENT_MODE` y la validación de `NEXT_PUBLIC_SITE_URL` en `lib/env.ts`: en producción, el modo instalación exige
-    que sea `https://app.<ROOT_DOMAIN>`. En modo plataforma no se exige (el despliegue actual no cambia).
-  - El sitio se busca por `properties.custom_domain = ROOT_DOMAIN` con la consulta existente (`getSiteByHost`): el
-    script de alta (SD-1002) debe fijar ese valor. `app/sitemap.ts` y `app/robots.ts` no cambian: en modo instalación el
-    proxy los deja pasar en el host del sitio y leen el host solos.
-  - «Ver mi sitio» usa `siteHostFor`. El cron de iCal ya apuntaba a `app.<ROOT_DOMAIN>`; `docs/cron.md` avisa de que
-    en este modo todo cron se llama en `app.`.
-  - Pendiente (depende del PR #46 de SD-402, que aún no está en `main`): usar `siteHostFor` en `siteOrigin` del
-    cotizador (`lib/domain/quote-builder.ts`) para que los enlaces compartidos usen el dominio raíz en modo instalación.
-  - Pendiente del dueño en cada instalación: añadir `https://app.<dominio>/auth/callback` a las URL de redirección de
-    Supabase Auth y redirigir `www` al dominio raíz en Vercel (runbook de SD-1002).
+  - [ ] `siteOrigin` del cotizador usa `siteHostFor`: sigue sin integrar en `lib/domain/quote-builder.ts`; PR #46 ya está en `main`.
+- **Hecho**: enrutado puro con tests de ambos modos (`host-routing`, `proxy`), validación de URL de panel y «Ver mi sitio» en PR #50.
+  Sin modo explícito se mantiene plataforma; 404 no refresca sesión. La instalación busca `custom_domain = ROOT_DOMAIN`.
+  Sitemap/robots leen el host; API y cron se sirven en `app.`. SD-1002 configura dominio y callback Auth, con `www` redirigido a raíz.
+- **Pendiente**: integrar `siteHostFor` en `siteOrigin` (dependencia SD-402 ya mergeada) y verificar Saywa como instalación nº 1 en producción.
 
 ### [~] SD-1002 · chore(ops): client install script and runbook
 `M` · Depende: SD-1001 · Review: `R+S`
@@ -1890,25 +1803,23 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
         **Pendiente del dueño**: exige cuentas reales (proyecto Supabase, Vercel Pro, dominio); no se pudo ejecutar contra
         servicios reales desde el entorno de desarrollo. Los endpoints de las APIs de Supabase/Vercel están sin verificar
         en vivo: al primer uso real, corregir lo que falle y marcar este criterio.
-- **Hecho** (rama `chore/SD-1002-install-script`): `scripts/install-client.mjs` + `scripts/lib/install-core.mjs`,
-  `docs/runbook-instalacion.md`, `deploy/install.example.json`. Decisiones: el proyecto Supabase se crea a mano (el script
-  nunca crea recursos de pago); el owner se crea confirmado y sin contraseña y la fija con «Olvidé mi contraseña» (el
-  callback de la app solo soporta el flujo PKCE de recuperación, no el de invitación); las variables sensibles solo van a
-  producción y el proyecto del cliente no construye previews; el cron queda manual hasta SD-1003.
+- **Hecho**: script/runbook y núcleo puro probado en PR #53; dry run por defecto, apply explícito y estado reintentable en `.install/`.
+  Supabase se crea a mano: el script nunca crea recursos de pago. Owner confirmado sin contraseña, fijada por recuperación PKCE.
+  Secretos solo en producción, sin previews de clientes; cron configurado manualmente. Excepción service-role: ADR 0010 sobre ADR 0002.
+- **Pendiente**: instalación real desde cero y acceso del owner siguiendo el runbook; verificar endpoints Supabase/Vercel al primer uso real.
 
 ### [~] SD-1003 · ci: installation registry and multi-project DB deploy
 `S` · Depende: SD-1002 · Review: `R+S`
-- **Alcance**: `deploy/installations.json` (nombre, ref de Supabase, proyecto Vercel, dominio; sin secretos);
+- **Alcance**: `deploy/installations.json` (ids opacos y Environment; sin datos de clientes ni secretos);
   `deploy-db.yml` como *matrix* con un Environment por instalación y aprobación del dueño.
 - **Criterios**
   - [x] El registro se valida y la matriz tiene un job por instalación; un id desconocido falla en vez de no desplegar nada
         (`scripts/lib/installations.test.mjs`, incluye el registro real).
   - [ ] Una ejecución contra dos instalaciones pide una aprobación por cada una (el job aplica migraciones de verdad; el «Dry run» es un paso previo). **Pendiente del dueño**: exige crear
         el segundo Environment con credenciales reales (runbook, paso 10); se comprueba la primera vez que haya un cliente.
-- **Hecho** (rama `ci/SD-1003-installation-registry`): `deploy/installations.json`, `scripts/installations-matrix.mjs`,
-  `deploy-db.yml` con job `plan` (sin secretos) + `migrate` en matriz (`max-parallel: 1`, `fail-fast: false`), entrada
-  opcional `installation` para desplegar a una sola. Desviación del alcance original: el registro **no** lleva nombre, ref
-  ni dominio porque el repo es público; el ref ya vive en `SUPABASE_PROJECT_ID` de cada Environment.
+- **Hecho**: registro validado y matriz con plan sin secretos y migrate secuencial, fallos independientes y selección por instalación (PR #54).
+  Decisión: nombre/ref/dominio excluidos del registro público; `SUPABASE_PROJECT_ID` vive en cada Environment.
+- **Pendiente**: ejecutar contra dos instalaciones reales y comprobar una aprobación por Environment (runbook, paso 10).
 
 ### [~] SD-1004 · feat(ops): central installation health
 `M` · Depende: SD-1003 · Review: `R+S`
@@ -1921,12 +1832,10 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   - [x] `health_snapshot()` solo para service_role, solo conteos (pgTAP `0024_health_snapshot.test.sql`).
   - [ ] Detener el cron de una instalación de prueba genera un aviso. **Pendiente del dueño**: exige crear el Environment
         `health-<id>` con `HEALTH_URL`/`HEALTH_SECRET` (secretos) e `INSTALLATION_ID` y probar la alerta (docs/health.md → «Probar que la alerta funciona»).
-- **Hecho** (rama `feat/SD-1004-installation-health`): migración `20261102200000_health_snapshot.sql` (RPC de solo lectura),
-  `app/api/health/route.ts`, `lib/domain/health.ts`, `lib/dal/health.ts`, monitor `scripts/check-installation-health.mjs` +
-  `.github/workflows/installation-health.yml` (cada hora, un job por instalación, Environment `health-<id>` sin reviewers para
-  no bloquear las ejecuciones programadas), `docs/health.md`. Los cron no dejan registro: se mide su efecto (holds vencidos,
-  calendarios sin intento reciente); sin calendarios no hay señal del cron de iCal (límite documentado). Alerta = correo de
-  GitHub por ejecución fallida (sin servicios extra). `HEALTH_SECRET` distinto de `CRON_SECRET`.
+- **Hecho**: endpoint/RPC de lectura y monitor horario por instalación, tests Vitest/pgTAP `0024` y runbook `docs/health.md` (PR #55).
+  `HEALTH_SECRET` distinto de `CRON_SECRET`; solo conteos y 401 vacío. Environment `health-<id>` sin reviewers para no bloquear el horario.
+  Se mide efecto de cron: holds vencidos/calendarios sin intento reciente; sin calendarios no hay señal de iCal. Alerta por correo de GitHub al fallar el job.
+- **Pendiente**: configurar Environment de salud y detener un cron de prueba hasta recibir el aviso (`docs/health.md`).
 
 ### [x] SD-1005 · feat(email): per-installation branding
 `S` · Depende: SD-306 · Review: `R+S` (variables de entorno nuevas)
@@ -1962,13 +1871,10 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
         código 1 y no borra nada); datos y reglas con test (`scripts/lib/demo-data.test.mjs`).
   - [ ] La demo funciona en Vercel/Supabase reales y se resetea de noche. **Pendiente del dueño**: crear el proyecto Supabase,
         el de Vercel y el Environment `demo-reset` (docs/demo.md).
-- **Hecho** (rama `feat/SD-1007-shared-demo`): `scripts/lib/demo-data.mjs`, `scripts/demo-reset.mjs`,
-  `.github/workflows/demo-reset.yml` (03:30 Lima), banner con `DEMO_MODE` en el panel, `"demo": true` en la configuración de
-  instalación (carga `DEMO_MODE` y nunca `RESEND_API_KEY`), `docs/demo.md`. Decisiones: sin migración (el reseteo borra la
-  organización por cascada vía API con service-role, no hay función destructiva en las bases de los clientes); usuario `staff`
-  con credenciales públicas y contraseña reimpuesta cada noche; la demo no comparte proyecto con ningún cliente. Sin reservas de
-  ejemplo precargadas (se puede añadir luego). Nota: `npx supabase` descarga hoy la v3.0.0, sin binario para macOS arm64; usar
-  `npx supabase@2.122.0` (la versión del CI).
+- **Hecho**: seed ficticio, staff, banner y reset nocturno 03:30 Lima con tests y prueba local de restauración/guardas (PR #56; `docs/demo.md`).
+  Sin migración: borra org por cascada vía API service-role; proyecto separado de clientes, contraseña pública reimpuesta cada noche.
+  Configuración demo carga `DEMO_MODE` y nunca `RESEND_API_KEY`; sin reservas de ejemplo. Usar CLI `supabase@2.122.0` como CI.
+- **Pendiente**: crear Supabase/Vercel y Environment `demo-reset`, registrar demo y verificar funcionamiento/reset nocturno reales.
 
 ### [~] SD-1008 · feat(whatsapp): Cloud API client and webhook
 `M` · Depende: SD-1001 · Review: `R+S`
@@ -1981,11 +1887,10 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
         probado además de punta a punta contra el servidor de desarrollo y la base local).
   - [x] En modo simulación nada sale a Meta y el envío queda registrado (`send.test.ts`).
   - [ ] Un envío real con el número de prueba de Meta y el registro del webhook en su panel. **Pendiente del dueño** (trámite por cliente: `docs/whatsapp.md`).
-- **Hecho** (rama `feat/SD-1008-whatsapp-cloud-api`): `lib/whatsapp/{config,send,webhook}.ts`, `lib/dal/whatsapp.ts`,
-  `app/api/whatsapp/webhook/route.ts`, migración `20261103120000_whatsapp_messages.sql` (tabla sin acceso para anon/authenticated y dos RPC solo
-  para service_role; el estado solo avanza), `docs/whatsapp.md`. Decisiones: solo plantillas (no texto libre); **sin reintento** (no hay clave de
-  idempotencia); el registro **no guarda teléfonos**; no se procesan mensajes entrantes; el consentimiento lo exige el tipo (`optIn: true`) y su
-  registro/comprobación real es SD-1009. No hay versión de la Graph API por defecto: `WHATSAPP_API_VERSION` es obligatoria para enviar de verdad (Meta retira versiones).
+- **Hecho**: cliente, simulación y webhook firmado con estados monotónicos; Vitest/pgTAP `0025` y flujo local en PR #57 (`docs/whatsapp.md`).
+  Tabla sin acceso anon/authenticated y RPC solo service-role. Solo plantillas, sin teléfonos guardados ni mensajes entrantes, sin reintentos por falta de idempotencia.
+  `WHATSAPP_API_VERSION` obligatoria para enviar; `optIn: true` exigido por tipo, evidencia/comprobación real del consentimiento en SD-1009.
+- **Pendiente**: registrar webhook en Meta y probar un envío real con su número de prueba por instalación.
 
 ### [ ] SD-1009 · feat(whatsapp): booking templates and guest opt-in
 `M` · Depende: SD-1008, SD-403, SD-405, SD-406 · Review: `R+S`
