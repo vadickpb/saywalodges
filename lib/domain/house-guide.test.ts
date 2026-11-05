@@ -13,7 +13,8 @@ describe("private house guide", () => {
   });
   it("rejects oversized content and short passwords", () => {
     expect(houseGuideSchema.safeParse({ title: "Casa", sections: [{ ...section, text: "x".repeat(12001) }] }).success).toBe(false);
-    expect(guidePasswordSchema.safeParse("123456").success).toBe(false);
+    expect(guidePasswordSchema.safeParse("12345").success).toBe(false);
+    expect(guidePasswordSchema.safeParse("123456").success).toBe(true);
   });
   it("denies expired, revoked and malformed links including the exact expiry", () => {
     const now = Date.parse("2026-11-04T12:00:00Z");

@@ -1940,3 +1940,26 @@ No cambia los estados de los demás tickets ni su trabajo guardado.
 - Foto principal como poster/fallback; controles manuales, reproducción inline y soporte Range.
 - Borradores privados; volver a foto retira el video de la ruta pública. Sin transcodificación ni videos con voz en esta entrega.
 - Verificado con unitarios, pgTAP y upload/publicación/lectura HTTP local. Despliegue de BD pendiente del workflow.
+
+### [x] PP-10 · feat: guest guide PDF and memorable passwords
+
+Alcance:
+- Impresión a PDF desde la guía desbloqueada, sin dependencias ni generación en servidor.
+- Contraseñas de mínimo 6 caracteres en dominio, formularios y RPCs; generador memorable y mensaje para WhatsApp.
+
+Criterios:
+- [x] Botón «Descargar PDF» / «Download PDF» en dictionaries; `window.print()` solo con guía desbloqueada.
+- [x] Impresión en una columna, negro sobre blanco, título y alojamiento arriba; sin controles, formulario, cabecera ni pie.
+- [x] Imágenes completas con ancho máximo 100 %, pasos/secciones sin cortes evitables; título del documento «Guía – <alojamiento>».
+- [x] Sesión privada y secciones ocultas conservadas; sin PDF en servidor ni acceso público a imágenes.
+- [x] Schema y migración nueva reducen solo el mínimo a 6; bcrypt, 72 bytes, tokens, grants y límites 10/50 por 15 min intactos.
+- [x] Generador puro con ≥200 palabras españolas de 4–6 letras sin tildes/ñ/duplicados + 3 dígitos, Web Crypto con rechazo.
+- [x] Generar/copiar contraseña editable; aviso de guardarla ahora; enlace y contraseña juntos tras crear y mensaje es/en para huésped.
+- [x] Vitest: formato, schema 6/5, vocabulario y Web Crypto mockeado; pgTAP: crear/desbloquear 6 y rechazar 5.
+- [x] Lint, typecheck, test, build, reset y pgTAP locales; autorrevisión y revisiones independientes; PR sin merge.
+
+Verificación PP-10: lint y typecheck; 116 archivos / 1604 tests Vitest; build; reset local y 35 archivos / 1323 tests pgTAP.
+Chromium local (`app.localhost:3010` y `saywa-lodges.localhost:3010`): generar/editar/copiar, crear y desbloquear con 6,
+mensaje es/en, imágenes privadas, sección oculta y estilos de impresión. Autorrevisión completa y revisores funcional/de seguridad aprobados.
+Producción: aprobar *Deploy database* tras un futuro merge; hasta entonces la BD anterior rechaza contraseñas de 6–11 caracteres.
+Este encargo termina con PR abierto, sin merge ni cambios de BD remota.

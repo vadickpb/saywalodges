@@ -36,5 +36,5 @@ export function isGuideLinkActive(link: { expiresAt: string; revokedAt: string |
   return link.revokedAt === null && Number.isFinite(now) && Number.isFinite(expiry) && expiry > now;
 }
 
-export const guidePasswordSchema = z.string().min(12).max(72).refine(value => new TextEncoder().encode(value).length <= 72, "Máximo 72 bytes");
+export const guidePasswordSchema = z.string().min(6).max(72).refine(value => new TextEncoder().encode(value).length <= 72, "Máximo 72 bytes");
 export const guideTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
