@@ -4,10 +4,10 @@ vi.mock("server-only", () => ({}));
 const revalidatePath = vi.fn();
 vi.mock("next/cache", () => ({ revalidatePath: (p: string) => revalidatePath(p) }));
 const dal = vi.hoisted(() => ({
-  getBookingsContext: vi.fn(), approvePayment: vi.fn(), rejectPayment: vi.fn(), cancelBooking: vi.fn(),
+  getBookingsContext: vi.fn(), approvePayment: vi.fn(), rejectPayment: vi.fn(), cancelBooking: vi.fn(), createManualBooking: vi.fn(), recordManualPayment: vi.fn(),
 }));
 vi.mock("@/lib/dal/bookings", () => dal);
-import { approvePaymentAction, cancelBookingAction, rejectPaymentAction } from "./actions";
+import { approvePaymentAction, cancelBookingAction, createManualBookingAction, recordManualPaymentAction, rejectPaymentAction } from "./actions";
 
 const B = "b2060000-0000-4000-8000-000000000001";
 const P = "b3060000-0000-4000-8000-000000000001";
@@ -92,5 +92,33 @@ describe("rejectPaymentAction / cancelBookingAction", () => {
     dal.cancelBooking.mockClear();
     expect((await cancelBookingAction(form({ bookingId: "x", reason: "" }))).ok).toBe(false);
     expect(dal.cancelBooking).not.toHaveBeenCalled();
+  });
+});
+
+describe("manual booking and payment", () => {
+  const U = "ee204001-0000-4000-8000-000000000001";
+  const PID = "a4130000-0000-4000-8000-000000000001";
+  const booking = { unitId: U, checkIn: "2030-01-10", checkOut: "2030-01-12", guests: "2", name: "Ana", email: "ana@example.com", phone: "", lang: "es" };
+  it("creates a booking from validated input only (no price anywhere) and refreshes the list", async () => {
+    dal.createManualBooking.mockResolvedValue({ ok: true, bookingId: B });
+    expect(await createManualBookingAction(form(booking))).toEqual({ ok: true, bookingId: B });
+    expect(dal.createManualBooking).toHaveBeenCalledWith(ctx, expect.objectContaining({ unitId: U, guests: 2, email: "ana@example.com" }));
+    expect(JSON.stringify(dal.createManualBooking.mock.calls[0][1])).not.toMatch(/total|price|amount/i);
+    expect(revalidatePath).toHaveBeenCalledWith("/app/bookings");
+  });
+  it("refuses invalid input and staff before touching the DAL", async () => {
+    dal.createManualBooking.mockClear();
+    expect((await createManualBookingAction(form({ ...booking, email: "x" }))).ok).toBe(false);
+    dal.getBookingsContext.mockResolvedValue({ ...ctx, isOwner: false });
+    expect(await createManualBookingAction(form(booking))).toEqual({ ok: false, error: "Solo el dueño puede aprobar, rechazar o cancelar reservas." });
+    expect(await recordManualPaymentAction(form({ bookingId: B, paymentId: PID, amount: "10", method: "cash", reference: "", fxRate: "" }))).toMatchObject({ ok: false });
+    expect(dal.createManualBooking).not.toHaveBeenCalled();
+    expect(dal.recordManualPayment).not.toHaveBeenCalled();
+  });
+  it("registers a payment in cents with the idempotency id and refreshes the booking", async () => {
+    dal.recordManualPayment.mockResolvedValue({ ok: true, replayed: false });
+    expect(await recordManualPaymentAction(form({ bookingId: B, paymentId: PID, amount: "150,50", method: "yape", reference: "r1", fxRate: "3.75" }))).toEqual({ ok: true });
+    expect(dal.recordManualPayment).toHaveBeenCalledWith(ctx, expect.objectContaining({ bookingId: B, paymentId: PID, amount: 15050, method: "yape", fxRate: 3.75 }));
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/bookings/${B}`);
   });
 });

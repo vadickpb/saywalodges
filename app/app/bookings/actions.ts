@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { approvePayment, cancelBooking, getBookingsContext, rejectPayment, type ActionResult } from "@/lib/dal/bookings";
+import { approvePayment, cancelBooking, createManualBooking, getBookingsContext, recordManualPayment, rejectPayment, type ActionResult } from "@/lib/dal/bookings";
+import { manualBookingSchema, manualPaymentSchema } from "@/lib/domain/manual-booking";
 import { approvePaymentSchema, cancelBookingSchema, rejectPaymentSchema } from "@/lib/domain/bookings";
 import { readText } from "../site/_lib/form-state";
 
@@ -47,4 +48,32 @@ export async function cancelBookingAction(formData: FormData): Promise<ActionRes
   const parsed = cancelBookingSchema.safeParse(v);
   if (!parsed.success) return INVALID;
   return run((ctx) => cancelBooking(ctx, parsed.data.bookingId, parsed.data.reason), parsed.data.bookingId);
+}
+
+// Manual booking and payment (SD-413). Owner only (the RPCs enforce it too). The price is never read from the form.
+export type ManualBookingActionResult = { ok: true; bookingId: string } | { ok: false; error: string };
+
+export async function createManualBookingAction(formData: FormData): Promise<ManualBookingActionResult> {
+  const parsed = manualBookingSchema.safeParse(readText(formData, ["unitId", "checkIn", "checkOut", "guests", "name", "email", "phone", "lang"]));
+  if (!parsed.success) return INVALID;
+  let outcome: Awaited<ReturnType<typeof createManualBooking>>;
+  try {
+    const ctx = await getBookingsContext();
+    if (!ctx) return NO_ORG;
+    if (!ctx.isOwner) return NOT_OWNER;
+    outcome = await createManualBooking(ctx, parsed.data);
+  } catch {
+    return { ok: false, error: "No se pudo completar la acción. Inténtalo de nuevo en unos minutos." };
+  }
+  revalidatePath("/app/bookings");
+  return outcome;
+}
+
+export async function recordManualPaymentAction(formData: FormData): Promise<ActionResult> {
+  const parsed = manualPaymentSchema.safeParse(readText(formData, ["bookingId", "paymentId", "amount", "method", "reference", "fxRate"]));
+  if (!parsed.success) return INVALID;
+  return run(async (ctx) => {
+    const r = await recordManualPayment(ctx, parsed.data);
+    return r.ok ? { ok: true } : r;
+  }, parsed.data.bookingId);
 }

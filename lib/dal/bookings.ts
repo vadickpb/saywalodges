@@ -5,6 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import {
   BOOKING_PAGE_SIZE, bookingActionError, type BookingAction, type BookingQuery, type BookingStatus, type PaymentStatus,
 } from "@/lib/domain/bookings";
+import {
+  manualActionError, manualBookingResultSchema, manualPaymentResultSchema, PRICING_ERROR_MESSAGE, snapshotDiffers,
+  type ManualBookingInput, type ManualPaymentInput,
+} from "@/lib/domain/manual-booking";
 
 // Bookings management (SD-406). Everything goes through the owner's own session: reads are limited by RLS (members of the active
 // organization) and the three actions are SECURITY DEFINER RPCs that re-check membership and state. The service role is not used.
@@ -121,6 +125,8 @@ export type BookingDetail = Omit<BookingRow, "hasVoucherToReview" | "guestName">
   cancelledAt: string | null;
   cancelReason: string | null;
   guest: { name: string; email: string; phone: string | null };
+  /** What the guest typed in the checkout (null fields: booking made before the snapshot existed), and whether it differs from the guest record. */
+  guestSnapshot: { name: string | null; phone: string | null; differs: boolean };
   payments: PaymentRow[];
   hasVoucherToReview: boolean;
 };
@@ -128,7 +134,7 @@ export type BookingDetail = Omit<BookingRow, "hasVoucherToReview" | "guestName">
 export async function getBookingDetail(ctx: Context, bookingId: string): Promise<BookingDetail | null> {
   const { supabase, orgId } = ctx;
   const booking = await supabase.from("bookings")
-    .select(`${BOOKING_COLUMNS}, confirmed_at, cancelled_at, cancel_reason`).eq("org_id", orgId).eq("id", bookingId).maybeSingle();
+    .select(`${BOOKING_COLUMNS}, confirmed_at, cancelled_at, cancel_reason, guest_name, guest_phone`).eq("org_id", orgId).eq("id", bookingId).maybeSingle();
   if (booking.error) fail("detail", booking.error.code);
   const b = booking.data;
   if (!b) return null;
@@ -150,6 +156,10 @@ export async function getBookingDetail(ctx: Context, bookingId: string): Promise
     totalCents: b.total_cents, depositCents: b.deposit_cents, expiresAt: b.expires_at, createdAt: b.created_at,
     unitName: unit.data?.name ?? "—", confirmedAt: b.confirmed_at, cancelledAt: b.cancelled_at, cancelReason: b.cancel_reason,
     guest: { name: guest.data?.name ?? "—", email: guest.data?.email ?? "", phone: guest.data?.phone ?? null },
+    guestSnapshot: {
+      name: b.guest_name, phone: b.guest_phone,
+      differs: guest.data ? snapshotDiffers({ name: b.guest_name, phone: b.guest_phone }, guest.data) : false,
+    },
     payments: rows, hasVoucherToReview: rows.some((p) => p.status === "pending_review"),
   };
 }
@@ -176,4 +186,48 @@ export async function rejectPayment(ctx: Context, paymentId: string, reason: str
 export async function cancelBooking(ctx: Context, bookingId: string, reason: string): Promise<ActionResult> {
   const { error } = await ctx.supabase.rpc("cancel_booking", { p_org_id: ctx.orgId, p_booking_id: bookingId, p_reason: reason || undefined });
   return result("cancel", error);
+}
+
+// ─── Owner-registered bookings and payments (SD-413). The RPCs are owner-only and price/validate in the database. ───────────────
+export type ManualResult<T> = ({ ok: true } & T) | { ok: false; error: string };
+
+export async function listBookableUnits(ctx: Context): Promise<{ id: string; name: string; maxGuests: number }[]> {
+  const { data, error } = await ctx.supabase.from("units").select("id, name, max_guests").eq("org_id", ctx.orgId).eq("active", true).order("name");
+  if (error) fail("units", error.code);
+  return (data ?? []).map((u) => ({ id: u.id, name: u.name, maxGuests: u.max_guests }));
+}
+
+export async function createManualBooking(ctx: Context, input: ManualBookingInput): Promise<ManualResult<{ bookingId: string }>> {
+  const { data, error } = await ctx.supabase.rpc("create_manual_booking", {
+    p_org_id: ctx.orgId, p_unit_id: input.unitId, p_check_in: input.checkIn, p_check_out: input.checkOut, p_guests: input.guests,
+    p_guest_name: input.name, p_guest_email: input.email, p_guest_phone: input.phone || undefined, p_lang: input.lang,
+  });
+  if (error) {
+    log("warn", "bookings.manual_failed", { code: error.code ?? "UNKNOWN", outcome: "create" });
+    return { ok: false, error: manualActionError("booking", error.code) };
+  }
+  const parsed = manualBookingResultSchema.safeParse(data);
+  if (!parsed.success) {
+    log("error", "bookings.manual_failed", { code: "INVALID_RESPONSE", outcome: "create" });
+    return { ok: false, error: manualActionError("booking", undefined) };
+  }
+  if (!parsed.data.ok) return { ok: false, error: PRICING_ERROR_MESSAGE[parsed.data.error] ?? manualActionError("booking", undefined) };
+  return { ok: true, bookingId: parsed.data.booking_id };
+}
+
+export async function recordManualPayment(ctx: Context, input: ManualPaymentInput): Promise<ManualResult<{ replayed: boolean }>> {
+  const { data, error } = await ctx.supabase.rpc("record_manual_payment", {
+    p_org_id: ctx.orgId, p_booking_id: input.bookingId, p_amount_cents: input.amount, p_method: input.method,
+    p_reference: input.reference || undefined, p_fx_rate_pen: input.fxRate ?? undefined, p_payment_id: input.paymentId,
+  });
+  if (error) {
+    log("warn", "bookings.manual_failed", { code: error.code ?? "UNKNOWN", outcome: "payment" });
+    return { ok: false, error: manualActionError("payment", error.code) };
+  }
+  const parsed = manualPaymentResultSchema.safeParse(data);
+  if (!parsed.success) {
+    log("error", "bookings.manual_failed", { code: "INVALID_RESPONSE", outcome: "payment" });
+    return { ok: false, error: manualActionError("payment", undefined) };
+  }
+  return { ok: true, replayed: parsed.data.replayed ?? false };
 }

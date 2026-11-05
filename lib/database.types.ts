@@ -250,6 +250,8 @@ isOneToOne: true
           email_lang: string;
           expires_at: string | null;
           guest_id: string;
+          guest_name: string | null;
+          guest_phone: string | null;
           guests: number;
           id: string;
           org_id: string;
@@ -297,6 +299,8 @@ isOneToOne: true
           email_lang?: string;
           expires_at?: string | null;
           guest_id?: string;
+          guest_name?: string | null;
+          guest_phone?: string | null;
           guests?: number;
           id?: string;
           org_id?: string;
@@ -1867,6 +1871,32 @@ isOneToOne: true
       };
       cron_claim_booking_email: {
         Args: { p_arrival_days?: number };
+        Returns: Json;
+      };
+      create_manual_booking: {
+        Args: {
+          p_check_in: string;
+          p_check_out: string;
+          p_guest_email: string;
+          p_guest_name: string;
+          p_guest_phone?: string;
+          p_guests: number;
+          p_lang?: string;
+          p_org_id: string;
+          p_unit_id: string;
+        };
+        Returns: Json;
+      };
+      record_manual_payment: {
+        Args: {
+          p_amount_cents: number;
+          p_booking_id: string;
+          p_fx_rate_pen?: number;
+          p_method: Database["public"]["Enums"]["payment_method"];
+          p_org_id: string;
+          p_payment_id?: string;
+          p_reference?: string;
+        };
         Returns: Json;
       };
       create_localized_booking_from_quote: {
