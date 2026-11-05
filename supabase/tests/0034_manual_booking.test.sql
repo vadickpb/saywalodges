@@ -4,7 +4,7 @@
 begin;
 select plan(33);
 
-create function pg_temp.d(n integer) returns date language sql stable as $$ select (current_date + 300 + n)::date $$;
+create function pg_temp.d(n integer) returns date language sql stable as $$ select (current_date + 650 + n)::date $$;
 
 insert into public.units (id, org_id, property_id, name, kind, max_guests, included_guests, active) values
   ('ee413000-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Manual Unit', 'room', 4, 4, true);
