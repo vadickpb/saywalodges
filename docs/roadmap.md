@@ -1405,9 +1405,10 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   selección pura y revalidación atómica mediante marcas privadas para impedir asociación concurrente al borrar.
   Huérfanos/orgs borradas >24 h; rechazados o reservas cerradas >30 días. Aprobados y `pending_review` siempre protegidos.
   Tests de dominio, orquestación, auth y pgTAP. Sin DELETE SQL de objetos ni datos personales en logs.
-- **Pendiente**: revisión de Claude, merge (este encargo deja el PR abierto), aprobación de *Deploy database* y
-  programación externa diaria (`docs/cron.md`). El dueño debe decidir sobre la propuesta documental de 5 años para
-  aprobados (Ley 29733 art. 8 no fija ese plazo); su borrado no está habilitado.
+- **Pendiente**: aprobación de *Deploy database* y programación externa diaria (`docs/cron.md`). El dueño debe decidir
+  el plazo para aprobados (propuesta: 5 años; Ley 29733 art. 8 no lo fija) y, al decidirlo, **crear un ticket para
+  habilitar su borrado** (hoy no está habilitado). Seguimiento menor: tras purgar un comprobante rechazado, el panel
+  muestra el botón de ver comprobante y falla; devolver «comprobante eliminado» en `getVoucherSignedUrl`.
 
 ### [ ] SD-410 · test(e2e): booking flow
 `M` · Depende: SD-406 · Review: `R`
