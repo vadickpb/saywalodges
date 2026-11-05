@@ -126,7 +126,7 @@ y **ambas** `EMAIL_ARRIVAL_INSTRUCTIONS_ES` / `EMAIL_ARRIVAL_INSTRUCTIONS_EN` (t
 incompleta impide consumir la cola. En desarrollo se usa el modo simulación existente;
 en preview, configurar `EMAIL_ALLOWED_RECIPIENTS` antes de usar Resend.
 
-La migración `20261104053113_booking_lifecycle_emails.sql` añade una cola interna con RLS,
+La migración `20261105031117_booking_lifecycle_emails.sql` añade una cola interna con RLS,
 sin acceso para anon ni miembros. Los triggers registran reserva recibida/nueva reserva,
 confirmación, rechazo por payment y **cada** voucher recibido, dentro de la transacción;
 el correo se envía después, exclusivamente desde el cron con service-role. No se añaden
