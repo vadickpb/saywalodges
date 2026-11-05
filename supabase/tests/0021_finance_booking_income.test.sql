@@ -6,7 +6,7 @@
 -- Two real concurrent sessions are not available in pgTAP: exactly-once is proven by replays, by a
 -- pre-existing key (the ON CONFLICT path a lost race takes) and by the unique index itself.
 begin;
-select plan(91);
+select plan(92);
 
 -- ─── Catalog ────────────────────────────────────────────────────────────────
 select ok((select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc where oid in (
