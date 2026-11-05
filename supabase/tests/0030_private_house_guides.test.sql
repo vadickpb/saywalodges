@@ -1,5 +1,5 @@
 begin;
-select no_plan();
+select plan(42);
 delete from public.house_guides;
 -- Fixture: immutable image ID maps to a private object; no real guest information.
 insert into public.house_guide_images(id,org_id,storage_path) values
@@ -20,6 +20,7 @@ select throws_ok($$select public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12
 select throws_ok($$select public.save_house_guide('bf88f504-051f-4fdc-ab73-4fa12d715817','{"title":"x","sections":42}',2,true)$$,'22023',null,'Malformed guide rejected');
 select throws_ok($$select public.create_house_guide_link('bf88f504-051f-4fdc-ab73-4fa12d715817','Stay',repeat('a',64),'short',now()+interval '7 days')$$,'22023',null,'Weak password rejected');
 select throws_ok($$select public.create_house_guide_link('bf88f504-051f-4fdc-ab73-4fa12d715817','Stay',repeat('a',64),repeat('é',40),now()+interval '7 days')$$,'22023',null,'Bcrypt byte truncation prevented');
+select lives_ok($$select public.create_house_guide_link('bf88f504-051f-4fdc-ab73-4fa12d715817','Short stay',repeat('f',64),'lago48',now()+interval '7 days')$$,'Six-character password accepted');
 select lives_ok($$select public.create_house_guide_link('bf88f504-051f-4fdc-ab73-4fa12d715817','Stay',repeat('a',64),'private-password-2026',now()+interval '7 days')$$,'Owner creates password protected link');
 select ok((select password_hash not like '%private-password%' from public.house_guide_links where token_hash=repeat('a',64)),'Password not stored in plaintext');
 -- A draft edit does not affect readers of the published revision.
@@ -30,6 +31,8 @@ select throws_like($$select * from public.house_guides$$,'%permission denied%','
 select throws_like($$select * from public.house_guide_links$$,'%permission denied%','Anon cannot query credentials');
 select throws_like($$select * from private.house_guide_sessions$$,'%permission denied%','Sessions inaccessible');
 select is(public.read_house_guide('saywa-lodges',repeat('a',64),repeat('b',64)),null::jsonb,'No content before password');
+select is(public.unlock_house_guide('saywa-lodges',repeat('f',64),'lago4',repeat('f',64)),false,'Five-character password rejected at unlock');
+select is(public.unlock_house_guide('saywa-lodges',repeat('f',64),'lago48',repeat('f',64)),true,'Six-character password unlocks');
 select is(public.unlock_house_guide('demo',repeat('a',64),'private-password-2026',repeat('b',64)),false,'Link does not work on another tenant');
 select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'incorrect-password',repeat('b',64)),false,'Wrong password denied');
 select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'private-password-2026',repeat('b',64)),true,'Correct password creates session');
@@ -78,7 +81,8 @@ reset role;
 update public.house_guide_links set total_attempts=0;
 insert into private.house_guide_sessions(session_hash,org_id,link_id,expires_at)
 select md5(n::text)||md5('session'||n::text),'bf88f504-051f-4fdc-ab73-4fa12d715817',id,now()+interval '1 day'
-from public.house_guide_links,generate_series(1,100) n;
+from public.house_guide_links,generate_series(1,100) n
+where token_hash=repeat('a',64);
 set local role anon;
 select is(public.unlock_house_guide('saywa-lodges',repeat('a',64),'private-password-2026',repeat('e',64)),false,'Active session count bounded');
 select * from finish();rollback;

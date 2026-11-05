@@ -39,7 +39,7 @@ export async function saveGuide(input: unknown, version: number, publish: boolea
 }
 export async function createGuideLink(input: {label:string;password:string;expiresAt:string}) {
   const parsed=z.object({label:z.string().trim().min(1).max(100),password:guidePasswordSchema,expiresAt:z.iso.datetime()}).safeParse(input);
-  if(!parsed.success) return {ok:false as const,error:"Completa el nombre, una contraseña de 12 caracteres y el vencimiento."};
+  if(!parsed.success) return {ok:false as const,error:"Completa el nombre, una contraseña de al menos 6 caracteres y el vencimiento."};
   const ctx=await guideOwnerContext(); if(!ctx) return {ok:false as const,error:"Solo el dueño puede compartir la guía."};
   const expiry=Date.parse(input.expiresAt); if(expiry<=Date.now()||expiry>Date.now()+365*86400000) return {ok:false as const,error:"El vencimiento debe estar dentro del próximo año."};
   const token=createGuideToken();

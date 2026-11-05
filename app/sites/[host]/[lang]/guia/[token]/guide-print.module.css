@@ -1,0 +1,32 @@
+@media print {
+  :global(body):has(.guide) {
+    background: white !important;
+    color: black !important;
+  }
+  :global(body):has(.guide) :global(header),
+  :global(body):has(.guide) :global(footer),
+  .guide button, .guide form, .guide nav {
+    display: none !important;
+  }
+  .guide {
+    display: block;
+    min-height: 0;
+    max-width: none;
+    padding: 0;
+    color: black;
+    background: white;
+  }
+  .guide * { color: black !important; }
+  .guide section, .guide li, .guide figure { break-inside: avoid; }
+  .guide h1, .guide h2 { break-after: avoid; }
+  .guide img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 230mm;
+    object-fit: contain;
+    break-inside: avoid;
+  }
+  .guide figure { margin-bottom: 1rem; }
+}
