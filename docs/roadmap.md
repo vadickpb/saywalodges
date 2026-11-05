@@ -1257,7 +1257,8 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   huésped, y valorar que `create_booking_from_quote` deje de rellenar teléfonos de huéspedes existentes. Requiere migración (tocar el RPC central) y pgTAP.
 - **Criterios**
 - **Hecho (parte 1)**: aprobar/rechazar un pago y cancelar una reserva son solo del dueño en la base (migración `20261105160000`, pgTAP 0019/0021) y en la app (botones ocultos y acción que falla rápido).
-- **Pendiente (partes 2 y 3)**: *snapshot* del huésped (H4), reserva manual y pago de saldo (RPC nuevas), luego su pantalla.
+- **Hecho (parte 2, base de datos)**: migración `20261105170000` y pgTAP `0034`: *snapshot* (`bookings.guest_name/guest_phone`; el checkout ya no rellena el teléfono de un huésped existente), `create_manual_booking` (solo dueño, precio calculado en la base, disponibilidad por el constraint) y `record_manual_payment` (solo dueño; depósito o saldo; ingreso en finanzas; nunca por encima del total).
+- **Pendiente (parte 3)**: pantallas del dueño (reserva manual y registrar pago) y mostrar el *snapshot* con aviso si no coincide con la ficha.
   - [ ] Reserva manual sobre fechas ocupadas falla; sobre fechas libres crea reserva y bloque.
   - [ ] El detalle muestra el nombre y teléfono tal como se enviaron en el checkout.
 
