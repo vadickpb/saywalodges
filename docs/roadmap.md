@@ -1424,6 +1424,7 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 ## Fase 7 — Hardening y portafolio
 
 ### [ ] SD-701 · security: CSP and headers
+- **Guía de validación pendiente**: [produccion.md](produccion.md#2-validación-csp-en-preview-sd-701).
 `M` · Depende: SD-105 · Review: `R+S`
 - **Alcance**: CSP con nonce (ver `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`),
   compatible con Mercado Pago.
@@ -1434,6 +1435,7 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   dashboard y login; por eso sigue sin marcar.
 
 ### [ ] SD-702 · chore: production readiness
+- **Checklist y runbook por instalación**: [produccion.md](produccion.md); ejecución y evidencias del dueño pendientes.
 `S` · Depende: M4 · Review: `R`
 - **Alcance**: Supabase Pro (sin pausa, backups), migraciones aplicadas por CI, runbook (restaurar backup,
   rotar secretos, incidente de doble reserva).
