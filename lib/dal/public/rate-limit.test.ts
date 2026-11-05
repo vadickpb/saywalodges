@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 const rpc = vi.hoisted(() => vi.fn());
-const state = vi.hoisted(() => ({ secret: "s3cret-s3cret-s3cret" as string | undefined, ip: "203.0.113.7" }));
+const state = vi.hoisted(() => ({ secret: "s3cret-s3cret-s3cret-s3cret-s3cret" as string | undefined, ip: "203.0.113.7" }));
 vi.mock("@/lib/supabase/admin", () => ({ getSupabaseAdmin: () => ({ rpc }) }));
 vi.mock("@/lib/env", () => ({ env: { get CRON_SECRET() { return state.secret; } } }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-vercel-forwarded-for": state.ip }) }));
 import { allowPublicRequest, clientIpFrom, rateKey } from "./rate-limit";
 
-beforeEach(() => { rpc.mockReset(); state.secret = "s3cret-s3cret-s3cret"; state.ip = "203.0.113.7"; });
+beforeEach(() => { rpc.mockReset(); state.secret = "s3cret-s3cret-s3cret-s3cret-s3cret"; state.ip = "203.0.113.7"; });
 
 describe("clientIpFrom", () => {
   it("trusts the Vercel header only on Vercel and takes the first address", () => {
