@@ -111,6 +111,62 @@ propiedad esté publicada y que el host coincida con su subdominio/dominio propi
 Token inválido, de otro tenant o de propiedad no publicada → el mismo 404. Aún no hay quien entregue el enlace
 al huésped: lo hará el flujo de reserva (SD-403/405), que deberá devolver `public_token` al crear el booking.
 
+## Correos de reservas (SD-407)
+
+Programar `GET /api/cron/booking-emails` cada minuto (o `POST` desde un scheduler externo),
+con `Authorization: Bearer <CRON_SECRET>`; mismo secreto y autenticación que `expire-holds`.
+No existe programación automática en el repositorio: debe habilitarse en cada instalación.
+La ruta devuelve `{summary:{sent,failed,skipped}}`; `sent` incluye simulaciones.
+401 = secreto incorrecto/ausente; 500 genérico = configuración/BD, consultar logs.
+`summary.failed > 0` requiere alerta del scheduler aunque HTTP sea 200.
+
+Antes de activarlo, configurar las variables existentes de Resend, `EMAIL_BRAND_NAME`,
+y las instrucciones `EMAIL_ARRIVAL_INSTRUCTIONS_ES` / `EMAIL_ARRIVAL_INSTRUCTIONS_EN` (texto real de llegada,
+1–4000 caracteres). Solo se exige la instrucción del idioma de la reserva al procesar `arrival`;
+si falta o no es válida, ese evento termina `failed` y el cron continúa con los demás sin 500.
+`EMAIL_ARRIVAL_DAYS` es un entero 0–30, por defecto 3 también si la variable está vacía. En desarrollo se usa el modo simulación existente;
+en preview, configurar `EMAIL_ALLOWED_RECIPIENTS` antes de usar Resend.
+
+La migración `20261105120000_booking_lifecycle_emails.sql` añade una cola interna con RLS,
+sin acceso para anon ni miembros. Los triggers registran reserva recibida/nueva reserva,
+confirmación, rechazo por payment y **cada** voucher recibido, dentro de la transacción;
+el correo se envía después, exclusivamente desde el cron con service-role. No se añaden
+notificaciones históricas de reservas/pagos existentes. El idioma queda fijado desde el
+checkout; clientes anteriores y reservas existentes usan español. Owners reciben el idioma
+de la reserva; los destinatarios se resuelven en el primer claim y quedan fijados para los reintentos.
+
+**Supuesto de instalación (ADR 0010):** una organización por instalación; la demo es otra instalación.
+La marca y las instrucciones de llegada son por instalación, no por organización ni por propiedad.
+
+Las llegadas se registran para reservas confirmadas entre hoy y X días en `America/Lima`;
+esto también cubre confirmaciones tardías y una ejecución diaria perdida. No se envían
+instrucciones para llegadas pasadas o reservas canceladas antes de reclamar el evento.
+
+**Garantía de deduplicación:** `unique nulls not distinct (booking_id,event,payment_id)` más
+claim atómico `FOR UPDATE SKIP LOCKED`. `attempts` limita a tres intentos por evento. Los fallos
+transitorios de proveedor (5xx, 429 o red, resultado `unavailable`) reabren el evento hasta agotar
+ese tope; los fallos permanentes terminan `failed`. Un claim sin outcome abandonado durante más
+de 30 minutos también se recupera hasta tres intentos; el tercero abandonado termina `failed`.
+Cada reintento conserva eventId, snapshot de destinatarios y clave de idempotencia por destinatario;
+los resultados de un intento antiguo no pueden cerrar uno más reciente. La deduplicación del
+proveedor tiene una ventana finita: ante una interrupción prolongada no hay garantía absoluta de
+exactamente una entrega. No resetear contadores ni claims manualmente sin verificar al proveedor.
+
+`received` y `rejected` se omiten (`skipped`) si la reserva está expired/cancelled. Además, se admiten
+como máximo tres eventos `received` por email normalizado en 24 horas (incluidos otros tenants);
+los excesos se marcan `skipped`. Se cuentan eventos distintos, no sus reintentos. Los claims de
+forma inválida con id válido se liquidan `failed` para no dejarlos abandonados.
+Revisar `cron.booking_emails.delivery`, `cron.booking_emails.settle_failed`,
+`cron.booking_emails.invalid_claim`, `cron.booking_emails.arrival_not_configured` y
+`cron.booking_emails.not_configured`. El ledger conserva `attempts`, `first_attempt_at`,
+`attempted_at` y `outcome` para investigar fallos y agotamiento.
+No hay PII ni tokens en logs. Los correos no incluyen enlaces con credenciales de reserva.
+
+Despliegue: dejar el PR abierto para revisión. Tras el merge, el dueño aprueba **Deploy database**
+como indica `docs/workflow.md`, configura las variables en Vercel y programa este cron. Antes de
+la migración, el checkout usa la RPC anterior si la nueva aún no existe (sin emails ni idioma
+persistido hasta aprobar SQL); la reserva y el pago siguen funcionando. No se modifica ninguna BD remota desde el agente.
+
 # Cron de purga de comprobantes (SD-412)
 
 Ruta: `GET` o `POST /api/cron/voucher-purge`, en el mismo host de plataforma que los cron anteriores

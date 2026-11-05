@@ -45,7 +45,21 @@ function defineTemplate<S extends z.ZodType>(schema: S, build: (lang: EmailLang,
   return { build: (lang: EmailLang, raw: z.input<S>, brand: string = DEFAULT_BRAND_NAME): EmailContent => build(lang, schema.parse(raw), brand) };
 }
 
+export const bookingEvents = ["received", "confirmed", "rejected", "arrival", "owner_booking", "owner_voucher"] as const;
 export const templates = {
+  booking: defineTemplate(z.object({
+    event: z.enum(bookingEvents), unit: z.string().transform(v => cleanText(v, 200)),
+    checkIn: z.iso.date(), checkOut: z.iso.date(),
+    instructions: z.string().trim().min(1).max(4000).optional(),
+  }).refine(p => p.event !== "arrival" || Boolean(p.instructions)), (lang, props, brand) => {
+    const m = emailMessages[lang].booking;
+    const body = props.event === "arrival" ? cleanText(props.instructions ?? "", 4000)
+      : m[`${props.event}Body`];
+    return {
+      subject: `${m[props.event]} · ${brand}`, preheader: m[props.event], heading: m[props.event],
+      paragraphs: [format(m.stay, { unit: props.unit, checkIn: props.checkIn, checkOut: props.checkOut }), body],
+    };
+  }),
   test: defineTemplate(z.object({ name: displayName }), (lang, props, brand) => {
     const m = emailMessages[lang].test;
     return {

@@ -19,7 +19,7 @@ describe("public checkout action", () => {
     book.mockResolvedValue({publicToken});
     await expect(submitCheckout("es",{},form({total_cents:"1",deposit_cents:"0",currency:"PEN",host:"saywa-lodges",org_id:"other",check_in:"2030-01-01"})))
       .rejects.toThrow(`REDIRECT:/es/reserva/${publicToken}`);
-    expect(book).toHaveBeenCalledWith("demo",{token,name:"Ana",email:"ana@example.com",phone:"",terms:"on"});
+    expect(book).toHaveBeenCalledWith("demo",{token,name:"Ana",email:"ana@example.com",phone:"",terms:"on"},"es");
   });
   it.each([{name:" "},{name:"Ana\n"},{name:"Ana\u202e"},{email:"bad"},{email:""},{phone:"script"},{terms:"false"}])("validates before calling DAL %o",async patch => {
     const state=await submitCheckout("es",{},form(patch));

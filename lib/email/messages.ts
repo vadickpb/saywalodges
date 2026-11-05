@@ -6,6 +6,17 @@ export const emailLangs = ["es", "en"] as const satisfies readonly EmailLang[];
 
 export const emailMessages = {
   es: {
+    booking: {
+      received: "Recibimos tu reserva", confirmed: "Tu reserva está confirmada", rejected: "Tu pago fue rechazado",
+      arrival: "Instrucciones para tu llegada", owner_booking: "Nueva reserva recibida", owner_voucher: "Comprobante recibido",
+      stay: "Alojamiento: {unit}. Llegada: {checkIn}. Salida: {checkOut}.",
+      receivedBody: "Recibimos tu solicitud. Si todavía está pendiente de pago, completa el pago dentro del plazo indicado al reservar para conservar las fechas.",
+      confirmedBody: "Tu pago fue aprobado y las fechas están confirmadas.",
+      rejectedBody: "No se pudo aprobar el comprobante. Revisa tu reserva y envía un nuevo comprobante o comunícate con el alojamiento.",
+      owner_bookingBody: "Revisa la nueva reserva en el panel de reservas.",
+      owner_voucherBody: "Se recibió un comprobante para esta reserva. Revisa el archivo y verifica el pago en tu cuenta antes de aprobarlo en el panel.",
+    },
+
     channels: { airbnb: "Airbnb", booking: "Booking.com", vrbo: "Vrbo", other: "otro canal" },
     footer: "Enviado por {brand}. Si no esperabas este correo, puedes ignorarlo.",
     poweredBy: "Con tecnología de Saywa Direct.",
@@ -39,6 +50,17 @@ export const emailMessages = {
     },
   },
   en: {
+    booking: {
+      received: "We received your booking", confirmed: "Your booking is confirmed", rejected: "Your payment was rejected",
+      arrival: "Arrival instructions", owner_booking: "New booking received", owner_voucher: "Payment voucher received",
+      stay: "Accommodation: {unit}. Check-in: {checkIn}. Check-out: {checkOut}.",
+      receivedBody: "We received your request. If payment is still pending, complete payment before the deadline shown at checkout to keep your dates.",
+      confirmedBody: "Your payment was approved and your dates are confirmed.",
+      rejectedBody: "We could not approve your voucher. Review your booking and submit a new voucher or contact the accommodation.",
+      owner_bookingBody: "Review the new booking in your bookings dashboard.",
+      owner_voucherBody: "A payment voucher was submitted for this booking. Review the file and verify the payment in your account before approving it in the dashboard.",
+    },
+
     channels: { airbnb: "Airbnb", booking: "Booking.com", vrbo: "Vrbo", other: "another channel" },
     footer: "Sent by {brand}. If you weren't expecting this email, you can ignore it.",
     poweredBy: "Powered by Saywa Direct.",

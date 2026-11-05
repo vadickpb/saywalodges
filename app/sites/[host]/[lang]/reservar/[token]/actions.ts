@@ -24,7 +24,7 @@ export async function submitCheckout(lang: string, _previous: CheckoutState, for
   let result;
   try {
     const host = siteIdentifierFromHost(((await headers()).get("host") ?? "").toLowerCase());
-    result = await bookQuote(host, parsed.data);
+    result = await bookQuote(host, parsed.data, lang);
   } catch {
     // DAL logs only closed machine codes. Never log the thrown object or form.
     return { error: "generic" };
