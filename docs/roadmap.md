@@ -1403,10 +1403,17 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 
 ### [ ] SD-410 · test(e2e): booking flow
 `M` · Depende: SD-406 · Review: `R`
-- **Alcance**: Playwright en CI contra Supabase local: owner cotiza → huésped reserva → sube voucher → owner aprueba
+- **Alcance**: Playwright en CI contra Supabase local: el huésped cotiza en /cotizar → reserva → sube voucher → owner aprueba
   → reserva confirmada y fechas bloqueadas.
 - **Criterios**
   - [ ] Corre en CI en < 5 min y es estable (3 ejecuciones seguidas en verde).
+- **Implementado**: Playwright/Chromium contra Supabase local; huésped cotiza en `/es/cotizar`, reserva,
+  sube un PNG real y el dueño aprueba desde `/app/bookings` en otra sesión. Comprueba confirmación pública,
+  importe persistido, bloqueo permanente y rechazo de una cotización solapada. Fixtures con UUID y limpieza;
+  sin cambios de producción ni migraciones. Job independiente con límite de 5 min y tres pasadas sin retries.
+- **Ejecución y diagnóstico**: [booking-e2e.md](booking-e2e.md), `npm run test:e2e -- --repeat-each=3`.
+- **Verificado localmente**: tres pasadas consecutivas en verde (29,6 s), sin fixtures residuales; lint, typecheck, build y 1436 tests unitarios en verde. Revisiones funcional y de seguridad sin hallazgos importantes.
+- **Pendiente**: comprobar la duración real del job remoto del PR.
 
 ---
 

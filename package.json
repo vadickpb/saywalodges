@@ -17,7 +17,8 @@
     "local:booking": "node scripts/local-demo-booking.mjs",
     "db:seed-storage": "node scripts/seed-local-storage.mjs",
     "where": "node scripts/where.mjs",
-    "install-client": "node scripts/install-client.mjs"
+    "install-client": "node scripts/install-client.mjs",
+    "test:e2e": "node scripts/test-booking-e2e.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -38,6 +39,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.19.1",
     "@types/react": "^19",
