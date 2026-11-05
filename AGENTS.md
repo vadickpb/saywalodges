@@ -51,3 +51,7 @@ El proceso completo está en [`docs/workflow.md`](docs/workflow.md); léelo ante
   Indica siempre la rama y el worktree en los que trabajaste. El dueño solo debe intervenir cuando es imprescindible.
 - Quien escribió el diff no es el único que lo revisa: lo revisa el otro agente o los subagentes `reviewer` y
   `security-reviewer` antes del merge.
+  Excepción (SD-901): un PR etiquetado `risk:low` por el workflow `PR risk` (lista cerrada de rutas y escaneo de
+  líneas añadidas; sin BD, permisos, pagos, Storage, auth, API, server actions, `page`/`layout`, variables de
+  entorno, dependencias ni CI) se mergea con la autorrevisión del implementador y CI verde, incluso por el
+  auto-merge de GitHub. El orden de trabajo vive en `docs/cola.md`.
