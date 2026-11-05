@@ -25,7 +25,7 @@ export const checkoutGuestSchema = z.object({
   terms: z.literal("on"),
 });
 export type CheckoutGuest = z.infer<typeof checkoutGuestSchema>;
-export type CheckoutError = "validation" | "linkUnavailable" | "unbookable" | "unavailable" | "generic";
+export type CheckoutError = "validation" | "linkUnavailable" | "unbookable" | "unavailable" | "tryLater" | "generic";
 export type CheckoutState = { error?: CheckoutError; fields?: Partial<Record<keyof CheckoutGuest, boolean>> };
 export function checkoutError(code: string): CheckoutError {
   if (code === "SD001" || code === "P0002") return "linkUnavailable";

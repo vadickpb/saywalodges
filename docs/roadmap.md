@@ -1377,11 +1377,13 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Criterios**
   - [x] Hold vencido pasa la reserva a `expired` y libera fechas.
 
-### [ ] SD-409 · security: abuse protection on public actions
+### [~] SD-409 · security: abuse protection on public actions
 `S` · Depende: SD-403 · Review: `R+S`
 - **Alcance**: rate limiting / BotID en crear reserva, cotizar y subir voucher; límites de holds activos por IP/teléfono.
 - **Criterios**
-  - [ ] Ráfaga de 20 reservas desde el mismo origen es bloqueada.
+  - [x] Ráfaga de 20 reservas desde el mismo origen es bloqueada (límite 10/hora por IP y 5/hora por email, en la base).
+- **Hecho**: `public_rate_limits` + `check_public_rate_limit` (migración `20261105150000`, pgTAP `0033`), `lib/dal/public/rate-limit.ts` en cotizar, reservar y comprobante; claves HMAC, sin IPs en la base. Detalle en `docs/cron.md`.
+- **Pendiente**: BotID/captcha (dependencia nueva, solo si se observa abuso real).
 
 ### [~] SD-411 · feat(dashboard): payment accounts settings
 `S` · Depende: SD-401 · Review: `R+S`

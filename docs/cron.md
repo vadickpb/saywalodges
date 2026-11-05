@@ -223,3 +223,23 @@ La respuesta `200 {"selected": N, "deleted": M}` cuenta candidatos y rutas envia
    No se añade `vercel.json`: el patrón del repositorio usa scheduler externo (ver SD-408).
 3. Hasta programarlo no hay purga automática. Confirmar por separado la propuesta de cinco años;
    no afecta al cron actual porque los aprobados permanecen protegidos.
+
+## Límite de peticiones públicas (SD-409)
+
+Cotizar, crear la reserva y registrar el comprobante pasan por `allowPublicRequest` (`lib/dal/public/rate-limit.ts`).
+Los contadores viven en la tabla `public_rate_limits` (RPC `check_public_rate_limit`, ventana fija); la clave es un
+HMAC (con `CRON_SECRET`) de la IP o del email, así que la base nunca guarda IPs ni emails.
+
+| Acción | Límite por IP | Extra |
+|---|---|---|
+| Cotizar | 30 / 10 min | |
+| Reservar | 10 / hora | 5 / hora por email |
+| Registrar comprobante | 10 / hora | |
+
+- Al excederse, el huésped ve «Demasiadas solicitudes, inténtalo en unos minutos». Se registra `ratelimit.blocked`.
+- Sin `CRON_SECRET` (desarrollo local) no se limita. Si el contador falla, la petición pasa y se registra `ratelimit.check_failed`.
+- La IP sale de `x-vercel-forwarded-for` / `x-real-ip` / `x-forwarded-for`. En Vercel la pone la plataforma; si una
+  instalación corre detrás de otro proxy, ese proxy debe sobrescribir esas cabeceras.
+- Alcance: frena el abuso a través de la aplicación. Quien llame a las RPC directamente no pasa por aquí (siguen los
+  topes de la base: 3 reservas pendientes por unidad, máximo de cotizaciones por organización, 5 comprobantes por reserva).
+- Pendiente: BotID/captcha (añade una dependencia y depende del plan de Vercel; ticket aparte si se observa abuso real).

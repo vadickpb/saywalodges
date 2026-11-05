@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { allowPublicRequest } from "@/lib/dal/public/rate-limit";
 import { submitVoucher } from "@/lib/dal/public/payment-voucher";
 import { siteIdentifierFromHost } from "@/lib/dal/public/site";
 import { submitVoucherSchema, type VoucherState } from "@/lib/domain/payment-voucher";
@@ -14,6 +15,7 @@ export async function submitVoucherAction(lang: string, _previous: VoucherState,
     token: form.get("token"), path: form.get("path"), method: form.get("method"), reference: form.get("reference") ?? "",
   });
   if (!parsed.success) return { error: "validation" };
+  if (!(await allowPublicRequest("voucher"))) return { error: "tryLater" };
   let result;
   try {
     const host = siteIdentifierFromHost(((await headers()).get("host") ?? "").toLowerCase());

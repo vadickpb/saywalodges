@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+const allow = vi.hoisted(() => vi.fn(async (..._args: unknown[]) => true));
+vi.mock("@/lib/dal/public/rate-limit", () => ({ allowPublicRequest: allow }));
 const mocks = vi.hoisted(() => ({ create: vi.fn(), host: vi.fn(), redirect: vi.fn() }));
 vi.mock("@/lib/dal/public/public-quote", () => ({ createPublicQuote: mocks.create }));
 vi.mock("next/headers", () => ({ headers: async () => ({ get: () => mocks.host() }) }));
@@ -26,6 +28,13 @@ describe("submitPublicQuote", () => {
   it("marks the invalid fields and never calls the database", async () => {
     const r = await submitPublicQuote("es", {}, form({ guests: "0", checkOut: "2040-03-01" }));
     expect(r).toEqual({ error: "validation", fields: { guests: true, checkOut: true } });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+  it("answers tryLater and never reaches the database when the caller is rate limited", async () => {
+    allow.mockResolvedValueOnce(false);
+    const form = new FormData();
+    form.set("unitId", "ee204001-0000-4000-8000-000000000001"); form.set("checkIn", "2040-03-02"); form.set("checkOut", "2040-03-05"); form.set("guests", "2");
+    expect(await submitPublicQuote("es", {}, form)).toEqual({ error: "tryLater" });
     expect(mocks.create).not.toHaveBeenCalled();
   });
   it("refuses an unknown language", async () => {

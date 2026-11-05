@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { allowPublicRequest } from "@/lib/dal/public/rate-limit";
 import { createPublicQuote } from "@/lib/dal/public/public-quote";
 import { siteIdentifierFromHost } from "@/lib/dal/public/site";
 import { publicQuoteRequestSchema, type PublicQuoteState } from "@/lib/domain/public-quote";
@@ -21,6 +22,7 @@ export async function submitPublicQuote(lang: string, _previous: PublicQuoteStat
     }
     return { error: "validation", fields };
   }
+  if (!(await allowPublicRequest("quote"))) return { error: "tryLater" };
   let result;
   try {
     const host = siteIdentifierFromHost(((await headers()).get("host") ?? "").toLowerCase());
