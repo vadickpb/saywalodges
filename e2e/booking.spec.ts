@@ -50,7 +50,8 @@ test("guest quotes, books and uploads a voucher; owner confirms and dates stay b
     expect(voucher?.ok()).toBe(true);
     expect(voucher?.headers()["content-type"]).toContain("image/png");
     await voucherPage.close();
-    await dashboard.getByLabel("Tipo de cambio", { exact: false }).fill("3.75");
+    // The detail has two exchange-rate fields (approve voucher / register payment): target the approval one by its full label.
+    await dashboard.getByRole("textbox", { name: "Tipo de cambio (S/ por 1 USD), opcional", exact: true }).fill("3.75");
     await dashboard.getByRole("button", { name: "Aprobar pago", exact: true }).click();
     await dashboard.getByRole("button", { name: "Aprobar y confirmar", exact: true }).click();
     // The detail also has a "Confirmada" timestamp label; assert the status badge.
