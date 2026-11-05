@@ -62,7 +62,7 @@ describe("bookingActionError", () => {
     expect(bookingActionError("approve", "22023")).toMatch(/tipo de cambio.*menor que 100/);
     expect(bookingActionError("cancel", "22023")).toMatch(/motivo/);
     expect(bookingActionError("approve", "55000")).toMatch(/cambió de estado/);
-    expect(bookingActionError("reject", "42501")).toMatch(/permiso/);
+    expect(bookingActionError("reject", "42501")).toMatch(/solo el dueño/);
     expect(bookingActionError("reject", "XX000")).toMatch(/No se pudo/);
     expect(bookingActionError("reject", undefined)).toMatch(/No se pudo/);
   });

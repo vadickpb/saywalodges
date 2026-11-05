@@ -12,7 +12,7 @@ import { approvePaymentAction, cancelBookingAction, rejectPaymentAction } from "
 const B = "b2060000-0000-4000-8000-000000000001";
 const P = "b3060000-0000-4000-8000-000000000001";
 const form = (o: Record<string, string>) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.set(k, v); return f; };
-const ctx = { orgId: "org-1", supabase: {} };
+const ctx = { orgId: "org-1", supabase: {}, isOwner: true };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -55,6 +55,16 @@ describe("approvePaymentAction", () => {
     const r = await approvePaymentAction(form({ bookingId: B, paymentId: P, fxRate: "" }));
     expect(r.ok).toBe(false);
     expect(JSON.stringify(r)).not.toContain("postgres://");
+  });
+  it("refuses staff before calling the DAL (the database refuses them too)", async () => {
+    dal.getBookingsContext.mockResolvedValue({ ...ctx, isOwner: false });
+    const denied = { ok: false, error: "Solo el dueño puede aprobar, rechazar o cancelar reservas." };
+    expect(await approvePaymentAction(form({ bookingId: B, paymentId: P, fxRate: "" }))).toEqual(denied);
+    expect(await rejectPaymentAction(form({ bookingId: B, paymentId: P, reason: "" }))).toEqual(denied);
+    expect(await cancelBookingAction(form({ bookingId: B, reason: "" }))).toEqual(denied);
+    expect(dal.approvePayment).not.toHaveBeenCalled();
+    expect(dal.rejectPayment).not.toHaveBeenCalled();
+    expect(dal.cancelBooking).not.toHaveBeenCalled();
   });
   it("does nothing without an active organization", async () => {
     dal.getBookingsContext.mockResolvedValue(null);

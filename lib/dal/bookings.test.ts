@@ -24,7 +24,7 @@ function client(tables: Record<string, Result>, rpcResult: { error: { code?: str
   const used: Record<string, ReturnType<typeof query>> = {};
   const rpc = vi.fn().mockResolvedValue(rpcResult);
   const supabase = { from: (t: string) => (used[t] = query(tables[t] ?? { data: [], error: null })).q, rpc };
-  return { ctx: { supabase: supabase as never, orgId: ORG }, used, rpc };
+  return { ctx: { supabase: supabase as never, orgId: ORG, isOwner: true }, used, rpc };
 }
 
 const booking = { id: "b1", status: "pending_payment", check_in: "2026-12-01", check_out: "2026-12-03", guests: 2, currency: "USD", total_cents: 60000, deposit_cents: 30000, expires_at: "2026-11-05T00:00:00Z", created_at: "2026-11-03T00:00:00Z", unit_id: "u1", guest_id: "g1" };
@@ -65,7 +65,7 @@ describe("listBookings", () => {
     const head = { data: null, error: null, count: 45 };
     const used: ReturnType<typeof query>[] = [];
     const supabase = { from: () => { const r = query(call++ === 0 ? out : head); used.push(r); return r.q; }, rpc: vi.fn() };
-    const res = await listBookings({ supabase: supabase as never, orgId: ORG }, { filter: "all", from: null, to: null, page: 99 });
+    const res = await listBookings({ supabase: supabase as never, orgId: ORG, isOwner: true }, { filter: "all", from: null, to: null, page: 99 });
     expect(res).toEqual({ rows: [], total: 45 });
     expect(used[1].calls).toContainEqual(["select", ["id", { count: "exact", head: true }]]);
   });

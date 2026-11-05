@@ -1250,12 +1250,14 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   Hasta resolver permisos, no asignar staff de confianza limitada en instalaciones con reservas reales.
 - **Pendiente**: filtro por origen de la lista (el dominio y la DAL actuales solo filtran estado y fechas).
 
-### [ ] SD-413 · feat(bookings): manual booking, balance payment and guest snapshot
+### [~] SD-413 · feat(bookings): manual booking, balance payment and guest snapshot
 `L` · Depende: SD-406 · Review: `R+S`
 - **Alcance**: (a) registrar una reserva manual (cerrada por WhatsApp o efectivo) que respete la disponibilidad (el *exclusion constraint* de `calendar_blocks` manda); (b) registrar el
   pago de saldo; (c) **permisos**: confirmar/cancelar solo para `owner` en los RPC (migración + pgTAP) y botones ocultos al staff (ver SD-406); (d) **H4 de SD-403**: guardar en la reserva el nombre y teléfono enviados en el checkout (*snapshot*), mostrarlos en el detalle y avisar si no coinciden con la ficha del
   huésped, y valorar que `create_booking_from_quote` deje de rellenar teléfonos de huéspedes existentes. Requiere migración (tocar el RPC central) y pgTAP.
 - **Criterios**
+- **Hecho (parte 1)**: aprobar/rechazar un pago y cancelar una reserva son solo del dueño en la base (migración `20261105160000`, pgTAP 0019/0021) y en la app (botones ocultos y acción que falla rápido).
+- **Pendiente (partes 2 y 3)**: *snapshot* del huésped (H4), reserva manual y pago de saldo (RPC nuevas), luego su pantalla.
   - [ ] Reserva manual sobre fechas ocupadas falla; sobre fechas libres crea reserva y bloque.
   - [ ] El detalle muestra el nombre y teléfono tal como se enviaron en el checkout.
 

@@ -13,7 +13,8 @@ export const BOOKINGS_ERROR = "No se pudieron cargar las reservas. Intenta de nu
 export async function getBookingsContext() {
   const { activeOrg } = await requireActiveOrg();
   if (!activeOrg) return null;
-  return { supabase: await createClient(), orgId: activeOrg.id };
+  // Approving/rejecting a payment and cancelling are owner-only (SD-413); the RPCs enforce it, this flag only shapes the UI and fails fast.
+  return { supabase: await createClient(), orgId: activeOrg.id, isOwner: activeOrg.role === "owner" };
 }
 type Context = NonNullable<Awaited<ReturnType<typeof getBookingsContext>>>;
 
