@@ -24,7 +24,7 @@ El proceso completo está en [`docs/workflow.md`](workflow.md#modo-automático-s
 | SD-407 | Emails del ciclo de la reserva + aviso al dueño de cada comprobante | Codex | en curso (`feat/SD-407-booking-emails`) |
 | SD-410 | E2E Playwright del flujo completo en CI | Codex | en curso (`test/SD-410-e2e-booking`) |
 | SD-412 | Purga de comprobantes huérfanos/rechazados | Codex (+ revisión de seguridad de Claude) | en curso (`feat/SD-412-voucher-purge`) |
-| SD-901 | Trabajo automático: cola, riesgo, auto-merge, guía del dueño | Claude | PR |
+| SD-901 | Trabajo automático: cola, riesgo, auto-merge, guía del dueño | Claude | hecho (#64) |
 
 ## Lote 2 · Saywa Lodges en producción con huéspedes reales
 
