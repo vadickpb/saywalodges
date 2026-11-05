@@ -7,6 +7,8 @@ import { nightsBetween, showDate, showStamp } from "@/lib/domain/booking-format"
 import { formatPrice } from "@/lib/domain/rates-management";
 import { BookingBadge } from "@/components/dashboard/booking-badge";
 import { CancelBooking, ReviewPayment } from "@/components/dashboard/booking-actions";
+import { ManualPaymentForm } from "@/components/dashboard/manual-payment-form";
+import { remainingBalance } from "../_lib/payment-balance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,6 +23,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const nights = nightsBetween(b.checkIn, b.checkOut);
   // The ledger is kept in soles: a payment in another currency needs an exchange rate (ADR 0007).
   const foreign = b.currency === "PEN" ? null : b.currency;
+  const balance = remainingBalance(b.totalCents, b.payments);
 
   return (
     <div className="space-y-4">
@@ -48,12 +51,23 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               <dt className="text-muted-foreground">Celular</dt><dd>{b.guest.phone ?? "—"}</dd>
             </dl>
           </div>
+          {(b.guestSnapshot.name !== null || b.guestSnapshot.phone !== null) && (
+            <div>
+              <h3 className="font-medium">Datos escritos por el huésped al reservar</h3>
+              {b.guestSnapshot.differs && <p className="mt-1 font-medium text-amber-700 dark:text-amber-400">No coincide con la ficha del huésped</p>}
+              <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
+                <dt className="text-muted-foreground">Nombre</dt><dd><bdi>{b.guestSnapshot.name ?? "—"}</bdi></dd>
+                <dt className="text-muted-foreground">Teléfono</dt><dd><bdi>{b.guestSnapshot.phone ?? "—"}</bdi></dd>
+              </dl>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader><CardTitle>Pagos</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <p className="text-sm font-medium">Falta por cobrar: {formatPrice(balance, b.currency)}</p>
           {b.payments.length === 0 ? (
             <p className="text-sm text-muted-foreground">El huésped aún no registró ningún pago.</p>
           ) : (
@@ -85,6 +99,17 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           )}
         </CardContent>
       </Card>
+
+      {ctx.isOwner && (b.status === "pending_payment" || b.status === "confirmed") && (
+        <Card>
+          <CardHeader><CardTitle>Registrar pago</CardTitle></CardHeader>
+          <CardContent>
+            {balance > 0 ? (
+              <ManualPaymentForm key={`${b.id}:${b.payments.filter((p) => p.status === "approved").map((p) => p.id).sort().join(",")}`} bookingId={b.id} currency={b.currency} />
+            ) : <p className="text-sm text-muted-foreground">La reserva ya está pagada por completo.</p>}
+          </CardContent>
+        </Card>
+      )}
 
       {canCancel(b.status) && ctx.isOwner && <CancelBooking bookingId={b.id} confirmed={b.status === "confirmed"} />}
     </div>

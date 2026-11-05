@@ -1259,9 +1259,9 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Hecho (parte 1)**: aprobar/rechazar un pago y cancelar una reserva son solo del dueño en la base (migración `20261105160000`, pgTAP 0019/0021) y en la app (botones ocultos y acción que falla rápido).
 - **Hecho (parte 2, base de datos)**: migración `20261105170000` y pgTAP `0034`: *snapshot* (`bookings.guest_name/guest_phone`; el checkout ya no rellena el teléfono de un huésped existente), `create_manual_booking` (solo dueño, precio calculado en la base, disponibilidad por el constraint) y `record_manual_payment` (solo dueño; depósito o saldo; ingreso en finanzas; nunca por encima del total).
 - **Hecho (parte 3, servidor)**: `lib/domain/manual-booking.ts`, DAL (`createManualBooking`, `recordManualPayment`, `listBookableUnits`, `guestSnapshot` en el detalle) y acciones `createManualBookingAction` / `recordManualPaymentAction` (solo dueño, monto en céntimos, id de idempotencia por formulario).
-- **Pendiente (parte 3, pantallas)**: reserva manual, registrar pago y mostrar el *snapshot* con aviso si no coincide con la ficha (Codex).
-  - [ ] Reserva manual sobre fechas ocupadas falla; sobre fechas libres crea reserva y bloque.
-  - [ ] El detalle muestra el nombre y teléfono tal como se enviaron en el checkout.
+- **Hecho (parte 3, pantallas)**: reserva manual solo para el dueño, registro de pagos con identificador estable por formulario, saldo pendiente según pagos aprobados y *snapshot* con aviso si no coincide con la ficha. UI en español, errores accesibles y tests Vitest del saldo; sin cambios en la capa de servidor ni en la base de datos.
+  - [x] Reserva manual sobre fechas ocupadas falla; sobre fechas libres crea reserva y bloque (comprobado con Chromium y Supabase local).
+  - [x] El detalle muestra el nombre y teléfono del snapshot, separados de la ficha; avisa si difieren (comprobado con Chromium y Supabase local).
 
 ### [x] SD-407 · feat(email): booking lifecycle emails
 `M` · Depende: SD-306, SD-406 · Review: `R`

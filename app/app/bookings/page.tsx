@@ -32,7 +32,10 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader><CardTitle>Reservas</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+          <CardTitle>Reservas</CardTitle>
+          {ctx.isOwner && <Button asChild><Link href="/app/bookings/nueva">Nueva reserva manual</Link></Button>}
+        </CardHeader>
         <CardContent className="space-y-4">
           <nav aria-label="Filtrar por estado" className="flex flex-wrap gap-2">
             {BOOKING_FILTERS.map((f: BookingFilter) => (
