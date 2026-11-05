@@ -127,7 +127,7 @@ si falta o no es válida, ese evento termina `failed` y el cron continúa con lo
 `EMAIL_ARRIVAL_DAYS` es un entero 0–30, por defecto 3 también si la variable está vacía. En desarrollo se usa el modo simulación existente;
 en preview, configurar `EMAIL_ALLOWED_RECIPIENTS` antes de usar Resend.
 
-La migración `20261105031117_booking_lifecycle_emails.sql` añade una cola interna con RLS,
+La migración `20261105120000_booking_lifecycle_emails.sql` añade una cola interna con RLS,
 sin acceso para anon ni miembros. Los triggers registran reserva recibida/nueva reserva,
 confirmación, rechazo por payment y **cada** voucher recibido, dentro de la transacción;
 el correo se envía después, exclusivamente desde el cron con service-role. No se añaden
