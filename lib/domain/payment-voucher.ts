@@ -63,7 +63,7 @@ export const paymentInfoSchema = z.object({
 });
 export type PaymentInfo = z.infer<typeof paymentInfoSchema>;
 
-export type VoucherError = "validation" | "unavailable" | "fileNotFound" | "expired" | "tooManyAttempts" | "alreadyUnderReview" | "generic";
+export type VoucherError = "validation" | "unavailable" | "fileNotFound" | "expired" | "tooManyAttempts" | "alreadyUnderReview" | "tryLater" | "generic";
 export type VoucherState = { error?: VoucherError };
 
 /** Errors after which the page itself is out of date (no longer payable or already under review) and must be reloaded. */

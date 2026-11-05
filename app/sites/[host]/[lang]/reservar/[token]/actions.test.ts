@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+const allow = vi.hoisted(() => vi.fn(async (..._args: unknown[]) => true));
+vi.mock("@/lib/dal/public/rate-limit", () => ({ allowPublicRequest: allow }));
 const book = vi.fn();
 const redirect = vi.fn((url: string) => { throw new Error(`REDIRECT:${url}`); });
 vi.mock("next/headers", () => ({ headers: async () => new Headers({host:"demo.localhost:3000"}) }));

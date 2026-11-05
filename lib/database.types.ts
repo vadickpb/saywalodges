@@ -1857,6 +1857,10 @@ isOneToOne: true
 "unlock_house_guide":
 { Args: { "p_host": string,"p_password": string,"p_session_hash": string,"p_token_hash": string }; Returns: boolean
                            }
+      check_public_rate_limit: {
+        Args: { p_key_hash: string; p_limit: number; p_scope: string; p_window_seconds: number };
+        Returns: boolean;
+      };
       cron_settle_booking_email: {
         Args: { p_attempt?: number; p_id: string; p_outcome: string };
         Returns: undefined;

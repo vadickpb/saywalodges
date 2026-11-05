@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { allowPublicRequest } from "@/lib/dal/public/rate-limit";
 import { bookQuote } from "@/lib/dal/public/quote-checkout";
 import { siteIdentifierFromHost } from "@/lib/dal/public/site";
 import { checkoutGuestSchema, type CheckoutState } from "@/lib/domain/quote-checkout";
@@ -21,6 +22,7 @@ export async function submitCheckout(lang: string, _previous: CheckoutState, for
     }
     return { error: "validation", fields };
   }
+  if (!(await allowPublicRequest("checkout", parsed.data.email))) return { error: "tryLater" };
   let result;
   try {
     const host = siteIdentifierFromHost(((await headers()).get("host") ?? "").toLowerCase());
