@@ -8,9 +8,10 @@ import { readText } from "../site/_lib/form-state";
 
 // Owner actions on a booking (SD-406). Input is validated with zod; the amount of a payment is never accepted from here (the database
 // approves what the guest registered). Membership and state are enforced again by the RPCs, so a forged id of another tenant fails there.
-const INVALID: ActionResult = { ok: false, error: "Revisa los datos e inténtalo de nuevo." };
-const NO_ORG: ActionResult = { ok: false, error: "No hay una organización activa." };
-const NOT_OWNER: ActionResult = { ok: false, error: "Solo el dueño puede aprobar, rechazar o cancelar reservas." };
+type Failure = Extract<ActionResult, { ok: false }>;
+const INVALID: Failure = { ok: false, error: "Revisa los datos e inténtalo de nuevo." };
+const NO_ORG: Failure = { ok: false, error: "No hay una organización activa." };
+const NOT_OWNER: Failure = { ok: false, error: "Solo el dueño puede aprobar, rechazar o cancelar reservas." };
 
 async function run(fn: (ctx: NonNullable<Awaited<ReturnType<typeof getBookingsContext>>>) => Promise<ActionResult>, bookingId: string): Promise<ActionResult> {
   let outcome: ActionResult;
@@ -51,7 +52,7 @@ export async function cancelBookingAction(formData: FormData): Promise<ActionRes
 }
 
 // Manual booking and payment (SD-413). Owner only (the RPCs enforce it too). The price is never read from the form.
-export type ManualBookingActionResult = { ok: true; bookingId: string } | { ok: false; error: string };
+export type ManualBookingActionResult = { ok: true; bookingId: string } | Failure;
 
 export async function createManualBookingAction(formData: FormData): Promise<ManualBookingActionResult> {
   const parsed = manualBookingSchema.safeParse(readText(formData, ["unitId", "checkIn", "checkOut", "guests", "name", "email", "phone", "lang"]));
