@@ -13,6 +13,7 @@ create table public.booking_email_events (
   attempted_at timestamptz,
   first_attempt_at timestamptz,
   attempts integer not null default 0 check (attempts between 0 and 3),
+  retry_after timestamptz, -- Backoff so a provider outage cannot burn all attempts in one cron run.
   recipients text[], -- Snapshot preserves recipient/key association across retries.
 
   outcome text check (outcome in ('sent','simulated','failed','skipped')),
@@ -98,7 +99,8 @@ begin
       outcome = case when attempts < 3 then null else 'failed' end, updated_at = clock_timestamp()
     where outcome is null and attempted_at < clock_timestamp() - interval '30 minutes';
   select * into e from public.booking_email_events
-    where attempted_at is null and outcome is null and attempts < 3 order by created_at,id for update skip locked limit 1;
+    where attempted_at is null and outcome is null and attempts < 3
+      and (retry_after is null or retry_after <= clock_timestamp()) order by created_at,id for update skip locked limit 1;
   if not found then return null; end if;
   select * into strict b from public.bookings where id = e.booking_id and org_id = e.org_id;
   update public.booking_email_events set attempted_at = clock_timestamp(), first_attempt_at = coalesce(first_attempt_at, clock_timestamp()),
@@ -146,6 +148,7 @@ begin
   update public.booking_email_events set outcome = case when p_outcome = 'retry' then
       case when attempts < 3 then null else 'failed' end else p_outcome end,
     attempted_at = case when p_outcome = 'retry' and attempts < 3 then null else attempted_at end,
+    retry_after = case when p_outcome = 'retry' and attempts < 3 then clock_timestamp() + attempts * interval '5 minutes' else retry_after end,
     updated_at = clock_timestamp()
     where id = p_id and attempted_at is not null and outcome is null
       and (p_attempt is null or attempts = p_attempt);

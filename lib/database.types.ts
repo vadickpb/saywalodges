@@ -179,6 +179,7 @@ isOneToOne: true
           outcome: string | null;
           payment_id: string | null;
           recipients: string[] | null;
+          retry_after: string | null;
           updated_at: string;
         };
         ComputedFields: never;
@@ -194,6 +195,7 @@ isOneToOne: true
           outcome?: string | null;
           payment_id?: string | null;
           recipients?: string[] | null;
+          retry_after?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -208,6 +210,7 @@ isOneToOne: true
           outcome?: string | null;
           payment_id?: string | null;
           recipients?: string[] | null;
+          retry_after?: string | null;
           updated_at?: string;
         };
         Relationships: [

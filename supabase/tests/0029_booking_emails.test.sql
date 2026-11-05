@@ -94,6 +94,8 @@ insert into retry_claims select public.cron_claim_booking_email(3);
 select is((select attempts from public.booking_email_events where id=(select id from retry_event)),1,'first attempt counted');
 select public.cron_settle_booking_email((select id from retry_event),'retry',1);
 select ok((select attempted_at is null and outcome is null from public.booking_email_events where id=(select id from retry_event)),'transient failure reopens event');
+select is(public.cron_claim_booking_email(3),null,'retry waits for backoff (no immediate reclaim)');
+update public.booking_email_events set retry_after=null where id=(select id from retry_event);
 -- A changed membership must not shift the recipient associated with a provider key.
 update public.memberships set role='staff';
 insert into retry_claims select public.cron_claim_booking_email(3);
@@ -101,6 +103,7 @@ select is((select count(distinct payload->'recipients') from retry_claims),1::bi
 select public.cron_settle_booking_email((select id from retry_event),'sent',1);
 select ok((select outcome is null and attempted_at is not null from public.booking_email_events where id=(select id from retry_event)),'stale settlement cannot settle newer attempt');
 select public.cron_settle_booking_email((select id from retry_event),'retry',2);
+update public.booking_email_events set retry_after=null where id=(select id from retry_event);
 select public.cron_claim_booking_email(3);
 select public.cron_settle_booking_email((select id from retry_event),'retry',3);
 select is((select outcome from public.booking_email_events where id=(select id from retry_event)),'failed','third transient failure is terminal');
