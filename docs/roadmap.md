@@ -1403,7 +1403,7 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 
 ### [ ] SD-410 · test(e2e): booking flow
 `M` · Depende: SD-406 · Review: `R`
-- **Alcance**: Playwright en CI contra Supabase local: owner cotiza → huésped reserva → sube voucher → owner aprueba
+- **Alcance**: Playwright en CI contra Supabase local: el huésped cotiza en /cotizar → reserva → sube voucher → owner aprueba
   → reserva confirmada y fechas bloqueadas.
 - **Criterios**
   - [ ] Corre en CI en < 5 min y es estable (3 ejecuciones seguidas en verde).
