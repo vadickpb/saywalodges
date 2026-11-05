@@ -118,11 +118,12 @@ begin
     raise exception 'invalid input' using errcode = '22023';
   end if;
 
+  -- The unit must belong to the organization BEFORE pricing: pricing errors would otherwise describe another tenant's units.
+  if not exists (select 1 from public.units where id = p_unit_id and org_id = p_org_id) then
+    raise exception 'not allowed' using errcode = '42501';
+  end if;
   priced := private.price_stay(p_unit_id, p_check_in, p_check_out, p_guests);
   if not (priced ->> 'ok')::boolean then return priced; end if;
-  if (priced ->> 'orgId')::uuid is distinct from p_org_id then
-    raise exception 'not allowed' using errcode = '42501'; -- the unit belongs to another organization
-  end if;
 
   perform private.release_expired_holds(p_unit_id);
   select booking_hold_minutes into v_hold from public.properties where id = (priced ->> 'propertyId')::uuid and org_id = p_org_id;
@@ -132,7 +133,7 @@ begin
     total_cents, deposit_cents, breakdown, expires_at, created_by, is_public)
   values (p_org_id, (priced ->> 'propertyId')::uuid, p_unit_id, replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
     p_check_in, p_check_out, p_guests, (priced ->> 'currency')::public.currency_code, (priced ->> 'totalCents')::integer,
-    (priced ->> 'depositCents')::integer, priced -> 'breakdown', now(), auth.uid(), false)
+    (priced ->> 'depositCents')::integer, priced -> 'breakdown', v_expires, auth.uid(), false)
   returning id into v_quote;
 
   insert into public.guests (org_id, name, email, phone) values (p_org_id, v_name, v_email, v_phone)
@@ -158,10 +159,10 @@ $$;
 
 create function public.record_manual_payment(
   p_org_id uuid, p_booking_id uuid, p_amount_cents integer, p_method public.payment_method,
-  p_reference text default null, p_fx_rate_pen numeric default null
+  p_reference text default null, p_fx_rate_pen numeric default null, p_payment_id uuid default null
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
-  b public.bookings%rowtype; v_paid bigint; v_id uuid := gen_random_uuid(); v_ref text := nullif(btrim(p_reference), '');
+  b public.bookings%rowtype; v_paid bigint; v_id uuid := coalesce(p_payment_id, gen_random_uuid()); v_ref text := nullif(btrim(p_reference), '');
   v_fx numeric; v_category uuid; v_guest text;
 begin
   if p_org_id is null or not private.is_owner(p_org_id) then
@@ -178,6 +179,14 @@ begin
   if b.status not in ('pending_payment', 'confirmed') then
     raise exception 'cannot register a payment on a % booking', b.status using errcode = '55000';
   end if;
+  -- Idempotency: the client sends one id per form (a double click or a retry must not charge twice). The id is the payment's id and,
+  -- through confirm_payment / the ledger insert, the income's external_ref, whose unique index is the last barrier.
+  if p_payment_id is not null and exists (select 1 from public.payments where id = p_payment_id) then
+    if exists (select 1 from public.payments where id = p_payment_id and booking_id = b.id and org_id = p_org_id) then
+      return jsonb_build_object('ok', true, 'payment_id', p_payment_id, 'booking_status', b.status, 'replayed', true);
+    end if;
+    raise exception 'payment id already used' using errcode = '22023';
+  end if;
   select coalesce(sum(amount_cents), 0) into v_paid from public.payments where booking_id = b.id and status = 'approved';
   if v_paid + p_amount_cents > b.total_cents then
     raise exception 'payment exceeds the total' using errcode = '22023';
@@ -191,7 +200,7 @@ begin
     insert into public.payments (id, org_id, booking_id, amount_cents, currency, method, status, reference)
     values (v_id, p_org_id, b.id, p_amount_cents, b.currency, p_method, 'pending_review', v_ref);
     perform public.confirm_payment(p_org_id, v_id, p_fx_rate_pen);
-    return jsonb_build_object('ok', true, 'payment_id', v_id, 'booking_status', 'confirmed');
+    return jsonb_build_object('ok', true, 'payment_id', v_id, 'booking_status', 'confirmed', 'replayed', false);
   end if;
 
   -- The balance of a confirmed booking.
@@ -218,13 +227,13 @@ begin
     case p_method when 'yape' then 'yape_plin' when 'plin' then 'yape_plin' when 'bank_transfer' then 'bank_transfer'
       when 'cash' then 'cash' else 'other' end::public.finance_payment_method,
     v_guest, b.check_in, b.check_out, 'direct', case when b.guests <= 1000 then b.guests end, null, 'booking', v_id::text);
-  return jsonb_build_object('ok', true, 'payment_id', v_id, 'booking_status', 'confirmed');
+  return jsonb_build_object('ok', true, 'payment_id', v_id, 'booking_status', 'confirmed', 'replayed', false);
 end;
 $$;
 
 revoke all on function public.create_manual_booking(uuid,uuid,date,date,integer,text,text,text,text) from public, anon;
-revoke all on function public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric) from public, anon;
+revoke all on function public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric,uuid) from public, anon;
 grant execute on function public.create_manual_booking(uuid,uuid,date,date,integer,text,text,text,text) to authenticated;
-grant execute on function public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric) to authenticated;
+grant execute on function public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric,uuid) to authenticated;
 
 commit;

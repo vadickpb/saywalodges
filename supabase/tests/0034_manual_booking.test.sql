@@ -2,7 +2,7 @@
 -- Ids from supabase/seed.sql: org Saywa bf88f504-..., property 131583b5-...; Saywa owner a3b45db1-..., Saywa staff c5d77e30-...,
 -- Demo owner bd6a1c86-... (org ff24bacc-...), Demo unit ee204001-...0002.
 begin;
-select plan(30);
+select plan(33);
 
 create function pg_temp.d(n integer) returns date language sql stable as $$ select (current_date + 300 + n)::date $$;
 
@@ -16,13 +16,13 @@ grant all on res to public;
 -- ─── Catalog and grants ─────────────────────────────────────────────────────
 select ok((select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc where oid in (
   'public.create_manual_booking(uuid,uuid,date,date,integer,text,text,text,text)'::regprocedure,
-  'public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric)'::regprocedure)), 'both are SECURITY DEFINER with an empty search_path');
+  'public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric,uuid)'::regprocedure)), 'both are SECURITY DEFINER with an empty search_path');
 select ok(not has_function_privilege('anon', 'public.create_manual_booking(uuid,uuid,date,date,integer,text,text,text,text)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric)', 'EXECUTE'),
+  and not has_function_privilege('anon', 'public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric,uuid)', 'EXECUTE'),
   'anon cannot execute either');
 select is((select array_agg(a order by a) from unnest(proargnames) a where a like '%cents%' or a like '%total%' or a like '%price%')
   , array['p_amount_cents'], 'create_manual_booking takes no price; record_manual_payment takes only the amount received')
-  from pg_proc where oid = 'public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric)'::regprocedure;
+  from pg_proc where oid = 'public.record_manual_payment(uuid,uuid,integer,public.payment_method,text,numeric,uuid)'::regprocedure;
 
 -- ─── Staff and other organizations are refused ──────────────────────────────
 select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true);
@@ -36,6 +36,8 @@ select throws_ok($$select public.create_manual_booking('bf88f504-051f-4fdc-ab73-
   '42501', 'not allowed', 'the owner of another organization cannot book into this one');
 select throws_ok($$select public.create_manual_booking('ff24bacc-47d2-40bc-9210-f860e98892fd', 'ee413000-0000-4000-8000-000000000001', pg_temp.d(0), pg_temp.d(3), 2, 'Ana', 'ana@example.com')$$,
   '42501', 'not allowed', 'nor can they use this unit with their own organization id');
+select throws_ok($$select public.create_manual_booking('ff24bacc-47d2-40bc-9210-f860e98892fd', 'ee413000-0000-4000-8000-000000000001', pg_temp.d(0), pg_temp.d(3), 99, 'Ana', 'ana@example.com')$$,
+  '42501', 'not allowed', 'a foreign unit gives no pricing hints (capacity, rates), only a refusal');
 reset role;
 
 -- ─── The owner ──────────────────────────────────────────────────────────────
@@ -71,13 +73,17 @@ select throws_ok($$select public.record_manual_payment('bf88f504-051f-4fdc-ab73-
 reset role;
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
 set local role authenticated;
-select lives_ok($$select public.record_manual_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', (select (v->>'booking_id')::uuid from res where k = 'm1'), 15000, 'cash', 'recibo 1', 3.75)$$,
+select lives_ok($$select public.record_manual_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', (select (v->>'booking_id')::uuid from res where k = 'm1'), 15000, 'cash', 'recibo 1', 3.75, 'a4130000-0000-4000-8000-000000000001')$$,
   'the owner registers the deposit');
+select is((select public.record_manual_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', (select (v->>'booking_id')::uuid from res where k = 'm1'), 15000, 'cash', 'recibo 1', 3.75, 'a4130000-0000-4000-8000-000000000001')->>'replayed'),
+  'true', 'sending the same payment id again is a replay: nothing is charged twice');
+select is((select count(*)::int from public.payments where booking_id = (select (v->>'booking_id')::uuid from res where k = 'm1')), 1, 'still exactly one payment');
 select is((select status::text from public.bookings where id = (select (v->>'booking_id')::uuid from res where k = 'm1')), 'confirmed', 'the deposit confirms the booking');
 select lives_ok($$select public.record_manual_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', (select (v->>'booking_id')::uuid from res where k = 'm1'), 15000, 'yape', null, 3.75)$$,
   'and then the balance');
 select throws_ok($$select public.record_manual_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', (select (v->>'booking_id')::uuid from res where k = 'm1'), 1, 'cash', null, 3.75)$$,
   '22023', 'payment exceeds the total', 'a fully paid booking takes nothing more');
+
 reset role;
 select is((select sum(amount_cents)::int from public.payments where booking_id = (select (v->>'booking_id')::uuid from res where k = 'm1') and status = 'approved'), 30000, 'two approved payments add up to the total');
 select is((select count(*)::int from public.finance_entries where source = 'booking' and external_ref in (
