@@ -1886,6 +1886,10 @@ isOneToOne: true
         Args: { p_feed_id: string; p_kind: string };
         Returns: Json;
       };
+      cron_claim_voucher_purge: {
+        Args: { p_id: string; p_snapshot: Json };
+        Returns: boolean;
+      };
       cron_finish_ical_sync: {
         Args: {
           p_error?: string;
@@ -1898,6 +1902,10 @@ isOneToOne: true
       cron_list_due_ical_feeds: {
         Args: { p_limit?: number };
         Returns: { feed_id: string }[];
+      };
+      cron_list_voucher_purge: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
       };
       cron_settle_ical_alert: {
         Args: { p_claim_id: string; p_delivered: boolean; p_feed_id: string };
