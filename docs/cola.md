@@ -29,17 +29,17 @@ El proceso completo está en [`docs/workflow.md`](workflow.md#modo-automático-s
 Cierre de implementación: PRs #74, #76 y #75 mergeados. La decisión de conservación y la puesta en operación de SD-412
 siguen abiertas en el roadmap; el cierre del lote no acredita una prueba de la demo por el dueño.
 
-## Lote 2 · Saywa Lodges en producción con huéspedes reales
+## Lote 2 · Saywa Lodges en producción con huéspedes reales (listo para revisar)
 
 Objetivo: la primera reserva real pagada por el sistema. Es lo que valida el producto antes de venderlo.
 
 | Ticket | Qué | Quién | Estado |
 |---|---|---|---|
-| SD-902 | Ordenar el roadmap: cerrar los `[~]` que ya cumplen, mover sobrantes a tickets nuevos | Codex | pendiente |
-| SD-409 | Anti-abuso: límite por origen, BotID/captcha en cotizar, reservar y subir comprobante | Claude | pendiente |
-| SD-413 | Reserva manual, pago de saldo, *snapshot* del huésped, aprobar/cancelar solo el dueño | Claude | pendiente |
-| SD-701 | CSP y cabeceras de seguridad | Codex (+ revisión de seguridad) | pendiente |
-| SD-702 | Checklist de producción (backups probados, dominios, cron, monitoreo activo) | Claude + dueño | pendiente |
+| SD-902 | Ordenar el roadmap: cerrar los `[~]` que ya cumplen, mover sobrantes a tickets nuevos | Codex | hecho (#77) |
+| SD-409 | Anti-abuso: límite por origen, BotID/captcha en cotizar, reservar y subir comprobante | Claude | hecho (#78); BotID/captcha pendiente si hay abuso real |
+| SD-413 | Reserva manual, pago de saldo, *snapshot* del huésped, aprobar/cancelar solo el dueño | Claude | hecho (#80, #81, #82, #83) |
+| SD-701 | CSP y cabeceras de seguridad | Codex (+ revisión de seguridad) | implementado (ADR 0011); falta verificar en preview (ver `docs/produccion.md`) |
+| SD-702 | Checklist de producción (backups probados, dominios, cron, monitoreo activo) | Claude + dueño | hecho (#79); el dueño ejecuta el checklist por instalación |
 
 Decisiones del dueño que bloquean este lote: ver [`docs/decisiones-pendientes.md`](decisiones-pendientes.md).
 
