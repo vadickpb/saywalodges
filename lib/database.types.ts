@@ -166,6 +166,65 @@ isOneToOne: true
           },
         ];
       };
+      booking_email_events: {
+        Row: {
+          attempted_at: string | null;
+          booking_id: string;
+          created_at: string;
+          event: string;
+          id: string;
+          org_id: string;
+          outcome: string | null;
+          payment_id: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          attempted_at?: string | null;
+          booking_id: string;
+          created_at?: string;
+          event: string;
+          id?: string;
+          org_id: string;
+          outcome?: string | null;
+          payment_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          attempted_at?: string | null;
+          booking_id?: string;
+          created_at?: string;
+          event?: string;
+          id?: string;
+          org_id?: string;
+          outcome?: string | null;
+          payment_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_email_events_booking_id_org_id_fkey";
+            columns: ["booking_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "booking_email_events_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_email_events_payment_id_org_id_fkey";
+            columns: ["payment_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
       bookings: {
         Row: {
           cancel_reason: string | null;
@@ -176,6 +235,7 @@ isOneToOne: true
           created_at: string;
           currency: Database["public"]["Enums"]["currency_code"];
           deposit_cents: number;
+          email_lang: string;
           expires_at: string | null;
           guest_id: string;
           guests: number;
@@ -199,6 +259,7 @@ isOneToOne: true
           created_at?: string;
           currency: Database["public"]["Enums"]["currency_code"];
           deposit_cents: number;
+          email_lang?: string;
           expires_at?: string | null;
           guest_id: string;
           guests: number;
@@ -221,6 +282,7 @@ isOneToOne: true
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];
           deposit_cents?: number;
+          email_lang?: string;
           expires_at?: string | null;
           guest_id?: string;
           guests?: number;
@@ -1783,6 +1845,24 @@ isOneToOne: true
 "unlock_house_guide":
 { Args: { "p_host": string,"p_password": string,"p_session_hash": string,"p_token_hash": string }; Returns: boolean
                            }
+      cron_settle_booking_email: {
+        Args: { p_id: string; p_outcome: string };
+        Returns: undefined;
+      };
+      cron_claim_booking_email: {
+        Args: { p_arrival_days?: number };
+        Returns: Json;
+      };
+      create_localized_booking_from_quote: {
+        Args: {
+          p_guest_email: string;
+          p_guest_name: string;
+          p_guest_phone?: string;
+          p_lang?: string;
+          p_token: string;
+        };
+        Returns: Json;
+      };
       begin_ical_sync: {
         Args: { p_feed_id: string; p_org_id: string };
         Returns: Json;

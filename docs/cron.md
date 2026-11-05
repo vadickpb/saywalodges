@@ -110,3 +110,47 @@ solo por la RPC `get_booking_status(host, token)`: `anon` no tiene SELECT sobre 
 propiedad esté publicada y que el host coincida con su subdominio/dominio propio, y no devuelve datos personales.
 Token inválido, de otro tenant o de propiedad no publicada → el mismo 404. Aún no hay quien entregue el enlace
 al huésped: lo hará el flujo de reserva (SD-403/405), que deberá devolver `public_token` al crear el booking.
+
+## Correos de reservas (SD-407)
+
+Programar `GET /api/cron/booking-emails` cada minuto (o `POST` desde un scheduler externo),
+con `Authorization: Bearer <CRON_SECRET>`; mismo secreto y autenticación que `expire-holds`.
+No existe programación automática en el repositorio: debe habilitarse en cada instalación.
+La ruta devuelve `{summary:{sent,failed,skipped}}`; `sent` incluye simulaciones.
+401 = secreto incorrecto/ausente; 500 genérico = configuración/BD, consultar logs.
+`summary.failed > 0` requiere alerta del scheduler aunque HTTP sea 200.
+
+Antes de activarlo, configurar las variables existentes de Resend, `EMAIL_BRAND_NAME`,
+y **ambas** `EMAIL_ARRIVAL_INSTRUCTIONS_ES` / `EMAIL_ARRIVAL_INSTRUCTIONS_EN` (texto real de llegada,
+1–4000 caracteres). `EMAIL_ARRIVAL_DAYS` es un entero 0–30, por defecto 3. Configuración
+incompleta impide consumir la cola. En desarrollo se usa el modo simulación existente;
+en preview, configurar `EMAIL_ALLOWED_RECIPIENTS` antes de usar Resend.
+
+La migración `20261104053113_booking_lifecycle_emails.sql` añade una cola interna con RLS,
+sin acceso para anon ni miembros. Los triggers registran reserva recibida/nueva reserva,
+confirmación, rechazo por payment y **cada** voucher recibido, dentro de la transacción;
+el correo se envía después, exclusivamente desde el cron con service-role. No se añaden
+notificaciones históricas de reservas/pagos existentes. El idioma queda fijado desde el
+checkout; clientes anteriores y reservas existentes usan español. Owners reciben el idioma
+de la reserva y se resuelven por membresía owner de su organización al reclamar el evento.
+
+Las llegadas se registran para reservas confirmadas entre hoy y X días en `America/Lima`;
+esto también cubre confirmaciones tardías y una ejecución diaria perdida. No se envían
+instrucciones para llegadas pasadas o reservas canceladas antes de reclamar el evento.
+
+**Garantía de deduplicación:** `unique nulls not distinct (booking_id,event,payment_id)` más
+claim atómico `FOR UPDATE SKIP LOCKED`. Cada evento se reclama una sola vez, antes del envío.
+Los reintentos internos del proveedor reutilizan una clave estable por evento/destinatario.
+No se libera un claim al fallar ni al reiniciar: un fallo ambiguo podría ser un envío aceptado.
+Esta política prioriza no duplicar: una caída entre claim y envío puede dejar el correo sin
+entregar; tampoco se reenvía automáticamente un fallo definitivo. Revisar los eventos
+`cron.booking_emails.delivery` con `outcome=failed`, `cron.booking_emails.settle_failed`,
+`cron.booking_emails.invalid_claim` y `cron.booking_emails.not_configured`. En BD, el ledger
+con `attempted_at` y `outcome` permite identificar incidencias (`outcome IS NULL` tras un claim
+indica una ejecución interrumpida). No resetear claims sin verificar el estado en el proveedor.
+No hay PII ni tokens en logs. Los correos no incluyen enlaces con credenciales de reserva.
+
+Despliegue: dejar el PR abierto para revisión. Tras el merge, el dueño aprueba **Deploy database**
+como indica `docs/workflow.md`, configura las variables en Vercel y programa este cron. Antes de
+la migración, el checkout usa la RPC anterior si la nueva aún no existe (sin emails ni idioma
+persistido hasta aprobar SQL); la reserva y el pago siguen funcionando. No se modifica ninguna BD remota desde el agente.

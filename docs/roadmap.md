@@ -1362,12 +1362,14 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
   - [ ] Reserva manual sobre fechas ocupadas falla; sobre fechas libres crea reserva y bloque.
   - [ ] El detalle muestra el nombre y teléfono tal como se enviaron en el checkout.
 
-### [ ] SD-407 · feat(email): booking lifecycle emails
+### [~] SD-407 · feat(email): booking lifecycle emails
 `M` · Depende: SD-306, SD-406 · Review: `R`
 - **Alcance**: al huésped: reserva recibida, confirmada, pago rechazado, instrucciones de llegada (X días antes);
   al owner: nueva reserva, voucher recibido.
 - **Criterios**
-  - [ ] Idioma según la reserva; sin enviar dos veces el mismo email (idempotencia por evento).
+  - [x] Idioma según la reserva; sin enviar dos veces el mismo email (idempotencia por evento).
+- **Hecho**: seis plantillas es/en con marca por instalación; idioma persistido en checkout; cola transaccional por reserva/evento/payment, claims exclusivos del cron con RLS y deduplicación persistente. Cron de envío y llegada configurable 0–30 días (Lima), fallos aislados con logs sin PII. Vitest y pgTAP de plantillas, claims, permisos y transiciones.
+- **Pendiente**: revisión/merge del PR, aprobación de Deploy database y configuración de instrucciones es/en y scheduler en cada instalación (`docs/cron.md`). Los claims no se reabren tras fallos ambiguos para impedir duplicados; la operación debe revisar fallos de entrega.
 
 ### [x] SD-408 · feat: hold expiration job and booking status page
 `S` · Depende: SD-401 · Review: `R+S`

@@ -40,8 +40,15 @@ describe("checkout DAL", () => {
     for (const replayed of [false,true]) {
       rpc.mockResolvedValueOnce({data:quote,error:null}).mockResolvedValueOnce({data:{public_token:publicToken,replayed},error:null});
       expect(await bookQuote("demo",guest)).toEqual({publicToken});
-      expect(rpc).toHaveBeenLastCalledWith("create_booking_from_quote",{p_token:token,p_guest_name:"Ana",p_guest_email:"ana@example.com",p_guest_phone:undefined});
+      expect(rpc).toHaveBeenLastCalledWith("create_localized_booking_from_quote",{p_lang:"es",p_token:token,p_guest_name:"Ana",p_guest_email:"ana@example.com",p_guest_phone:undefined});
     }
+  });
+  it("keeps checkout available before the additive migration is deployed", async () => {
+    rpc.mockResolvedValueOnce({data:quote,error:null})
+      .mockResolvedValueOnce({data:null,error:{code:"PGRST202"}})
+      .mockResolvedValueOnce({data:{public_token:publicToken,replayed:false},error:null});
+    expect(await bookQuote("demo",guest,"en")).toEqual({publicToken});
+    expect(rpc).toHaveBeenLastCalledWith("create_booking_from_quote",{p_token:token,p_guest_name:"Ana",p_guest_email:"ana@example.com",p_guest_phone:undefined});
   });
   it("resumes converted quote without creating anything", async () => {
     rpc.mockResolvedValue({data:{public_token:publicToken},error:null});
