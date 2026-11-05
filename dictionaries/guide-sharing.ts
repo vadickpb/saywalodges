@@ -1,4 +1,8 @@
 const es = {
+  copyGuideText: "Copiar como texto (WhatsApp)",
+  copyPart: (part: number) => `Copiar parte ${part}`,
+  textLanguage: "Idioma del texto", emptyGuide: "La guía publicada no tiene secciones visibles.",
+  photoReference: (caption: string) => `(foto: ${caption})`,
   password: "Contraseña (mínimo 6 caracteres)",
   generate: "Generar contraseña", copy: "Copiar", warning: "Guárdala ahora: después no se puede volver a ver",
   shareIntro: "Publica la guía antes de crear un enlace. Quien tenga el enlace y la contraseña puede reenviarlos.",
@@ -7,9 +11,13 @@ const es = {
   copyMessage: "Copiar mensaje para el huésped", messageLanguage: "Idioma del mensaje",
   copied: "Copiado.", copyError: "No se pudo copiar. Selecciona el texto y cópialo manualmente.",
   generateError: "No se pudo generar la contraseña. Puedes escribir una de al menos 6 caracteres.",
-  guestMessage: (url: string, password: string) => `Aquí tienes la guía del alojamiento:\n${url}\nContraseña: ${password}`,
+  guestMessage: (url: string, password: string, guestName: string, propertyName: string) => `Hola ${guestName}, estas son las instrucciones y reglas de la casa ${propertyName}:\n${url}\nContraseña: ${password}`,
 };
 const en: typeof es = {
+  copyGuideText: "Copy as text (WhatsApp)",
+  copyPart: (part: number) => `Copy part ${part}`,
+  textLanguage: "Text language", emptyGuide: "The published guide has no visible sections.",
+  photoReference: (caption: string) => `(photo: ${caption})`,
   password: "Password (at least 6 characters)",
   generate: "Generate password", copy: "Copy", warning: "Save it now: you cannot view it again later",
   shareIntro: "Publish the guide before creating a link. Anyone with the link and password can forward them.",
@@ -18,6 +26,6 @@ const en: typeof es = {
   copyMessage: "Copy message for the guest", messageLanguage: "Message language",
   copied: "Copied.", copyError: "Unable to copy. Select the text and copy it manually.",
   generateError: "Unable to generate a password. You can enter one with at least 6 characters.",
-  guestMessage: (url: string, password: string) => `Here is your property guide:\n${url}\nPassword: ${password}`,
+  guestMessage: (url: string, password: string, guestName: string, propertyName: string) => `Hi ${guestName}, here are the instructions and house rules for ${propertyName}:\n${url}\nPassword: ${password}`,
 };
 export function guideSharingCopy(lang: string) { return lang === "en" ? en : es; }

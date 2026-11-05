@@ -61,7 +61,8 @@ SD-501 → SD-502 → SD-503 → SD-504 → SD-505, en ese orden (cada uno depen
 
 | Ticket | Qué | Quién | Estado |
 |---|---|---|---|
-| PP-10 | PDF de guía y contraseñas memorables | Codex | implementado; en revisión, sin merge (`feat/PP-10-guide-pdf-passwords`) |
+| PP-10 | PDF de guía y contraseñas memorables | Codex | mergeado (#85) |
+| PP-11 | PDF desde el editor, impresión sin página vacía, referencias de fotos, texto WhatsApp y mensaje personalizado | Codex | implementado; PR abierto, sin merge (`feat/PP-11-guide-pdf-fixes`) |
 
 SD-1006 (web de ventas, necesita precio aprobado), SD-601 y SD-602 (CRM y check-in), SD-807 (ingresos
 automáticos), SD-307 (sincronización iCal programada), SD-703 (portafolio), SD-1001 pendiente (`siteOrigin`),

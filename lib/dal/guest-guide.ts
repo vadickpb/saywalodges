@@ -26,8 +26,22 @@ export async function getGuideEditor() {
   ]);
   if(error||linkError||imageError) return { unavailable:true as const };
   const parsed=houseGuideSchema.safeParse(guide?.draft);
+  const publishedGuide=houseGuideSchema.safeParse(guide?.published);
   return { unavailable:false as const, guide:parsed.success?parsed.data:{title:`Guía de ${ctx.property.name}`,sections:[]}, version:guide?.version??0,
-    published:Boolean(guide?.published), links:links??[], images:(images??[]).map(i=>i.id) };
+    publishedGuide:publishedGuide.success?publishedGuide.data:null, propertyName:ctx.property.name, published:Boolean(guide?.published), links:links??[], images:(images??[]).map(i=>i.id) };
+}
+// Read the published snapshot independently of the editable draft.
+export async function getOwnerPublishedGuide() {
+  const ctx = await guideOwnerContext();
+  if (!ctx) return null;
+  const { data, error } = await ctx.client.from("house_guides")
+    .select("published").eq("org_id", ctx.orgId).maybeSingle();
+  if (error) return null;
+  const parsed = houseGuideSchema.safeParse(data?.published);
+  if (!parsed.success) return null;
+  return { propertyName: ctx.property.name, guide: {
+    ...parsed.data, sections: parsed.data.sections.filter(section => section.visible),
+  } };
 }
 export async function saveGuide(input: unknown, version: number, publish: boolean) {
   const parsed=houseGuideSchema.safeParse(input); if(!parsed.success) return {ok:false as const,error:"Revisa títulos, textos e imágenes."};
@@ -35,7 +49,7 @@ export async function saveGuide(input: unknown, version: number, publish: boolea
   const ctx=await guideOwnerContext(); if(!ctx) return {ok:false as const,error:"Solo el dueño puede editar la guía."};
   const {data,error}=await ctx.client.rpc("save_house_guide",{p_org_id:ctx.orgId,p_content:parsed.data,p_version:version,p_publish:publish});
   if(error) return {ok:false as const,error:error.code==='40001'?"La guía cambió en otra ventana. Recarga antes de guardar.":"No se pudo guardar la guía."};
-  return {ok:true as const,version:data};
+  return {ok:true as const,version:data,guide:parsed.data};
 }
 export async function createGuideLink(input: {label:string;password:string;expiresAt:string}) {
   const parsed=z.object({label:z.string().trim().min(1).max(100),password:guidePasswordSchema,expiresAt:z.iso.datetime()}).safeParse(input);
