@@ -6,7 +6,7 @@
 -- Two real concurrent sessions are not available in pgTAP: exactly-once is proven by replays, by a
 -- pre-existing key (the ON CONFLICT path a lost race takes) and by the unique index itself.
 begin;
-select plan(89);
+select plan(91);
 
 -- ─── Catalog ────────────────────────────────────────────────────────────────
 select ok((select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc where oid in (
@@ -87,7 +87,7 @@ select is((select count(*)::int from public.finance_entries where external_ref =
   'And wrote no income');
 
 -- ─── Below the deposit ──────────────────────────────────────────────────────
-select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true); -- Saywa staff
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true); -- Saywa owner (approving payments is owner-only, SD-413)
 set local role authenticated;
 select throws_ok($$select public.confirm_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'b3000000-0000-4000-8000-000000000005', 3.75)$$,
   '22023', 'payment is below the required deposit', 'A payment below the deposit is refused');
@@ -95,10 +95,14 @@ reset role;
 select is((select count(*)::int from public.finance_entries where external_ref = 'b3000000-0000-4000-8000-000000000005'), 0, 'It wrote no income');
 
 -- ─── Approval writes the income, once ───────────────────────────────────────
-set local role authenticated; -- still Saywa staff
+set local role authenticated; -- still Saywa owner
 select lives_ok($$select public.confirm_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'b3000000-0000-4000-8000-000000000001', 3.75)$$,
-  'Staff confirms the payment with an explicit rate');
-select is((select count(*)::int from public.finance_entries), 0, 'Staff did not gain access to the ledger row (created_by is null)');
+  'Owner confirms the payment with an explicit rate');
+select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true); -- Saywa staff
+select is((select count(*)::int from public.finance_entries), 0, 'Staff have no access to the ledger row (created_by is null)');
+select throws_ok($$select public.confirm_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'b3000000-0000-4000-8000-000000000003', 3.75)$$, '42501', 'not allowed', 'Staff cannot approve a payment');
+select throws_ok($$select public.reject_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'b3000000-0000-4000-8000-000000000003', 'no')$$, '42501', 'not allowed', 'Staff cannot reject a payment');
+select throws_ok($$select public.cancel_booking('bf88f504-051f-4fdc-ab73-4fa12d715817', 'b2000000-0000-4000-8000-000000000002')$$, '42501', 'not allowed', 'Staff cannot cancel a booking');
 reset role;
 select results_eq($$select e.kind::text, e.amount_cents, e.currency::text, e.fx_rate_pen::text, e.amount_pen_cents::int,
     e.occurred_on::text, e.stay_start::text, e.stay_end::text, e.channel::text, e.guests,

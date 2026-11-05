@@ -252,11 +252,11 @@ select throws_ok($$update public.bookings set status = 'confirmed'$$, '42501', n
 select throws_ok($$insert into public.payments (org_id, booking_id, amount_cents, currency, method) values (gen_random_uuid(), gen_random_uuid(), 1, 'USD', 'cash')$$,
   '42501', null, 'Members cannot insert payments directly');
 
-select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true); -- Saywa staff
+select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true); -- Saywa owner (approve/reject/cancel are owner-only, SD-413)
 select throws_ok($$select public.confirm_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a0000000-0000-4000-8000-000000000001')$$,
   '22023', null, 'A payment below the deposit cannot confirm the booking');
 select lives_ok($$select public.reject_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a0000000-0000-4000-8000-000000000001', 'too little')$$,
-  'Staff rejects the short payment');
+  'Owner rejects the short payment');
 select is((select v->>'replayed' from (select public.reject_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a0000000-0000-4000-8000-000000000001') v) s),
   'true', 'Rejecting twice is an idempotent replay');
 select throws_ok($$select public.confirm_payment('bf88f504-051f-4fdc-ab73-4fa12d715817', 'a0000000-0000-4000-8000-000000000001')$$,

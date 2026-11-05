@@ -86,7 +86,7 @@ export type BookingAction = "approve" | "reject" | "cancel";
 export function bookingActionError(action: BookingAction, code: string | undefined): string {
   switch (code) {
     case "42501":
-      return "No se encontró la reserva o no tienes permiso para esta acción.";
+      return "No se encontró la reserva o solo el dueño puede hacer esta acción.";
     case "55000":
       return "La reserva ya cambió de estado. Actualiza la página para ver su situación actual.";
     case "22023":

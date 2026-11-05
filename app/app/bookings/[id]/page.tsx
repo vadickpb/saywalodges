@@ -76,9 +76,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                       <a className="underline" href={`/app/bookings/${b.id}/voucher/${p.id}?descargar=1`}>Descargar<span className="sr-only"> el comprobante de {formatPrice(p.amountCents, p.currency)}</span></a>
                     </p>
                   )}
-                  {canReview(b.status, p.status) && (
-                    <ReviewPayment bookingId={b.id} paymentId={p.id} amountLabel={formatPrice(p.amountCents, p.currency)} foreignCurrency={foreign} />
-                  )}
+                  {canReview(b.status, p.status) && (ctx.isOwner
+                    ? <ReviewPayment bookingId={b.id} paymentId={p.id} amountLabel={formatPrice(p.amountCents, p.currency)} foreignCurrency={foreign} />
+                    : <p className="text-sm text-muted-foreground">Solo el dueño puede aprobar o rechazar este comprobante.</p>)}
                 </li>
               ))}
             </ul>
@@ -86,7 +86,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </CardContent>
       </Card>
 
-      {canCancel(b.status) && <CancelBooking bookingId={b.id} confirmed={b.status === "confirmed"} />}
+      {canCancel(b.status) && ctx.isOwner && <CancelBooking bookingId={b.id} confirmed={b.status === "confirmed"} />}
     </div>
   );
 }
