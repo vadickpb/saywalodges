@@ -110,3 +110,60 @@ solo por la RPC `get_booking_status(host, token)`: `anon` no tiene SELECT sobre 
 propiedad esté publicada y que el host coincida con su subdominio/dominio propio, y no devuelve datos personales.
 Token inválido, de otro tenant o de propiedad no publicada → el mismo 404. Aún no hay quien entregue el enlace
 al huésped: lo hará el flujo de reserva (SD-403/405), que deberá devolver `public_token` al crear el booking.
+
+# Cron de purga de comprobantes (SD-412)
+
+Ruta: `GET` o `POST /api/cron/voucher-purge`, en el mismo host de plataforma que los cron anteriores
+(`app.<ROOT_DOMAIN>` en modo instalación). Usa el mismo `CRON_SECRET`, comparación en tiempo constante,
+401 vacío sin ejecutar la DAL y 500 genérico. `Cache-Control: no-store`, `x-request-id` y logs de contadores,
+sin rutas de archivos, tokens, organizaciones ni datos personales.
+
+## Política implementada
+
+- Huérfanos (sin fila en `payments`): **más de 24 horas** desde la creación del objeto.
+- Organizaciones borradas: objetos de más de 24 horas, sin pago protegido.
+- Pagos rechazados: **más de 30 días** desde `reviewed_at`. También se seleccionan comprobantes de
+  reservas `expired`/`cancelled` pasados 30 días desde la última actualización de la reserva.
+- **Nunca borra objetos asociados a pagos `approved` o `pending_review`**, aunque la reserva esté
+  cancelada/expirada o la antigüedad supere cinco años. No modifica los pagos, reservas ni sus estados.
+- Constantes en `lib/domain/voucher-purge.ts`; la BD replica los límites en `private.voucher_purge_due`
+  para imponerlos de nuevo al reclamar. Cambiar la política exige actualizar ambos y sus pruebas.
+
+**Decisión pendiente del dueño:** se propone conservar aprobados durante **5 años**
+(`VOUCHER_APPROVED_RETENTION_YEARS`), desde la aprobación. Esta constante es documental y **no activa
+su borrado**. La [Ley 29733, artículo 8](https://www.smv.gob.pe/Uploads/Ley_29733_vigente_2025.pdf)
+exige limitar la conservación a lo necesario para la finalidad; los cinco años son una propuesta de producto,
+no un plazo impuesto por esa ley. El dueño debe validar finalidad y obligaciones contables/contractuales y
+aprobar la política antes de un ticket posterior que habilite el borrado de aprobados. Mientras tanto se conservan.
+
+## Lotes, concurrencia y reintentos
+
+Cada pasada lista hasta **100** objetos elegibles, los más antiguos primero, valida la respuesta con zod y
+aplica la selección pura del dominio. Antes del borrado, `cron_claim_voucher_purge` vuelve a comprobar
+la instantánea y los plazos bajo el mismo bloqueo que el trigger de escritura de pagos. Si un huésped
+asoció el archivo entre la lectura y la reclamación, se omite. Si ganó el cron, una marca persistente impide
+asociarlo durante/después del borrado; el huésped debe subir un archivo nuevo (otro UUID).
+
+Las marcas privadas solo guardan un hash de 64 bits y fecha, sin rutas ni tokens, sin FK a organizaciones.
+RLS habilitado y sin acceso directo a roles API. Se conservan para impedir reutilización de rutas borradas;
+una colisión de hash solo rechaza la reutilización de otra ruta, nunca habilita un borrado adicional.
+Las RPC son ejecutables solo por `service_role`. El borrado de archivos se hace exclusivamente con
+`storage.from('payment-vouchers').remove(paths)`, nunca con DELETE SQL en `storage.objects`.
+
+Si Storage falla o el proceso se interrumpe, las marcas quedan y la siguiente pasada reintenta los objetos
+que todavía existan. Dos ejecuciones solapadas pueden pedir borrar el mismo objeto: es idempotente.
+La respuesta `200 {"selected": N, "deleted": M}` cuenta candidatos y rutas enviadas con éxito a Storage
+(incluye objetos ya eliminados por una ejecución concurrente). Un fallo de Storage devuelve 500 para alertar/reintentar.
+
+## Activación por el dueño después de revisar el PR
+
+1. Tras el futuro merge, aprobar **Deploy database** para la migración `20261105031219_voucher_purge.sql`
+   siguiendo `docs/workflow.md`; comprobar la ejecución verde y la versión en *Migrations after*.
+   Es aditiva: el código anterior sigue funcionando. Antes de la migración, el nuevo cron falla con 500 sin borrar.
+2. Con `CRON_SECRET` ya configurado, añadir al scheduler externo una llamada **diaria**:
+   `POST https://<HOST_DE_PLATAFORMA>/api/cron/voucher-purge`, cabecera `Authorization: Bearer <CRON_SECRET>`.
+   Comprobar 200 con contadores y `cron.voucher_purge.completed` en Vercel Logs; alertar por 401/500.
+   Si hay más de 100 candidatos, se procesan en pasadas posteriores; aumentar la frecuencia si hace falta.
+   No se añade `vercel.json`: el patrón del repositorio usa scheduler externo (ver SD-408).
+3. Hasta programarlo no hay purga automática. Confirmar por separado la propuesta de cinco años;
+   no afecta al cron actual porque los aprobados permanecen protegidos.
