@@ -2,7 +2,7 @@
 -- Ids from supabase/seed.sql: org Saywa bf88f504-..., property 131583b5-...; Saywa owner a3b45db1-..., Saywa staff c5d77e30-...,
 -- Demo owner bd6a1c86-... (org ff24bacc-...), Demo unit ee204001-...0002.
 begin;
-select plan(33);
+select plan(32);
 
 create function pg_temp.d(n integer) returns date language sql stable as $$ select (current_date + 650 + n)::date $$;
 
