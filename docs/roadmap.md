@@ -1965,7 +1965,7 @@ Producción: aprobar *Deploy database* tras un futuro merge; hasta entonces la B
 Este encargo termina con PR abierto, sin merge ni cambios de BD remota.
 
 
-### [ ] PP-11 · fix: owner guide PDF, print layout and personalized sharing
+### [ ] PP-11 · fix: PDF del dueño, impresión y texto para WhatsApp
 
 Seguimiento de PP-10 (mergeado en #85). Implementación en `feat/PP-11-guide-pdf-fixes`; se entrega con PR abierto, sin merge.
 
