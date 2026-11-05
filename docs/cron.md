@@ -121,9 +121,10 @@ La ruta devuelve `{summary:{sent,failed,skipped}}`; `sent` incluye simulaciones.
 `summary.failed > 0` requiere alerta del scheduler aunque HTTP sea 200.
 
 Antes de activarlo, configurar las variables existentes de Resend, `EMAIL_BRAND_NAME`,
-y **ambas** `EMAIL_ARRIVAL_INSTRUCTIONS_ES` / `EMAIL_ARRIVAL_INSTRUCTIONS_EN` (texto real de llegada,
-1–4000 caracteres). `EMAIL_ARRIVAL_DAYS` es un entero 0–30, por defecto 3. Configuración
-incompleta impide consumir la cola. En desarrollo se usa el modo simulación existente;
+y las instrucciones `EMAIL_ARRIVAL_INSTRUCTIONS_ES` / `EMAIL_ARRIVAL_INSTRUCTIONS_EN` (texto real de llegada,
+1–4000 caracteres). Solo se exige la instrucción del idioma de la reserva al procesar `arrival`;
+si falta o no es válida, ese evento termina `failed` y el cron continúa con los demás sin 500.
+`EMAIL_ARRIVAL_DAYS` es un entero 0–30, por defecto 3 también si la variable está vacía. En desarrollo se usa el modo simulación existente;
 en preview, configurar `EMAIL_ALLOWED_RECIPIENTS` antes de usar Resend.
 
 La migración `20261105031117_booking_lifecycle_emails.sql` añade una cola interna con RLS,
@@ -132,22 +133,33 @@ confirmación, rechazo por payment y **cada** voucher recibido, dentro de la tra
 el correo se envía después, exclusivamente desde el cron con service-role. No se añaden
 notificaciones históricas de reservas/pagos existentes. El idioma queda fijado desde el
 checkout; clientes anteriores y reservas existentes usan español. Owners reciben el idioma
-de la reserva y se resuelven por membresía owner de su organización al reclamar el evento.
+de la reserva; los destinatarios se resuelven en el primer claim y quedan fijados para los reintentos.
+
+**Supuesto de instalación (ADR 0010):** una organización por instalación; la demo es otra instalación.
+La marca y las instrucciones de llegada son por instalación, no por organización ni por propiedad.
 
 Las llegadas se registran para reservas confirmadas entre hoy y X días en `America/Lima`;
 esto también cubre confirmaciones tardías y una ejecución diaria perdida. No se envían
 instrucciones para llegadas pasadas o reservas canceladas antes de reclamar el evento.
 
 **Garantía de deduplicación:** `unique nulls not distinct (booking_id,event,payment_id)` más
-claim atómico `FOR UPDATE SKIP LOCKED`. Cada evento se reclama una sola vez, antes del envío.
-Los reintentos internos del proveedor reutilizan una clave estable por evento/destinatario.
-No se libera un claim al fallar ni al reiniciar: un fallo ambiguo podría ser un envío aceptado.
-Esta política prioriza no duplicar: una caída entre claim y envío puede dejar el correo sin
-entregar; tampoco se reenvía automáticamente un fallo definitivo. Revisar los eventos
-`cron.booking_emails.delivery` con `outcome=failed`, `cron.booking_emails.settle_failed`,
-`cron.booking_emails.invalid_claim` y `cron.booking_emails.not_configured`. En BD, el ledger
-con `attempted_at` y `outcome` permite identificar incidencias (`outcome IS NULL` tras un claim
-indica una ejecución interrumpida). No resetear claims sin verificar el estado en el proveedor.
+claim atómico `FOR UPDATE SKIP LOCKED`. `attempts` limita a tres intentos por evento. Los fallos
+transitorios de proveedor (5xx, 429 o red, resultado `unavailable`) reabren el evento hasta agotar
+ese tope; los fallos permanentes terminan `failed`. Un claim sin outcome abandonado durante más
+de 30 minutos también se recupera hasta tres intentos; el tercero abandonado termina `failed`.
+Cada reintento conserva eventId, snapshot de destinatarios y clave de idempotencia por destinatario;
+los resultados de un intento antiguo no pueden cerrar uno más reciente. La deduplicación del
+proveedor tiene una ventana finita: ante una interrupción prolongada no hay garantía absoluta de
+exactamente una entrega. No resetear contadores ni claims manualmente sin verificar al proveedor.
+
+`received` y `rejected` se omiten (`skipped`) si la reserva está expired/cancelled. Además, se admiten
+como máximo tres eventos `received` por email normalizado en 24 horas (incluidos otros tenants);
+los excesos se marcan `skipped`. Se cuentan eventos distintos, no sus reintentos. Los claims de
+forma inválida con id válido se liquidan `failed` para no dejarlos abandonados.
+Revisar `cron.booking_emails.delivery`, `cron.booking_emails.settle_failed`,
+`cron.booking_emails.invalid_claim`, `cron.booking_emails.arrival_not_configured` y
+`cron.booking_emails.not_configured`. El ledger conserva `attempts`, `first_attempt_at`,
+`attempted_at` y `outcome` para investigar fallos y agotamiento.
 No hay PII ni tokens en logs. Los correos no incluyen enlaces con credenciales de reserva.
 
 Despliegue: dejar el PR abierto para revisión. Tras el merge, el dueño aprueba **Deploy database**

@@ -1369,7 +1369,7 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Criterios**
   - [x] Idioma según la reserva; sin enviar dos veces el mismo email (idempotencia por evento).
 - **Hecho**: seis plantillas es/en con marca por instalación; idioma persistido en checkout; cola transaccional por reserva/evento/payment, claims exclusivos del cron con RLS y deduplicación persistente. Cron de envío y llegada configurable 0–30 días (Lima), fallos aislados con logs sin PII. Vitest y pgTAP de plantillas, claims, permisos y transiciones.
-- **Pendiente**: revisión/merge del PR, aprobación de Deploy database y configuración de instrucciones es/en y scheduler en cada instalación (`docs/cron.md`). Los claims no se reabren tras fallos ambiguos para impedir duplicados; la operación debe revisar fallos de entrega.
+- **Pendiente**: revisión/merge del PR, aprobación de Deploy database y configuración de instrucciones es/en y scheduler en cada instalación (`docs/cron.md`). Reintentos transitorios y claims abandonados limitados a tres, con claves estables; límite de tres avisos recibidos por destinatario en 24 h. La operación debe revisar fallos definitivos/agotados.
 
 ### [x] SD-408 · feat: hold expiration job and booking status page
 `S` · Depende: SD-401 · Review: `R+S`

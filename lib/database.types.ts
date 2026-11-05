@@ -169,36 +169,45 @@ isOneToOne: true
       booking_email_events: {
         Row: {
           attempted_at: string | null;
+          attempts: number;
           booking_id: string;
           created_at: string;
           event: string;
+          first_attempt_at: string | null;
           id: string;
           org_id: string;
           outcome: string | null;
           payment_id: string | null;
+          recipients: string[] | null;
           updated_at: string;
         };
         ComputedFields: never;
         Insert: {
           attempted_at?: string | null;
+          attempts?: number;
           booking_id: string;
           created_at?: string;
           event: string;
+          first_attempt_at?: string | null;
           id?: string;
           org_id: string;
           outcome?: string | null;
           payment_id?: string | null;
+          recipients?: string[] | null;
           updated_at?: string;
         };
         Update: {
           attempted_at?: string | null;
+          attempts?: number;
           booking_id?: string;
           created_at?: string;
           event?: string;
+          first_attempt_at?: string | null;
           id?: string;
           org_id?: string;
           outcome?: string | null;
           payment_id?: string | null;
+          recipients?: string[] | null;
           updated_at?: string;
         };
         Relationships: [
@@ -1846,7 +1855,7 @@ isOneToOne: true
 { Args: { "p_host": string,"p_password": string,"p_session_hash": string,"p_token_hash": string }; Returns: boolean
                            }
       cron_settle_booking_email: {
-        Args: { p_id: string; p_outcome: string };
+        Args: { p_attempt?: number; p_id: string; p_outcome: string };
         Returns: undefined;
       };
       cron_claim_booking_email: {

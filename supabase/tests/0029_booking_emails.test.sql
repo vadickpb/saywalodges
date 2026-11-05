@@ -6,8 +6,8 @@ select ok(not has_table_privilege('authenticated','public.booking_email_events',
 select ok(not has_table_privilege('authenticated','public.booking_email_events','UPDATE'),'members cannot reset claims');
 select ok(not has_function_privilege('anon','public.cron_claim_booking_email(integer)','EXECUTE'),'anon cannot claim');
 select ok(not has_function_privilege('authenticated','public.cron_claim_booking_email(integer)','EXECUTE'),'members cannot claim');
-select ok(not has_function_privilege('anon','public.cron_settle_booking_email(uuid,text)','EXECUTE'),'anon cannot settle');
-select ok(not has_function_privilege('authenticated','public.cron_settle_booking_email(uuid,text)','EXECUTE'),'members cannot settle');
+select ok(not has_function_privilege('anon','public.cron_settle_booking_email(uuid,text,integer)','EXECUTE'),'anon cannot settle');
+select ok(not has_function_privilege('authenticated','public.cron_settle_booking_email(uuid,text,integer)','EXECUTE'),'members cannot settle');
 select ok(has_function_privilege('service_role','public.cron_claim_booking_email(integer)','EXECUTE'),'cron can claim');
 
 -- Same dates in two tenants; localized public conversion creates events atomically.
@@ -84,6 +84,70 @@ select is((select count(*) from public.booking_email_events where event='arrival
 update public.bookings b set status='cancelled',cancelled_at=now() from public.quotes q where q.id=b.quote_id and q.token=repeat('5',64);
 select public.cron_claim_booking_email(3) from generate_series(1,20);
 select is((select outcome from public.booking_email_events e join public.bookings b on b.id=e.booking_id
- join public.quotes q on q.id=b.quote_id where e.event='arrival' and q.token=repeat('5',64)),'failed','cancellation after enqueue suppresses instructions');
+ join public.quotes q on q.id=b.quote_id where e.event='arrival' and q.token=repeat('5',64)),'skipped','cancellation after enqueue suppresses instructions');
+-- Retry state machine, immutable recipient snapshot and stale-attempt protection.
+update public.booking_email_events set outcome='skipped' where outcome is null;
+create temp table retry_event as select id from public.booking_email_events where event='owner_booking' limit 1;
+update public.booking_email_events set outcome=null,attempted_at=null,first_attempt_at=null,attempts=0,recipients=null where id=(select id from retry_event);
+create temp table retry_claims(payload jsonb);
+insert into retry_claims select public.cron_claim_booking_email(3);
+select is((select attempts from public.booking_email_events where id=(select id from retry_event)),1,'first attempt counted');
+select public.cron_settle_booking_email((select id from retry_event),'retry',1);
+select ok((select attempted_at is null and outcome is null from public.booking_email_events where id=(select id from retry_event)),'transient failure reopens event');
+-- A changed membership must not shift the recipient associated with a provider key.
+update public.memberships set role='staff';
+insert into retry_claims select public.cron_claim_booking_email(3);
+select is((select count(distinct payload->'recipients') from retry_claims),1::bigint,'retry keeps the same recipient snapshot');
+select public.cron_settle_booking_email((select id from retry_event),'sent',1);
+select ok((select outcome is null and attempted_at is not null from public.booking_email_events where id=(select id from retry_event)),'stale settlement cannot settle newer attempt');
+select public.cron_settle_booking_email((select id from retry_event),'retry',2);
+select public.cron_claim_booking_email(3);
+select public.cron_settle_booking_email((select id from retry_event),'retry',3);
+select is((select outcome from public.booking_email_events where id=(select id from retry_event)),'failed','third transient failure is terminal');
+select is(public.cron_claim_booking_email(3),null,'no fourth attempt');
+update public.booking_email_events set outcome=null,attempted_at=null,first_attempt_at=null,attempts=0 where id=(select id from retry_event);
+select public.cron_claim_booking_email(3);
+update public.booking_email_events set attempted_at=clock_timestamp()-interval '29 minutes' where id=(select id from retry_event);
+select is(public.cron_claim_booking_email(3),null,'active claim under 30 minutes is retained');
+update public.booking_email_events set attempted_at=clock_timestamp()-interval '31 minutes' where id=(select id from retry_event);
+select public.cron_claim_booking_email(3);
+select is((select attempts from public.booking_email_events where id=(select id from retry_event)),2,'abandoned claim recovered after 30 minutes');
+update public.booking_email_events set attempted_at=clock_timestamp()-interval '31 minutes' where id=(select id from retry_event);
+select public.cron_claim_booking_email(3);
+update public.booking_email_events set attempted_at=clock_timestamp()-interval '31 minutes' where id=(select id from retry_event);
+select is(public.cron_claim_booking_email(3),null,'third abandoned attempt is not recovered');
+select is((select outcome from public.booking_email_events where id=(select id from retry_event)),'failed','abandoned retry exhaustion marked failed');
+
+-- Four distinct bookings in both organizations share a case-normalized email.
+insert into public.quotes(org_id,property_id,unit_id,token,check_in,check_out,guests,currency,total_cents,deposit_cents,expires_at)
+select case when k=4 then 'ff24bacc-47d2-40bc-9210-f860e98892fd'::uuid else 'bf88f504-051f-4fdc-ab73-4fa12d715817'::uuid end,
+case when k=4 then '57f914ac-3890-47c1-9d6d-1492782cf712'::uuid else '131583b5-785e-4127-81f0-e097163c5654'::uuid end,
+case when k=4 then 'ee204001-0000-4000-8000-000000000002'::uuid else 'ee204001-0000-4000-8000-000000000001'::uuid end,
+md5('rate'||k)||md5('rate2'||k),'2040-01-01'::date+k*3,'2040-01-02'::date+k*3,2,
+case when k=4 then 'PEN'::public.currency_code else 'USD'::public.currency_code end,10000,5000,now()+interval '1 day'
+from generate_series(1,4) k;
+select public.create_booking_from_quote(md5('rate'||k)||md5('rate2'||k),'Rate Guest',case when k%2=0 then 'RATE@EXAMPLE.COM' else 'rate@example.com' end) from generate_series(1,4) k;
+create temp table rate_claims(payload jsonb);
+insert into rate_claims select public.cron_claim_booking_email(3) from generate_series(1,8);
+select is((select count(*) from rate_claims where payload->>'event'='received'),3::bigint,'maximum three received events per case-insensitive address across orgs');
+select is((select count(*) from public.booking_email_events e join public.bookings b on b.id=e.booking_id
+ join public.guests g on g.id=b.guest_id where e.event='received' and g.email='rate@example.com' and e.outcome='skipped'),1::bigint,'fourth received event skipped');
+update public.booking_email_events set first_attempt_at=clock_timestamp()-interval '25 hours' where event='received';
+update public.booking_email_events set attempted_at=null,outcome=null,first_attempt_at=null,attempts=0
+where event='received' and outcome='skipped' and booking_id in (select b.id from public.bookings b join public.guests g on g.id=b.guest_id where g.email='rate@example.com');
+select is(public.cron_claim_booking_email(3)->>'event','received','allowance resets outside rolling 24 hours');
+update public.booking_email_events set outcome='skipped' where outcome is null;
+-- Check both received and rejected after each terminal booking state.
+insert into public.payments(org_id,booking_id,amount_cents,currency,method,status,reviewed_at)
+select b.org_id,b.id,5000,b.currency,'yape','rejected',now() from public.bookings b join public.guests g on g.id=b.guest_id
+where g.email='rate@example.com' limit 1;
+update public.bookings set status='expired' where status='pending_payment';
+update public.booking_email_events set attempted_at=null,outcome=null,attempts=0 where event in ('received','rejected') and booking_id in (select id from public.bookings where status='expired');
+select public.cron_claim_booking_email(3) from generate_series(1,20);
+select ok(not exists(select 1 from public.booking_email_events e join public.bookings b on b.id=e.booking_id where b.status='expired' and e.event in ('received','rejected') and e.outcome is distinct from 'skipped'),'received and rejected skipped for expired bookings');
+update public.bookings set status='cancelled',cancelled_at=now() where status='confirmed';
+update public.booking_email_events set attempted_at=null,outcome=null,attempts=0 where event in ('received','rejected') and booking_id in (select id from public.bookings where status='cancelled');
+select public.cron_claim_booking_email(3) from generate_series(1,20);
+select ok(not exists(select 1 from public.booking_email_events e join public.bookings b on b.id=e.booking_id where b.status='cancelled' and e.event in ('received','rejected') and e.outcome is distinct from 'skipped'),'received and rejected skipped for cancelled bookings');
 select * from finish();
 rollback;

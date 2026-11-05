@@ -11,7 +11,11 @@ create table public.booking_email_events (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   attempted_at timestamptz,
-  outcome text check (outcome in ('sent','simulated','failed')),
+  first_attempt_at timestamptz,
+  attempts integer not null default 0 check (attempts between 0 and 3),
+  recipients text[], -- Snapshot preserves recipient/key association across retries.
+
+  outcome text check (outcome in ('sent','simulated','failed','skipped')),
   foreign key (booking_id, org_id) references public.bookings(id, org_id) on delete cascade,
   foreign key (payment_id, org_id) references public.payments(id, org_id) on delete cascade,
   check ((event in ('rejected','owner_voucher')) = (payment_id is not null)),
@@ -78,11 +82,10 @@ revoke all on function private.enqueue_booking_email(), private.booking_email_la
 create trigger booking_email_enqueue after insert or update on public.bookings for each row execute function private.enqueue_booking_email();
 create trigger payment_email_enqueue after insert or update on public.payments for each row execute function private.enqueue_booking_email();
 
--- Claim ONE event per transaction. Claims never expire: an ambiguous delivery or a
--- crashed sender is not sent again after the provider's finite deduplication window.
+-- Claim ONE event per transaction; retry transient failures/abandoned leases at most three times.
 create function public.cron_claim_booking_email(p_arrival_days integer default 3)
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare e public.booking_email_events%rowtype; b public.bookings%rowtype; recipients text[];
+declare e public.booking_email_events%rowtype; b public.bookings%rowtype; v_recipients text[]; recipient_email text;
 begin
   if p_arrival_days is null or p_arrival_days not between 0 and 30 then raise exception 'invalid days' using errcode = '22023'; end if;
   insert into public.booking_email_events(org_id,booking_id,event)
@@ -90,37 +93,64 @@ begin
     where status = 'confirmed' and check_in between (now() at time zone 'America/Lima')::date
       and (now() at time zone 'America/Lima')::date + p_arrival_days
     on conflict do nothing;
+  update public.booking_email_events
+    set attempted_at = case when attempts < 3 then null else attempted_at end,
+      outcome = case when attempts < 3 then null else 'failed' end, updated_at = clock_timestamp()
+    where outcome is null and attempted_at < clock_timestamp() - interval '30 minutes';
   select * into e from public.booking_email_events
-    where attempted_at is null order by created_at,id for update skip locked limit 1;
+    where attempted_at is null and outcome is null and attempts < 3 order by created_at,id for update skip locked limit 1;
   if not found then return null; end if;
   select * into strict b from public.bookings where id = e.booking_id and org_id = e.org_id;
-  update public.booking_email_events set attempted_at = clock_timestamp(), updated_at = clock_timestamp() where id = e.id;
+  update public.booking_email_events set attempted_at = clock_timestamp(), first_attempt_at = coalesce(first_attempt_at, clock_timestamp()),
+    attempts = attempts + 1, updated_at = clock_timestamp() where id = e.id;
   if (e.event = 'arrival' and (b.status <> 'confirmed' or b.check_in < (now() at time zone 'America/Lima')::date))
-    or (e.event = 'confirmed' and b.status <> 'confirmed') then
-    update public.booking_email_events set outcome = 'failed' where id = e.id;
+    or (e.event = 'confirmed' and b.status <> 'confirmed')
+    or (e.event in ('received','rejected') and b.status in ('expired','cancelled')) then
+    update public.booking_email_events set outcome = 'skipped' where id = e.id;
     return jsonb_build_object('skip',true);
   end if;
-  if e.event in ('owner_booking','owner_voucher') then
-    select array_agg(distinct lower(u.email)) into recipients
+  if e.event = 'received' and e.first_attempt_at is null then
+    select lower(g.email) into recipient_email from public.guests g where g.id = b.guest_id and g.org_id = b.org_id;
+    -- Serialize the allowance across all organizations and concurrent cron requests.
+    perform pg_advisory_xact_lock(hashtextextended(recipient_email, 407));
+    if (select count(*) from public.booking_email_events other
+      join public.bookings ob on ob.id = other.booking_id and ob.org_id = other.org_id
+      join public.guests g on g.id = ob.guest_id and g.org_id = ob.org_id
+      where other.id <> e.id and other.event = 'received' and lower(g.email) = recipient_email
+        and other.first_attempt_at > clock_timestamp() - interval '24 hours'
+        and other.outcome is distinct from 'skipped') >= 3 then
+      update public.booking_email_events set outcome = 'skipped' where id = e.id;
+      return jsonb_build_object('skip',true);
+    end if;
+  end if;
+  if e.recipients is not null then
+    v_recipients := e.recipients;
+  elsif e.event in ('owner_booking','owner_voucher') then
+    select array_agg(distinct lower(u.email) order by lower(u.email)) into v_recipients
       from public.memberships m join auth.users u on u.id = m.user_id
       where m.org_id = e.org_id and m.role = 'owner' and u.email is not null;
   else
-    select array[g.email] into recipients from public.guests g where g.id = b.guest_id and g.org_id = b.org_id;
+    select array[g.email] into v_recipients from public.guests g where g.id = b.guest_id and g.org_id = b.org_id;
   end if;
-  return jsonb_build_object('id',e.id,'event',e.event,'lang',b.email_lang,
-    'recipients',coalesce(to_jsonb(recipients),'[]'::jsonb),
+  update public.booking_email_events set recipients = coalesce(v_recipients, '{}'::text[]) where id = e.id;
+  return jsonb_build_object('id',e.id,'attempt',e.attempts + 1,'event',e.event,'lang',b.email_lang,
+    'recipients',coalesce(to_jsonb(v_recipients),'[]'::jsonb),
     'unit', (select name from public.units where id = b.unit_id and org_id = b.org_id),
     'check_in',b.check_in,'check_out',b.check_out);
 end;
 $$;
-create function public.cron_settle_booking_email(p_id uuid, p_outcome text) returns void
+create function public.cron_settle_booking_email(p_id uuid, p_outcome text, p_attempt integer default null) returns void
 language plpgsql security definer set search_path = '' as $$
 begin
-  if p_outcome is null or p_outcome not in ('sent','simulated','failed') then raise exception 'invalid outcome' using errcode = '22023'; end if;
-  update public.booking_email_events set outcome = p_outcome, updated_at = clock_timestamp()
-    where id = p_id and attempted_at is not null and outcome is null;
+  if p_outcome is null or p_outcome not in ('sent','simulated','failed','retry','skipped') then raise exception 'invalid outcome' using errcode = '22023'; end if;
+  update public.booking_email_events set outcome = case when p_outcome = 'retry' then
+      case when attempts < 3 then null else 'failed' end else p_outcome end,
+    attempted_at = case when p_outcome = 'retry' and attempts < 3 then null else attempted_at end,
+    updated_at = clock_timestamp()
+    where id = p_id and attempted_at is not null and outcome is null
+      and (p_attempt is null or attempts = p_attempt);
 end;
 $$;
-revoke all on function public.cron_claim_booking_email(integer), public.cron_settle_booking_email(uuid,text) from public, anon, authenticated;
-grant execute on function public.cron_claim_booking_email(integer), public.cron_settle_booking_email(uuid,text) to service_role;
+revoke all on function public.cron_claim_booking_email(integer), public.cron_settle_booking_email(uuid,text,integer) from public, anon, authenticated;
+grant execute on function public.cron_claim_booking_email(integer), public.cron_settle_booking_email(uuid,text,integer) to service_role;
 commit;
