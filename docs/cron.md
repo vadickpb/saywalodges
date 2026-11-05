@@ -111,7 +111,6 @@ propiedad esté publicada y que el host coincida con su subdominio/dominio propi
 Token inválido, de otro tenant o de propiedad no publicada → el mismo 404. Aún no hay quien entregue el enlace
 al huésped: lo hará el flujo de reserva (SD-403/405), que deberá devolver `public_token` al crear el booking.
 
-<<<<<<< HEAD
 ## Correos de reservas (SD-407)
 
 Programar `GET /api/cron/booking-emails` cada minuto (o `POST` desde un scheduler externo),
@@ -167,7 +166,7 @@ Despliegue: dejar el PR abierto para revisión. Tras el merge, el dueño aprueba
 como indica `docs/workflow.md`, configura las variables en Vercel y programa este cron. Antes de
 la migración, el checkout usa la RPC anterior si la nueva aún no existe (sin emails ni idioma
 persistido hasta aprobar SQL); la reserva y el pago siguen funcionando. No se modifica ninguna BD remota desde el agente.
-=======
+
 # Cron de purga de comprobantes (SD-412)
 
 Ruta: `GET` o `POST /api/cron/voucher-purge`, en el mismo host de plataforma que los cron anteriores
@@ -224,4 +223,3 @@ La respuesta `200 {"selected": N, "deleted": M}` cuenta candidatos y rutas envia
    No se añade `vercel.json`: el patrón del repositorio usa scheduler externo (ver SD-408).
 3. Hasta programarlo no hay purga automática. Confirmar por separado la propuesta de cinco años;
    no afecta al cron actual porque los aprobados permanecen protegidos.
->>>>>>> origin/main
