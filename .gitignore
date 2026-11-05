@@ -47,3 +47,7 @@ next-env.d.ts
 # per-client installation state and generated secrets (SD-1002)
 .install/
 deploy/installs/
+
+# Playwright (local-only traces contain synthetic capability tokens and sessions)
+/test-results/
+/playwright-report/

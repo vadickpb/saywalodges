@@ -74,6 +74,21 @@ Abre `http://saywa-lodges.localhost:3000/es` (o `/en`) para el sitio público,
 `http://app.localhost:3000/login` para acceder al dashboard.
 La raíz `http://localhost:3000` corresponde a la plataforma.
 
+### E2E de reservas (SD-410)
+
+En un worktree sin archivos `.env*` de producción/locales y con Docker disponible:
+
+```bash
+npm ci
+npx playwright install --with-deps --only-shell chromium
+npx supabase@2.122.0 start
+npm run test:e2e -- --repeat-each=3
+```
+
+Usa el seed local actualizado y el puerto 3410; compila y arranca su propio servidor. Cubre cotización pública,
+checkout, voucher, aprobación del dueño y bloqueo de fechas. Preparación, limpieza y diagnóstico:
+[docs/booking-e2e.md](docs/booking-e2e.md). No usa bases ni secretos remotos.
+
 ### Base de datos
 
 El esquema vive versionado en `supabase/migrations/` (nunca se edita a mano la base remota — todo
