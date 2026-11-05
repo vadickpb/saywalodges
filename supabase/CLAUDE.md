@@ -13,5 +13,5 @@
 - Crea la migración después de `git rebase origin/main` para que su timestamp sea posterior al de todo lo mergeado.
 - Cada tabla nueva lleva un test pgTAP de aislamiento entre orgs en `supabase/tests/`;
   cada RPC y cada constraint, su propio test.
-- Tras cambiar el esquema: `npx supabase db reset`, `npx supabase test db`, regenerar tipos.
+- Tras cambiar el esquema: `npx supabase@2.122.0 db reset`, `npx supabase@2.122.0 test db` (versión fijada: un `npx supabase` a secas puede no tener binario para tu equipo), regenerar tipos.
 - Producción se actualiza solo con el workflow *Deploy database* (aprobación del dueño); ver `docs/workflow.md`.

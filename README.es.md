@@ -55,19 +55,17 @@ de cada ticket: [`docs/roadmap.md`](docs/roadmap.md). Decisiones de arquitectura
 
 ```bash
 npm install
-cp .env.example .env.local   # completar con las credenciales locales de Supabase
-npx supabase start            # levanta Postgres + Storage + Studio en Docker
+npm run local   # Supabase en Docker + .env.local + servidor de desarrollo, en un solo comando
 ```
 
-`supabase start` imprime las credenciales locales (`API_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY`, …).
-Para desarrollar **contra Supabase local**, usa `API_URL` como `SUPABASE_URL` y
-`NEXT_PUBLIC_SUPABASE_URL`, `ANON_KEY` como `NEXT_PUBLIC_SUPABASE_ANON_KEY` y
-`SERVICE_ROLE_KEY` como `SUPABASE_SERVICE_ROLE_KEY` en `.env.local`.
-No apuntes el entorno de desarrollo a producción.
+`npm run local` levanta Supabase local, rellena las cuatro variables de Supabase de `.env.local` (y se niega a tocar el archivo si apunta a un
+proyecto remoto: no apuntes el entorno de desarrollo a producción) y ejecuta `npm run dev`. Con `-- --reset` reconstruye la base local desde
+las migraciones y los datos de ejemplo (**borra los datos locales**); con `-- --no-dev` prepara todo sin arrancar el servidor.
+`npm run local:booking` crea una reserva de prueba con comprobante de pago para probar las pantallas del dueño
+(`-- --sin-comprobante` la deja esperando el pago del huésped).
 
-```bash
-npm run dev
-```
+Los comandos de Supabase usan la **versión fijada que usa el despliegue de la base de datos de producción**: `npx supabase@2.122.0 <comando>`. Un `npx supabase` a secas descarga la
+última versión, que puede no traer binario para tu equipo (la 3.0.0 no lo tenía para macOS arm64).
 
 Abre `http://saywa-lodges.localhost:3000/es` (o `/en`) para el sitio público,
 `http://demo.localhost:3000/es` para la segunda organización (solo en local, para ver el aislamiento) y
@@ -80,7 +78,7 @@ El esquema vive versionado en `supabase/migrations/` (nunca se edita a mano la b
 cambio es un archivo de migración nuevo; ver `supabase/CLAUDE.md` y la skill `.claude/skills/db-migration`).
 
 ```bash
-npx supabase db reset   # recrea la BD local desde las migraciones + supabase/seed.sql
+npx supabase@2.122.0 db reset   # recrea la BD local desde las migraciones + supabase/seed.sql (o `npm run local -- --reset`)
 ```
 
 `supabase/seed.sql` carga organizaciones de Saywa y demo, usuarios de desarrollo, espacios,
