@@ -9,10 +9,9 @@ import { parseDateRange } from "@/lib/domain/availability";
 
 // Exact hosts only. No suffix matching, credentials, arbitrary ports or proxies.
 // Airbnb exports the calendar link on the regional domain of the host's account (e.g. airbnb.com.pe),
-// so each regional domain is listed explicitly. Still exact hosts only: no wildcard or suffix matching.
+// so each regional domain of the markets we sell into is listed explicitly (add others on demand, after confirming Airbnb owns them). Still exact hosts only: no wildcard or suffix matching.
 const AIRBNB_DOMAINS = [
-  "com", "com.pe", "es", "mx", "com.mx", "com.ar", "cl", "co", "com.co", "com.br", "com.ec", "com.bo", "com.uy",
-  "ca", "co.uk", "fr", "de", "it", "pt", "nl", "ie", "com.au", "co.nz", "co.cr", "com.pa", "com.gt",
+  "com", "com.pe", "es", "mx", "com.ar", "cl", "com.co", "com.br", "com.ec", "com.bo", "co.cr", "com.pa", "com.gt", "ca",
 ];
 export const IMPORT_HOSTS = [
   ...AIRBNB_DOMAINS.flatMap((d) => [`airbnb.${d}`, `www.airbnb.${d}`]),
