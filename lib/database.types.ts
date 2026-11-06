@@ -2082,6 +2082,10 @@ isOneToOne: true
         Returns: Json;
       };
       health_snapshot: { Args: Record<PropertyKey, never>; Returns: Json };
+      import_airbnb_history: {
+        Args: { p_fx_rate_pen?: number; p_org_id: string; p_rows: Json };
+        Returns: Json;
+      };
       list_ical_rentals_to_complete: {
         Args: { p_org_id: string };
         Returns: {
@@ -2158,7 +2162,7 @@ isOneToOne: true
       finance_kind: "income" | "expense";
       finance_payment_method:
         "cash" | "bank_transfer" | "yape_plin" | "card" | "platform" | "other";
-      finance_source: "manual" | "booking" | "ical";
+      finance_source: "manual" | "booking" | "ical" | "airbnb_csv";
       ical_channel: "airbnb" | "booking" | "vrbo" | "other";
       membership_role: "owner" | "staff";
       payment_account_kind: "yape" | "plin" | "bank_account";
@@ -2312,7 +2316,7 @@ export const Constants = {
         "platform",
         "other",
       ],
-      finance_source: ["manual", "booking", "ical"],
+      finance_source: ["manual", "booking", "ical", "airbnb_csv"],
       ical_channel: ["airbnb", "booking", "vrbo", "other"],
       membership_role: ["owner", "staff"],
       payment_account_kind: ["yape", "plin", "bank_account"],
