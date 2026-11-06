@@ -68,7 +68,7 @@ SD-501 → SD-502 → SD-503 → SD-504 → SD-505, en ese orden (cada uno depen
 SD-1006 (web de ventas, necesita precio aprobado), SD-601 y SD-602 (CRM y check-in), SD-807 (ingresos
 automáticos), SD-307 (sincronización iCal programada), SD-703 (portafolio), SD-1001 pendiente (`siteOrigin`),
 SD-108 (límites/privilegios en BD), SD-414 (FK de reservas),
-SD-415 (concurrencia en CI), SD-416 (comprobante purgado) SD-417 (borrado de aprobados tras decidir el plazo) y SD-418 (aviso de revisión demorada).
+SD-419 (importar historial Airbnb, ver roadmap), SD-415 (concurrencia en CI), SD-416 (comprobante purgado) SD-417 (borrado de aprobados tras decidir el plazo) y SD-418 (aviso de revisión demorada).
 
 ## Mantenimiento semanal (lunes, automático)
 
