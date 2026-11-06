@@ -8,9 +8,14 @@ import ical, { type VEvent } from "node-ical";
 import { parseDateRange } from "@/lib/domain/availability";
 
 // Exact hosts only. No suffix matching, credentials, arbitrary ports or proxies.
+// Airbnb exports the calendar link on the regional domain of the host's account (e.g. airbnb.com.pe),
+// so each regional domain of the markets we sell into is listed explicitly (add others on demand, after confirming Airbnb owns them). Still exact hosts only: no wildcard or suffix matching.
+const AIRBNB_DOMAINS = [
+  "com", "com.pe", "es", "mx", "com.ar", "cl", "com.co", "com.br", "com.ec", "com.bo", "co.cr", "com.pa", "com.gt", "ca",
+];
 export const IMPORT_HOSTS = [
-  "airbnb.com",
-  "www.airbnb.com",
+  ...AIRBNB_DOMAINS.flatMap((d) => [`airbnb.${d}`, `www.airbnb.${d}`]),
+  "es.airbnb.com",
   "ical.booking.com",
   "admin.booking.com",
   "www.booking.com",
@@ -112,6 +117,8 @@ export async function fetchCalendar(value: string): Promise<string> {
               headers: {
                 Accept: "text/calendar",
                 "Accept-Encoding": "identity",
+                // Airbnb and Booking reject clients that send no User-Agent.
+                "User-Agent": "Mozilla/5.0 (compatible; SaywaDirect/1.0; calendar sync)",
               },
               lookup: (_host, options, callback) => {
                 if (options.all) callback(null, [address]);

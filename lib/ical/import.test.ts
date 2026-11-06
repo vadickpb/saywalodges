@@ -134,6 +134,19 @@ describe("OTA parser", () => {
     expect(() => parseCalendar("x".repeat(MAX_BYTES + 1))).toThrow("SIZE");
   });
 });
+describe("regional Airbnb hosts", () => {
+  it.each([
+    "https://www.airbnb.com.pe/calendar/ical/1.ics?s=x",
+    "https://airbnb.com.pe/calendar/ical/1.ics?s=x",
+    "https://www.airbnb.es/calendar/ical/1.ics?s=x",
+    "https://es.airbnb.com/calendar/ical/1.ics?s=x",
+  ])("accepts %s", (value) => {
+    expect(validateImportUrl(value).hostname).toContain("airbnb.");
+  });
+  it.each(["https://www.airbnb.com.pe.evil.test/a", "https://airbnb.evil.com/a", "https://www.airbnb.xyz/a"])("still rejects %s", (value) => {
+    expect(() => validateImportUrl(value)).toThrow("URL");
+  });
+});
 describe("SSRF boundary", () => {
   it.each([
     "http://www.airbnb.com/a",
