@@ -63,7 +63,7 @@ SD-501 → SD-502 → SD-503 → SD-504 → SD-505, en ese orden (cada uno depen
 |---|---|---|---|
 | PP-10 | PDF de guía y contraseñas memorables | Codex | mergeado (#85) |
 | PP-11 | PDF desde el editor, impresión sin página vacía, referencias de fotos, texto WhatsApp y mensaje personalizado | Codex | completado (#86) |
-| SD-419 | Importar historial CSV de Airbnb en Finanzas | Claude (partes 1–3), Codex (parte 4) | partes 1–3 hechas (#88); parte 4 en [PR #90](https://github.com/vadickpb/saywalodges/pull/90) (`feat/SD-419-import-screen`) |
+| SD-419 | Importar historial CSV de Airbnb en Finanzas | Claude (partes 1–3), Codex (parte 4) | hecho (#88, #90; neto #91)|
 
 SD-1006 (web de ventas, necesita precio aprobado), SD-601 y SD-602 (CRM y check-in), SD-807 (ingresos
 automáticos), SD-307 (sincronización iCal programada), SD-703 (portafolio), SD-1001 pendiente (`siteOrigin`),

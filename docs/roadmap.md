@@ -1355,7 +1355,7 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 
 ---
 
-### [~] SD-419 · feat(finance): importar historial de Airbnb
+### [x] SD-419 · feat(finance): importar historial de Airbnb
 `M` · Review: `R+S`
 - **Alcance**: importar el CSV de ganancias de Airbnb desde Finanzas, solo para el dueño, con vista previa,
   emparejamiento de espacios con casas y tipo de cambio para USD. Las transferencias al banco no son ingresos.
@@ -1366,6 +1366,8 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 - **Pendiente**: revisar y mergear el PR de la parte 4; comprobar el flujo con un CSV real antes del merge.
 
 ## Fase 5 — Mercado Pago (M5)
+- Decisión D6: el historial se registra **neto** (#91): ingreso = bruto − comisión, desglose en la nota; la comisión no es egreso y las filas ya importadas se convierten en la migración `20261106120000`.
+- Calendario Airbnb (#92): el importador acepta los dominios regionales de Airbnb (p. ej. `airbnb.com.pe`) y envía `User-Agent`.
 
 ### [ ] SD-501 · refactor(payments): payment provider abstraction
 `S` · Depende: SD-405 · Review: `R`
@@ -1991,28 +1993,3 @@ Seguimiento de PP-10 (mergeado en #85). Implementado en `feat/PP-11-guide-pdf-fi
 - [x] Chromium local (`app.localhost:3011`, `saywa-lodges.localhost:3011`): PDF owner y huésped, fotos privadas y caption sin alt, secciones ocultas, título y primera página con contenido; guía larga con paginación.
 - [x] Texto publicado independiente del borrador, partes de 4057/2420 caracteres, es/en y fallback manual; mensaje personalizado con saltos de línea reales y nombre conservado al editar el formulario.
 - [x] Entrega mediante PR #86 con CI verde y despliegue automático. No requiere pasos manuales de producción ni cambios de BD.
-
-### [ ] SD-419 · feat(finance): import Airbnb earnings history (CSV)
-
-Objetivo: copiar los alquileres anteriores de Airbnb a reservas y finanzas desde el CSV de Ganancias.
-
-Cabecera del CSV: Fecha, Fecha de llegada estimada, Tipo, Código de confirmación, Fecha de la reservación,
-Fecha de inicio, Fecha de finalización, Noches, Huésped, Espacio, Detalles, Código de referencia, Moneda, Monto,
-Ingresos recibidos, Tarifa de servicio, Tarifa por Pago rápido, Tarifa de limpieza, Ingresos brutos, Impuesto
-liquidado por Airbnb, Año de ingresos.
-
-Alcance:
-- Filas `Reservation` → reserva histórica (canal Airbnb, estado completada, huésped, noches, unidad) e
-  ingresos en finanzas: ingreso por `Ingresos brutos` y gasto por `Tarifa de servicio` (decisión D6 pendiente:
-  bruto + comisión o solo neto). Limpieza va dentro del bruto.
-- Filas `Payout` (transferencias al banco) NO son ingreso (evita duplicar); solo sirven para conciliar.
-- Ajustes/reembolsos se muestran en la vista previa para decidir.
-- Idempotente: clave única `(org_id, código de confirmación)`; subir el mismo CSV no duplica.
-- Estancias futuras no se importan (llegan por iCal); cruce con el código de confirmación después.
-- Formato de fecha a confirmar con el dueño (M/D/YYYY o D/M/YYYY); detectar por valores > 12.
-
-Partes: (1) lector CSV en `lib/domain` con tests — Claude; (2) migración + RPC `import_airbnb_history`
-owner-only y transaccional + pgTAP + revisión de seguridad — Claude; (3) pantalla subir/emparejar "Espacio"→unidad/
-vista previa — Codex; (4) SD-307 sync iCal programada y cruce — Codex.
-Límites: archivo ≤ 2 MB, ≤ 5.000 filas; solo nombre del huésped, sin contacto.
-Bloqueado por: filas de ejemplo tipo Reservation (con limpieza y reembolso) y confirmar fecha y D6.
