@@ -38,16 +38,15 @@ set local role authenticated;
 select lives_ok($$insert into res select 'i1', public.import_airbnb_history('bf88f504-051f-4fdc-ab73-4fa12d715817', pg_temp.rows(), 3.7)$$,
   'the owner imports two past stays');
 select is((select v->>'inserted' from res where k = 'i1'), '2', 'two stays inserted');
-select is((select v->>'commissions' from res where k = 'i1'), '1', 'one commission (the USD stay had none)');
-select is((select count(*)::int from public.finance_entries where source = 'airbnb_csv'), 3, 'three ledger rows: 2 incomes + 1 commission');
-select is((select e.related_entry_id from public.finance_entries e where e.external_ref = 'airbnb:HMAAAA1111:fee'),
-  (select e.id from public.finance_entries e where e.external_ref = 'airbnb:HMAAAA1111'), 'the commission is linked to its rental');
+select is((select v->>'commissions' from res where k = 'i1'), '1', 'one stay had a commission (the USD stay had none)');
+select is((select count(*)::int || '/' || count(*) filter (where kind = 'expense') from public.finance_entries where source = 'airbnb_csv'), '2/0', 'two ledger rows, both incomes: the commission is never an expense');
+select is((select note from public.finance_entries where external_ref = 'airbnb:HMAAAA1111'), 'Bruto 100.00 · Comisión Airbnb 15.00 PEN', 'the gross and the commission stay in the note');
 select is((select channel::text || '|' || counterparty || '|' || (stay_end - stay_start)::text || '|' || amount_cents::text from public.finance_entries where external_ref = 'airbnb:HMAAAA1111'),
-  'airbnb|Ana Prueba|3|10000', 'income keeps channel, guest, nights and the gross amount');
+  'airbnb|Ana Prueba|3|8500', 'income keeps channel, guest, nights and the NET amount received');
 
 select lives_ok($$insert into res select 'i2', public.import_airbnb_history('bf88f504-051f-4fdc-ab73-4fa12d715817', pg_temp.rows(), 3.7)$$, 'importing the same file again works');
 select is((select v->>'duplicates' || '/' || (v->>'inserted') from res where k = 'i2'), '2/0', 'it reports duplicates and inserts nothing');
-select is((select count(*)::int from public.finance_entries where source = 'airbnb_csv'), 3, 'the ledger did not grow');
+select is((select count(*)::int from public.finance_entries where source = 'airbnb_csv'), 2, 'the ledger did not grow');
 
 select throws_ok($$select public.import_airbnb_history('bf88f504-051f-4fdc-ab73-4fa12d715817', pg_temp.rows(), null)$$,
   '22023', 'exchange rate required', 'USD rows need an exchange rate');
