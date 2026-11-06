@@ -21,6 +21,10 @@ function MoneyTotals({ totals }: { totals: Record<string, number> }) {
   );
 }
 
+function netTotals(gross: Record<string, number>, fee: Record<string, number>) {
+  return Object.fromEntries(Object.entries(gross).map(([currency, cents]) => [currency, cents - (fee[currency] ?? 0)]));
+}
+
 export function AirbnbImportForm({ units }: { units: Unit[] }) {
   const [selection, setSelection] = useState<{ file: File | null; version: number }>({ file: null, version: 0 });
   return (
@@ -67,7 +71,8 @@ function ImportSession({ file, units, onFileChange }: { file: File | null; units
               <h2 className="font-medium">2. Revisa el historial</h2>
               <p>Reservas: <strong>{summary.reservations}</strong></p>
               <div>Ingresos brutos por moneda: <MoneyTotals totals={summary.grossCents} /></div>
-              <div>Comisiones por moneda: <MoneyTotals totals={summary.feeCents} /></div>
+              <div>Se registrará como ingreso el neto (bruto menos comisión): <MoneyTotals totals={netTotals(summary.grossCents, summary.feeCents)} /></div>
+              <div>Comisiones de Airbnb por moneda (no se registran como egreso; quedan en la nota): <MoneyTotals totals={summary.feeCents} /></div>
               <div>Transferencias al banco: <strong>{summary.payouts.count}</strong><MoneyTotals totals={summary.payouts.totalCents} /></div>
               <p className="text-muted-foreground">Las transferencias al banco no se cuentan como ingreso: corresponden a los pagos de las reservas.</p>
               {summary.skipped.length > 0 && (
@@ -121,7 +126,7 @@ function ImportSession({ file, units, onFileChange }: { file: File | null; units
             <p>Duplicadas: <strong>{result.duplicates}</strong></p>
             <p>Omitidas porque ya estaban registradas: <strong>{result.skippedOverlap}</strong></p>
             <p>Omitidas porque aún no terminan; llegan por el calendario: <strong>{result.skippedFuture}</strong></p>
-            <p>Comisiones registradas: <strong>{result.commissions}</strong></p>
+            <p>Reservas con comisión descontada (guardada en la nota): <strong>{result.commissions}</strong></p>
             <p className="text-muted-foreground">Volver a importar el mismo archivo es seguro: no se duplican las reservas.</p>
           </CardContent>
         </Card>
