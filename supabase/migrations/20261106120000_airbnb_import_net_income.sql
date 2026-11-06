@@ -7,8 +7,9 @@
 
 update public.finance_entries i
    set amount_cents = i.amount_cents - f.amount_cents,
-       note = 'Bruto ' || (i.amount_cents / 100.0)::numeric(14,2)::text
-              || ' · Comisión Airbnb ' || (f.amount_cents / 100.0)::numeric(14,2)::text || ' ' || i.currency::text
+       note = left(concat_ws(' · ', nullif(btrim(i.note), ''),
+              'Bruto ' || (i.amount_cents / 100.0)::numeric(14,2)::text
+              || ' · Comisión Airbnb ' || (f.amount_cents / 100.0)::numeric(14,2)::text || ' ' || i.currency::text), 1000)
   from public.finance_entries f
  where f.source = 'airbnb_csv' and f.kind = 'expense' and f.external_ref like 'airbnb:%:fee'
    and f.related_entry_id = i.id and f.org_id = i.org_id and f.currency = i.currency
@@ -17,7 +18,8 @@ update public.finance_entries i
 delete from public.finance_entries f
  using public.finance_entries i
  where f.source = 'airbnb_csv' and f.kind = 'expense' and f.external_ref like 'airbnb:%:fee'
-   and i.id = f.related_entry_id and i.org_id = f.org_id and i.note like 'Bruto %· Comisión Airbnb %';
+   and i.id = f.related_entry_id and i.org_id = f.org_id and i.source = 'airbnb_csv' and i.kind = 'income'
+   and i.currency = f.currency and i.note like '%Bruto %· Comisión Airbnb %';
 
 create or replace function public.import_airbnb_history(p_org_id uuid, p_rows jsonb, p_fx_rate_pen numeric default null)
 returns jsonb
