@@ -1355,13 +1355,13 @@ Implementado, revisado (R+S) y desplegado (PR #49). Prueba y despliegue: `docs/b
 
 ---
 
-### [~] SD-419 · feat(finance): Airbnb history import
+### [~] SD-419 · feat(finance): importar historial de Airbnb
 `M` · Review: `R+S`
 - **Alcance**: importar el CSV de ganancias de Airbnb desde Finanzas, solo para el dueño, con vista previa,
   emparejamiento de espacios con casas y tipo de cambio para USD. Las transferencias al banco no son ingresos.
 - **Hecho: partes 1–3 (#88)**: parser y tests, RPC idempotente con permisos de dueño, DAL y server action
   de vista previa/importación. Omite duplicados, reservas ya registradas y estadías que aún no terminan.
-- **Parte 4 en PR** (`feat/SD-419-import-screen`): pantalla `/app/finance/importar`, enlace solo para el dueño,
+- **Parte 4 en [PR #90](https://github.com/vadickpb/saywalodges/pull/90)** (`feat/SD-419-import-screen`): pantalla `/app/finance/importar`, enlace solo para el dueño,
   resumen por moneda, filas omitidas (máximo 200), emparejamiento, tipo de cambio y resultado; guía del dueño.
 - **Pendiente**: revisar y mergear el PR de la parte 4; comprobar el flujo con un CSV real antes del merge.
 
