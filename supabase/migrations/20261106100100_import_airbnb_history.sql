@@ -8,6 +8,7 @@
 --
 -- Each row = gross income (category rental, channel airbnb) + optional platform commission linked to it.
 -- Idempotency: unique (org_id, source, external_ref): 'airbnb:<code>' and 'airbnb:<code>:fee'.
+-- A stay already recorded for the same unit and dates on channel airbnb (by hand or from iCal) is skipped.
 -- Stays not finished yet (stay_end after today in Lima) are skipped: iCal covers the upcoming ones.
 -- created_by stays null (system movement), like confirm_payment.
 -- Errors: 42501 not allowed / unit not in org · 22023 invalid input.
@@ -28,6 +29,7 @@ declare
   v_inserted int := 0;
   v_duplicates int := 0;
   v_future int := 0;
+  v_overlap int := 0;
   v_fee_count int := 0;
 begin
   if p_org_id is null or not coalesce(private.is_owner(p_org_id), false) then
@@ -71,6 +73,16 @@ begin
       continue;
     end if;
 
+    -- Same unit + same stay + channel airbnb already in the ledger from another source (typed by hand or
+    -- completed from iCal): skip, so the stay is never counted twice.
+    if exists (select 1 from public.finance_entries e
+                where e.org_id = p_org_id and e.kind = 'income' and e.unit_id = r.unit_id
+                  and e.stay_start = r.stay_start and e.stay_end = r.stay_end and e.channel = 'airbnb'
+                  and e.external_ref is distinct from 'airbnb:' || r.ref) then
+      v_overlap := v_overlap + 1;
+      continue;
+    end if;
+
     v_rental := null;
     insert into public.finance_entries (
       org_id, kind, category_id, occurred_on, amount_cents, currency, fx_rate_pen, unit_id, payment_method,
@@ -105,7 +117,7 @@ begin
   end loop;
 
   return jsonb_build_object('inserted', v_inserted, 'duplicates', v_duplicates,
-    'skipped_future', v_future, 'commissions', v_fee_count);
+    'skipped_future', v_future, 'skipped_overlap', v_overlap, 'commissions', v_fee_count);
 end;
 $$;
 

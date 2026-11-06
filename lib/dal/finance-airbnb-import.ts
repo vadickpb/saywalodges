@@ -13,9 +13,10 @@ const resultSchema = z.object({
   inserted: z.number().int().nonnegative(),
   duplicates: z.number().int().nonnegative(),
   skipped_future: z.number().int().nonnegative(),
+  skipped_overlap: z.number().int().nonnegative(),
   commissions: z.number().int().nonnegative(),
 });
-export type AirbnbImportResult = { inserted: number; duplicates: number; skippedFuture: number; commissions: number };
+export type AirbnbImportResult = { inserted: number; duplicates: number; skippedFuture: number; skippedOverlap: number; commissions: number };
 
 export async function listImportUnits(supabase: Client, orgId: string): Promise<{ id: string; name: string }[]> {
   const { data, error } = await supabase.from("units").select("id, name").eq("org_id", orgId).order("name");
@@ -40,5 +41,5 @@ export async function importAirbnbHistory(
     return { ok: false };
   }
   const r = parsed.data;
-  return { ok: true, result: { inserted: r.inserted, duplicates: r.duplicates, skippedFuture: r.skipped_future, commissions: r.commissions } };
+  return { ok: true, result: { inserted: r.inserted, duplicates: r.duplicates, skippedFuture: r.skipped_future, skippedOverlap: r.skipped_overlap, commissions: r.commissions } };
 }

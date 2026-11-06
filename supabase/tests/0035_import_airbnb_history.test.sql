@@ -2,7 +2,7 @@
 -- Ids from supabase/seed.sql: org Saywa bf88f504-..., property 131583b5-...; Saywa owner a3b45db1-..., staff c5d77e30-...,
 -- Demo owner bd6a1c86-... (org ff24bacc-...).
 begin;
-select plan(19);
+select plan(21);
 
 insert into public.units (id, org_id, property_id, name, kind, max_guests, included_guests, active) values
   ('ee419000-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Import Unit', 'room', 4, 4, true);
@@ -67,6 +67,11 @@ select throws_ok($$select public.import_airbnb_history('bf88f504-051f-4fdc-ab73-
   jsonb_build_object('ref', 'x', 'unit_id', 'ee419000-0000-4000-8000-000000000001', 'stay_start', current_date - 9, 'stay_end', current_date - 8,
     'occurred_on', current_date - 8, 'currency', 'PEN', 'gross_cents', 9000)), null)$$, '22023', 'invalid row', 'one bad row fails the whole batch');
 select is((select count(*)::int from public.finance_entries where external_ref = 'airbnb:HMATOMIC01'), 0, 'and nothing from that batch was written');
+select is((select (public.import_airbnb_history('bf88f504-051f-4fdc-ab73-4fa12d715817', jsonb_build_array(jsonb_build_object(
+  'ref', 'HMOVERLAP1', 'unit_id', 'ee419000-0000-4000-8000-000000000001', 'stay_start', current_date - 70, 'stay_end', current_date - 67,
+  'occurred_on', current_date - 66, 'currency', 'PEN', 'gross_cents', 9000)), null))->>'skipped_overlap'),
+  '1', 'a stay already in the ledger for the same unit and dates is skipped, not counted twice');
+select is((select count(*)::int from public.finance_entries where external_ref = 'airbnb:HMOVERLAP1'), 0, 'and no second income was written');
 reset role;
 select * from finish();
 rollback;

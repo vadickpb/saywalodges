@@ -33,7 +33,7 @@ const FIELD_ALIASES = {
   start: ["fecha de inicio", "start date"],
   end: ["fecha de finalizacion", "end date"],
   guest: ["huesped", "guest"],
-  space: ["espacio", "listing"],
+  space: ["espacio", "anuncio", "listing"],
   currency: ["moneda", "currency"],
   amount: ["monto", "amount"],
   serviceFee: ["tarifa de servicio", "service fee"],
