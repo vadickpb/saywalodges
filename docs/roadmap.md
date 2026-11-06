@@ -1981,3 +1981,28 @@ Seguimiento de PP-10 (mergeado en #85). Implementado en `feat/PP-11-guide-pdf-fi
 - [x] Chromium local (`app.localhost:3011`, `saywa-lodges.localhost:3011`): PDF owner y huésped, fotos privadas y caption sin alt, secciones ocultas, título y primera página con contenido; guía larga con paginación.
 - [x] Texto publicado independiente del borrador, partes de 4057/2420 caracteres, es/en y fallback manual; mensaje personalizado con saltos de línea reales y nombre conservado al editar el formulario.
 - [x] Entrega mediante PR #86 con CI verde y despliegue automático. No requiere pasos manuales de producción ni cambios de BD.
+
+### [ ] SD-419 · feat(finance): import Airbnb earnings history (CSV)
+
+Objetivo: copiar los alquileres anteriores de Airbnb a reservas y finanzas desde el CSV de Ganancias.
+
+Cabecera del CSV: Fecha, Fecha de llegada estimada, Tipo, Código de confirmación, Fecha de la reservación,
+Fecha de inicio, Fecha de finalización, Noches, Huésped, Espacio, Detalles, Código de referencia, Moneda, Monto,
+Ingresos recibidos, Tarifa de servicio, Tarifa por Pago rápido, Tarifa de limpieza, Ingresos brutos, Impuesto
+liquidado por Airbnb, Año de ingresos.
+
+Alcance:
+- Filas `Reservation` → reserva histórica (canal Airbnb, estado completada, huésped, noches, unidad) e
+  ingresos en finanzas: ingreso por `Ingresos brutos` y gasto por `Tarifa de servicio` (decisión D6 pendiente:
+  bruto + comisión o solo neto). Limpieza va dentro del bruto.
+- Filas `Payout` (transferencias al banco) NO son ingreso (evita duplicar); solo sirven para conciliar.
+- Ajustes/reembolsos se muestran en la vista previa para decidir.
+- Idempotente: clave única `(org_id, código de confirmación)`; subir el mismo CSV no duplica.
+- Estancias futuras no se importan (llegan por iCal); cruce con el código de confirmación después.
+- Formato de fecha a confirmar con el dueño (M/D/YYYY o D/M/YYYY); detectar por valores > 12.
+
+Partes: (1) lector CSV en `lib/domain` con tests — Claude; (2) migración + RPC `import_airbnb_history`
+owner-only y transaccional + pgTAP + revisión de seguridad — Claude; (3) pantalla subir/emparejar "Espacio"→unidad/
+vista previa — Codex; (4) SD-307 sync iCal programada y cruce — Codex.
+Límites: archivo ≤ 2 MB, ≤ 5.000 filas; solo nombre del huésped, sin contacto.
+Bloqueado por: filas de ejemplo tipo Reservation (con limpieza y reembolso) y confirmar fecha y D6.
