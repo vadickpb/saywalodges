@@ -85,6 +85,20 @@ npm run local
 Si el PR no tiene worktree: `cd ~/Developer/saywa-direct && git fetch origin <rama> && git checkout --detach FETCH_HEAD`.
 Si una salida termina en `(END)`, pulsa `q`.
 
+## Importar el historial de Airbnb
+
+1. En Airbnb entra a **Menú > Ganancias > Descargar CSV** y descarga el período que quieres incorporar.
+   Las fechas deben tener formato **M/D/YYYY** (mes/día/año; por ejemplo, `10/25/2026`).
+2. Como dueño, abre **Finanzas > Importar historial de Airbnb**, elige el CSV (máximo 2 MB) y pulsa
+   **Ver vista previa**. Revisa reservas, ingresos brutos, comisiones y filas omitidas.
+   Las transferencias al banco se muestran como referencia: no se cuentan otra vez como ingreso.
+3. Empareja cada espacio de Airbnb con una casa. Si hay reservas en dólares, indica el
+   **Tipo de cambio (S/ por 1 USD)**. Pulsa **Importar** y revisa el resultado.
+
+Puedes importar el mismo archivo otra vez con seguridad: las reservas duplicadas o ya registradas se
+omiten. Las estadías que aún no terminan llegan por el calendario y no se importan como ingresos históricos.
+Si eliges otro CSV, vuelve a revisar la vista previa y emparejar sus espacios.
+
 ## Ahorrar tokens (y dinero)
 
 - **Una sesión de Claude por lote.** Al empezar un lote, abre una sesión nueva: la memoria y `docs/cola.md`
