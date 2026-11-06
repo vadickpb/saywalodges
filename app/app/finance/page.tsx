@@ -135,6 +135,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
           <Button asChild size="sm" variant="outline"><Link href="/app/finance/new?type=expense">+ Egreso</Link></Button>
           {ctx.isOwner && <Button asChild size="sm" variant="secondary"><Link href="/app/finance/reports">Reportes</Link></Button>}
           {ctx.isOwner && <Button asChild size="sm" variant="secondary"><Link href="/app/finance/recurring">Recurrentes</Link></Button>}
+          {ctx.isOwner && <Button asChild size="sm" variant="outline"><Link href="/app/finance/importar">Importar historial de Airbnb</Link></Button>}
         </div>
       </div>
 
