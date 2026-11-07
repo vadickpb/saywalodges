@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPrice } from "@/lib/domain/rates-management";
 import { useActionState, useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "radix-ui";
@@ -15,8 +16,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-export function AirbnbCalendar({ month, unit, blocks }: {
+export function AirbnbCalendar({ month, unit, blocks, prices = {}, currency = "PEN" }: {
   month: string; unit: { id: string; name: string; active: boolean }; blocks: CalendarBlock[];
+  prices?: Record<string, number | null>; currency?: "PEN" | "USD";
 }) {
   const router = useRouter();
   const [navigating, navigate] = useTransition();
@@ -119,7 +121,7 @@ export function AirbnbCalendar({ month, unit, blocks }: {
           const departure = highlighted?.end === date;
           return <button key={date} type="button" data-date={date} tabIndex={date === tabDate ? 0 : -1}
             aria-pressed={selected}
-            aria-label={`${date}: ${source ? `${source.label}. Ver detalle` : "Libre"}${departure ? ". Salida libre del rango seleccionado" : ""}`}
+            aria-label={`${date}: ${source ? `${source.label}. Ver detalle` : typeof prices[date] === "number" ? `Libre, ${formatPrice(prices[date], currency)} por noche` : "Libre"}${departure ? ". Salida libre del rango seleccionado" : ""}`}
             className={`relative flex min-h-20 min-w-11 flex-col items-center justify-center rounded-lg border text-sm sm:min-h-28 ${FOCUS} ${source?.className ?? "bg-background"} ${selected ? "z-10 ring-2 ring-foreground ring-inset" : ""}`}
             onFocus={() => setFocused(date)}
             onKeyDown={(event) => {
@@ -151,8 +153,7 @@ export function AirbnbCalendar({ month, unit, blocks }: {
             onClick={(event) => { if (suppressClick.current && event.detail > 0) { suppressClick.current = false; return; } suppressClick.current = false; activate(date, event.currentTarget); }}>
             <time dateTime={date} className="font-semibold" aria-hidden="true">{Number(date.slice(-2))}</time>
             <span className="text-xs" aria-hidden="true">{departure ? "Salida" : source?.short ?? "·"}</span>
-            {/* Reserved for nightly pricing in SD-421 part 2. */}
-            <span data-slot="nightly-price" className="h-3" aria-hidden="true" />
+            <span data-slot="nightly-price" className="h-3 text-[11px] text-muted-foreground" aria-hidden="true">{typeof prices[date] === "number" && !block ? formatPrice(prices[date], currency) : ""}</span>
           </button>;
         })}
       </div>
