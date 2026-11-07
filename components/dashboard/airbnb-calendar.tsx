@@ -45,6 +45,8 @@ export function AirbnbCalendar({ month, unit, blocks }: {
 
   function changeMonth(target: string | null) {
     if (!target || navigating) return;
+    setSelection(null);
+    setMessage("");
     setPreview(null);
     drag.current = null;
     navigate(() => router.push(`/app/calendar?${new URLSearchParams({ month: target, unit: unit.id })}`, { scroll: false }));
@@ -179,7 +181,10 @@ function RangeForm({ unitId, start, end, onSaved }: { unitId: string; start: str
       const result = await createManualBlockAction(previous, formData);
       if (result.ok) onSaved();
       return result;
-    } catch { return { ok: false, formError: "No se pudo guardar el bloqueo. Inténtalo de nuevo." }; }
+    } catch {
+      const note = formData.get("note");
+      return { ok: false, formError: "No se pudo guardar el bloqueo. Inténtalo de nuevo.", values: { note: typeof note === "string" ? note : "" } };
+    }
   }, { ok: false });
   return <form action={action} className="mt-5 space-y-4">
     <input type="hidden" name="unitId" value={unitId} />
@@ -188,7 +193,7 @@ function RangeForm({ unitId, start, end, onSaved }: { unitId: string; start: str
     <p>{start} → {end}</p>
     <p className="font-semibold">{daysBetween(start, end)} noches · salida libre</p>
     <label htmlFor={noteId} className="block text-sm font-medium">Nota (opcional)</label>
-    <textarea id={noteId} name="note" maxLength={500} rows={3} className={`w-full rounded-md border p-3 ${FOCUS}`} />
+    <textarea id={noteId} name="note" defaultValue={state.values?.note} maxLength={500} rows={3} className={`w-full rounded-md border p-3 ${FOCUS}`} />
     {(state.formError || state.errors) && <div role="alert" className="text-sm text-destructive">{state.formError}{Object.values(state.errors ?? {}).flat().map((error, index) => <p key={index}>{error}</p>)}</div>}
     <Button type="submit" disabled={pending} className="min-h-11 w-full">{pending ? "Guardando…" : "Bloquear fechas"}</Button>
   </form>;

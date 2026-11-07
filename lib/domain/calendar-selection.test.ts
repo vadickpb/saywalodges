@@ -16,6 +16,10 @@ describe("calendar selection", () => {
     const start = { start: "2026-12-08", end: null };
     expect(selectCalendarDate(start, "2026-12-14", blocks)).toBe(start);
   });
+  it("keeps the anchor when an earlier occupied date is clicked", () => {
+    const start = { start: "2026-12-15", end: null };
+    expect(selectCalendarDate(start, "2026-12-11", blocks)).toBe(start);
+  });
   it("restarts on an earlier free date and never creates zero nights", () => {
     const start = { start: "2026-12-08", end: null };
     expect(selectCalendarDate(start, start.start, [])).toEqual(start);
