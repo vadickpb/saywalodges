@@ -57,6 +57,15 @@ Decisiones del dueño que bloquean este lote: ver [`docs/decisiones-pendientes.m
 SD-501 → SD-502 → SD-503 → SD-504 → SD-505, en ese orden (cada uno depende del anterior). Claude implementa
 501, 502 y 504 (dinero y webhook); Codex 503 y 505.
 
+## Lote 5 · Producto listo para vender e instalar
+
+Objetivo: que cada instalación arranque con los datos del cliente y se maneje cómodo desde el celular.
+
+| Ticket | Qué | Quién | Estado |
+|---|---|---|---|
+| SD-420 | Asistente de importación único (unidades, tarifas, huéspedes, reservas, gastos) y edición rápida | Claude (RPC) + Codex (pantallas) | pendiente |
+| SD-421 | Calendario estilo Airbnb, adaptable a móvil, con precios por noche y acciones por rango | Codex (+ revisión de Claude) | pendiente |
+
 ## Después (sin lote)
 
 | Ticket | Qué | Quién | Estado |
