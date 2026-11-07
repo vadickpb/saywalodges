@@ -16,7 +16,10 @@ export default async function UnitsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground">Unidades reservables</h1>
-        {activeOrg && <Button asChild size="sm"><Link href="/app/site/units/new">Nueva unidad</Link></Button>}
+        {activeOrg && <div className="flex flex-wrap gap-2">
+          {activeOrg.role === "owner" && <Button asChild variant="outline" size="sm"><Link href="/app/site/units/importar">Importar desde CSV</Link></Button>}
+          <Button asChild size="sm"><Link href="/app/site/units/new">Nueva unidad</Link></Button>
+        </div>}
       </div>
       <p className="text-sm text-muted-foreground">Configura lo que pueden reservar tus huéspedes: una casa completa o una habitación. Las unidades inactivas no estarán disponibles para cotizar.</p>
       {units.length === 0 ? (
