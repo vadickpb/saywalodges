@@ -99,6 +99,12 @@ Puedes importar el mismo archivo otra vez con seguridad: las reservas duplicadas
 omiten. Las estadías que aún no terminan llegan por el calendario y no se importan como ingresos históricos.
 Si eliges otro CSV, vuelve a revisar la vista previa y emparejar sus espacios.
 
+## Importar casas y tarifas
+
+1. Como dueño, abre **Sitio > Unidades reservables > Importar desde CSV** y pulsa **Descargar plantilla**.
+2. Completa una fila por casa o habitación con precios en la moneda de tu propiedad, elige el CSV y pulsa **Ver vista previa**; revisa también las filas omitidas y sus motivos.
+3. Pulsa **Confirmar importación** y revisa cuántas casas se crearon o actualizaron; un nombre existente actualiza sus datos y su tarifa base.
+
 ## Ahorrar tokens (y dinero)
 
 - **Una sesión de Claude por lote.** Al empezar un lote, abre una sesión nueva: la memoria y `docs/cola.md`
