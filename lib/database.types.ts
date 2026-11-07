@@ -2086,6 +2086,10 @@ isOneToOne: true
         Args: { p_fx_rate_pen?: number; p_org_id: string; p_rows: Json };
         Returns: Json;
       };
+      import_units_and_rates: {
+        Args: { p_org_id: string; p_rows: Json };
+        Returns: Json;
+      };
       list_ical_rentals_to_complete: {
         Args: { p_org_id: string };
         Returns: {
