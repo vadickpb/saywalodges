@@ -121,3 +121,9 @@ Sin esto el auto-merge queda apagado y todo sigue funcionando como antes (Claude
 4. **Menos avisos de permisos en Claude Code**: escribe `/fewer-permission-prompts` en Claude Code y acepta
    la lista que proponga (solo comandos de lectura y de prueba).
 5. **Avisos al celular**: activa las notificaciones de GitHub (app móvil) para *Deployments* y *Actions*.
+
+### Bloquear fechas desde el calendario
+
+1. En `/app/calendar`, selecciona el mes y una unidad y pulsa **Ver calendario**.
+2. Toca el día de inicio y la fecha de salida (queda libre); en escritorio también puedes arrastrar entre ambos días.
+3. En el panel inferior, revisa las noches, añade una nota opcional y pulsa **Bloquear fechas**; toca un bloqueo manual para ver su detalle o eliminarlo.
