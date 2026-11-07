@@ -8,6 +8,8 @@ import { blockedDatesInMonth, rangeContains } from "@/lib/domain/availability";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { getPricingData } from "@/lib/dal/rates";
+import { nightlyPrices } from "@/lib/domain/nightly-prices";
 import { AirbnbCalendar } from "@/components/dashboard/airbnb-calendar";
 import { CalendarBlockForm } from "@/components/dashboard/calendar-block-form";
 import { RowAction } from "@/components/dashboard/row-action";
@@ -29,6 +31,15 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const { units, blocks } = data;
   const selected = units.find((unit) => unit.id === unitId);
   const bounds = calendarMonth(month);
+  // Display-only prices (SD-421): a pricing failure must never hide the calendar.
+  let prices: Record<string, number | null> = {};
+  let currency: "PEN" | "USD" = "PEN";
+  if (selected) {
+    try {
+      const pricing = await getPricingData();
+      if (pricing) { currency = pricing.currency; prices = nightlyPrices(selected.id, bounds.dates, pricing.rates, pricing.seasons, pricing.currency); }
+    } catch { prices = {}; }
+  }
   const href = (target: string) => `/app/calendar?${new URLSearchParams({ month: target, ...(unitId ? { unit: unitId } : {}) })}`;
   return <div className="min-w-0 space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -50,7 +61,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       </nav>}
       <ul aria-label="Leyenda de fuentes" className="flex flex-wrap gap-2 text-xs">{Object.entries(CALENDAR_SOURCES).map(([key, source]) => <li key={key} className={`rounded border px-2 py-1 ${source.className}`}>{source.short} · {source.label}</li>)}</ul>
       <p className="text-xs text-muted-foreground">Airbnb y Booking se identificarán cuando exista información del canal. Los bloques iCal actuales muestran el canal sin identificar. · = libre.</p>
-      {units.length === 0 ? <p>Aún no hay unidades. <Link href="/app/site/units" className="underline">Configurar unidades</Link></p> : selected ? <AirbnbCalendar key={selected.id} month={month} unit={selected} blocks={blocks} /> : <div className="space-y-4">{units.map((unit) => {
+      {units.length === 0 ? <p>Aún no hay unidades. <Link href="/app/site/units" className="underline">Configurar unidades</Link></p> : selected ? <AirbnbCalendar key={selected.id} month={month} unit={selected} blocks={blocks} prices={prices} currency={currency} /> : <div className="space-y-4">{units.map((unit) => {
         const unitBlocks = blocks.filter((block) => block.unitId === unit.id);
         const occupied = blockedDatesInMonth(unitBlocks, month).length;
         return <section key={unit.id} className="rounded-lg border p-3"><Link href={`/app/calendar?${new URLSearchParams({ month, unit: unit.id })}`} className="font-semibold underline">{unit.name}{unit.active ? "" : " (inactiva)"}</Link><p className="mb-2 text-xs text-muted-foreground">{occupied} de {bounds.days} noches ocupadas</p><div className="flex flex-wrap gap-1" aria-label={`Días de ${unit.name}`}>{bounds.dates.map((date) => {
