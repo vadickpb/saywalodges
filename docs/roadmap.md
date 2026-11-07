@@ -1993,3 +1993,35 @@ Seguimiento de PP-10 (mergeado en #85). Implementado en `feat/PP-11-guide-pdf-fi
 - [x] Chromium local (`app.localhost:3011`, `saywa-lodges.localhost:3011`): PDF owner y huésped, fotos privadas y caption sin alt, secciones ocultas, título y primera página con contenido; guía larga con paginación.
 - [x] Texto publicado independiente del borrador, partes de 4057/2420 caracteres, es/en y fallback manual; mensaje personalizado con saltos de línea reales y nombre conservado al editar el formulario.
 - [x] Entrega mediante PR #86 con CI verde y despliegue automático. No requiere pasos manuales de producción ni cambios de BD.
+
+### [ ] SD-420 · feat(onboarding): importar todo y editar rápido al instalar un cliente
+
+Contexto: el negocio vende el sistema instalado por cliente (`business-model-installation`). Cada instalación debe
+arrancar con los datos del cliente sin teclear nada a mano, y el dueño (o nosotros) debe poder corregir todo rápido.
+
+Alcance:
+- Asistente «Importar» único en el panel (solo dueño) con plantillas descargables CSV/Excel y vista previa antes de
+  guardar, siempre idempotente y con límites de tamaño (patrón de SD-419):
+  1. Historial de Airbnb (hecho, SD-419) y de otros canales (Booking, Vrbo) con el mismo lector extensible.
+  2. Unidades/casas, tarifas y temporadas.
+  3. Huéspedes y reservas históricas directas (CRM, SD-601).
+  4. Gastos e ingresos manuales (libro de finanzas).
+- Edición rápida: tablas editables en línea (tarifas, temporadas, gastos, huéspedes), deshacer del último cambio y
+  textos/mensajes plantilla editables por el dueño (guía, WhatsApp, emails).
+- Cada importación deja registro de auditoría (SD-605) y se puede reimportar sin duplicar.
+- Orden sugerido: unidades y tarifas → huéspedes → reservas históricas → gastos. Quién: Claude (RPC y reglas),
+  Codex (pantallas y plantillas).
+
+### [ ] SD-421 · feat(calendar): calendario estilo Airbnb, adaptable a móvil
+
+Alcance:
+- Calendario del panel (`/app/calendar`) con vista mensual y por casa: reservas directas, bloqueos manuales y
+  canales (Airbnb, Booking, Vrbo) con color por origen, precio por noche y mínimo de noches visibles en cada celda.
+- Interacción tipo Airbnb: seleccionar rango de fechas arrastrando o tocando inicio/fin, panel inferior (*bottom
+  sheet*) en móvil con acciones: bloquear, crear reserva manual, ver detalle y cambiar precio.
+- Móvil primero: gestos de deslizar entre meses, celdas táctiles de 44 px mínimo, accesibilidad por teclado y
+  lector de pantalla; el sitio público (`components/site/availability.tsx`) reutiliza el mismo componente.
+- Sin dependencias nuevas salvo justificación; sin cambios de reglas de reserva (la doble reserva sigue
+  impidiéndola el constraint de `calendar_blocks`).
+- Dependencias: SD-307 (sincronización iCal automática) y SD-419 (datos históricos). Quién: Codex (UI) con revisión
+  de Claude; Claude solo si hace falta un RPC para cambiar precios por rango.
