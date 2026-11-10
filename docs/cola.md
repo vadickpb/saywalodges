@@ -63,8 +63,8 @@ Objetivo: que cada instalación arranque con los datos del cliente y se maneje c
 
 | Ticket | Qué | Quién | Estado |
 |---|---|---|---|
-| SD-420 | Asistente de importación único (unidades, tarifas, huéspedes, reservas, gastos) y edición rápida | Claude (RPC) + Codex (pantallas) | pendiente |
-| SD-421 | Calendario estilo Airbnb, adaptable a móvil, con precios por noche y acciones por rango | Codex (+ revisión de Claude) | pendiente |
+| SD-420 | Asistente de importación único (unidades, tarifas, huéspedes, reservas, gastos) y edición rápida | Claude (RPC) + Codex (pantallas) | en curso: casas y tarifas base hechas (#96, #97); faltan gastos/ingresos, huéspedes y reservas directas (SD-601) y edición rápida |
+| SD-421 | Calendario estilo Airbnb, adaptable a móvil, con precios por noche y acciones por rango | Codex (+ revisión de Claude) | en curso: calendario móvil (#95) y precio por noche visible (#98); falta cambiar precio por rango (tabla + RPC) y reutilizarlo en el sitio público |
 
 ## Después (sin lote)
 
