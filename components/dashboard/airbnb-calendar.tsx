@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "radix-ui";
 import { createManualBlockAction, deleteManualBlockAction } from "@/app/app/calendar/actions";
 import type { FormState } from "@/app/app/site/_lib/form-state";
-import { calendarMonth, CALENDAR_SOURCES, type CalendarBlock } from "@/lib/domain/calendar";
+import { calendarMonth, blockStyle, type CalendarBlock } from "@/lib/domain/calendar";
 import { calendarKeyboardDate, selectCalendarDate, type CalendarSelection } from "@/lib/domain/calendar-selection";
 import { rangeContains } from "@/lib/domain/availability";
 import { daysBetween, monthOf } from "@/lib/domain/dates";
@@ -116,7 +116,7 @@ export function AirbnbCalendar({ month, unit, blocks, prices = {}, currency = "P
         {Array.from({ length: bounds.offset }, (_, i) => <span key={`pad-${i}`} aria-hidden="true" />)}
         {bounds.dates.map((date) => {
           const block = blocks.find((item) => rangeContains(item, date));
-          const source = block ? CALENDAR_SOURCES[block.source] : null;
+          const source = block ? blockStyle(block) : null;
           const selected = !!highlighted && (date === highlighted.start || (highlighted.end !== null && date > highlighted.start && date <= highlighted.end));
           const departure = highlighted?.end === date;
           return <button key={date} type="button" data-date={date} tabIndex={date === tabDate ? 0 : -1}
@@ -166,7 +166,7 @@ export function AirbnbCalendar({ month, unit, blocks, prices = {}, currency = "P
         <Dialog.Content onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}
           className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:max-h-dvh sm:w-96 sm:rounded-none sm:p-6">
           <Dialog.Title className="text-lg font-semibold">{detail ? "Ver detalle" : "Bloquear fechas"}</Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-muted-foreground">{unit.name} · {detail ? CALENDAR_SOURCES[detail.source].label : "Bloqueo manual"}</Dialog.Description>
+          <Dialog.Description className="mt-1 text-sm text-muted-foreground">{unit.name} · {detail ? blockStyle(detail).label : "Bloqueo manual"}</Dialog.Description>
           {detail ? <BlockDetail block={detail} onDeleted={() => { setMessage("Bloqueo eliminado."); close(); }} /> : selection?.end ? <RangeForm key={`${selection.start}-${selection.end}`} unitId={unit.id} start={selection.start} end={selection.end} onSaved={() => { setMessage("Bloqueo creado."); close(); }} /> : null}
           <Dialog.Close asChild><Button type="button" variant="outline" className="mt-4 min-h-11 w-full">Cerrar</Button></Dialog.Close>
         </Dialog.Content>

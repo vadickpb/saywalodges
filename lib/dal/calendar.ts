@@ -1,7 +1,7 @@
 import "server-only";
 import { requireActiveOrg } from "./organizations";
 import { createClient } from "@/lib/supabase/server";
-import { parseCalendarPeriod, type CalendarBlock, type ManualBlockInput } from "@/lib/domain/calendar";
+import { parseCalendarPeriod, type CalendarBlock, type CalendarChannel, type ManualBlockInput } from "@/lib/domain/calendar";
 import { monthBounds } from "@/lib/domain/dates";
 
 export const CALENDAR_ERROR = "No se pudo completar la operación del calendario. Intenta de nuevo.";
@@ -32,9 +32,10 @@ export async function readCalendar(ctx: Context, month: string, unitId?: string)
   const bounds = monthBounds(month);
   const period = bounds.endExclusive ? `[${bounds.start},${bounds.endExclusive})` : `[${bounds.start},9999-12-31]`;
   const blocks: CalendarBlock[] = [];
+  const feedOfBlock = new Map<string, string>();
   // PostgREST caps a response at 1000 rows. Read all pages; never silently show occupied days as free.
   for (let offset = 0; ; offset += 1000) {
-    let query = supabase.from("calendar_blocks").select("id, unit_id, period, source, note")
+    let query = supabase.from("calendar_blocks").select("id, unit_id, period, source, note, feed_id")
       .eq("org_id", orgId).eq("property_id", propertyId).overlaps("period", period).order("id").range(offset, offset + 999);
     if (unitId) query = query.eq("unit_id", unitId);
     const { data, error: blockError } = await query;
@@ -44,11 +45,26 @@ export async function readCalendar(ctx: Context, month: string, unitId?: string)
     }
     try {
       blocks.push(...data.map((row) => ({ id: row.id, unitId: row.unit_id, ...parseCalendarPeriod(row.period), source: row.source, note: row.source === "manual" ? row.note : null })));
+      for (const row of data) if (row.feed_id) feedOfBlock.set(row.id, row.feed_id);
     } catch (error) {
       console.error("readCalendar invalid period:", error);
       throw new Error(CALENDAR_ERROR);
     }
     if (data.length < 1000) break;
+  }
+  // Channel of each iCal feed (Airbnb, Booking, Vrbo). Feeds are owner-only (RLS): for staff this returns nothing
+  // and iCal blocks stay "canal sin identificar". A failure here must never hide occupied dates, so it only
+  // drops the label.
+  if (feedOfBlock.size > 0) {
+    const { data: feeds, error: feedError } = await supabase.from("ical_feeds").select("id, channel").eq("org_id", orgId);
+    if (feedError) console.error("readCalendar feeds failed:", feedError);
+    else {
+      const channelByFeed = new Map(feeds.map((feed) => [feed.id, feed.channel]));
+      for (const block of blocks) {
+        const feedId = feedOfBlock.get(block.id);
+        if (feedId) block.channel = channelByFeed.get(feedId) ?? null;
+      }
+    }
   }
   return { units, blocks, invalidUnit: false };
 }
