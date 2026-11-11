@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calendarMonth, manualBlockSchema, parseCalendarPeriod, CALENDAR_SOURCES } from "./calendar";
+import { calendarMonth, manualBlockSchema, parseCalendarPeriod, blockStyle, CALENDAR_SOURCES } from "./calendar";
 const input = { unitId: "2c19ef14-e784-4a6b-aafd-82af02488d42", start: "2027-12-31", end: "2028-01-02", note: "  Mantenimiento  " };
 describe("manual calendar input", () => {
   it("accepts year crossings and trims optional notes", () => {
@@ -32,5 +32,16 @@ describe("calendar presentation", () => {
     expect(calendarMonth("9999-12").next).toBeNull();
     expect(calendarMonth("2027-12").next).toBe("2028-01");
     expect(CALENDAR_SOURCES.ical.label).toContain("sin identificar");
+  });
+});
+
+describe("block channel style", () => {
+  it("uses the feed channel for iCal blocks and falls back when unknown", () => {
+    expect(blockStyle({ source: "ical", channel: "airbnb" }).label).toBe("Airbnb");
+    expect(blockStyle({ source: "ical", channel: "booking" }).label).toBe("Booking");
+    expect(blockStyle({ source: "ical", channel: "vrbo" }).label).toBe("Vrbo");
+    expect(blockStyle({ source: "ical", channel: "other" }).label).toContain("sin identificar");
+    expect(blockStyle({ source: "ical" }).label).toContain("sin identificar");
+    expect(blockStyle({ source: "manual", channel: "airbnb" }).label).toBe("Manual");
   });
 });

@@ -15,7 +15,8 @@ export const manualBlockSchema = z.object({
 });
 export type ManualBlockInput = z.infer<typeof manualBlockSchema>;
 export type CalendarSource = "booking" | "ical" | "manual";
-export type CalendarBlock = DateRange & { id: string; unitId: string; source: CalendarSource; note: string | null };
+export type CalendarChannel = "airbnb" | "booking" | "vrbo" | "other";
+export type CalendarBlock = DateRange & { id: string; unitId: string; source: CalendarSource; note: string | null; channel?: CalendarChannel | null };
 
 // SD-301 has no channel metadata yet. Never infer channels from notes, UUIDs or external UIDs.
 export const CALENDAR_SOURCES = {
@@ -23,8 +24,19 @@ export const CALENDAR_SOURCES = {
   airbnb: { label: "Airbnb", short: "A", className: "bg-rose-100 text-rose-950 border-rose-500" },
   bookingChannel: { label: "Booking", short: "B", className: "bg-blue-100 text-blue-950 border-blue-500" },
   manual: { label: "Manual", short: "M", className: "bg-amber-100 text-amber-950 border-amber-500" },
+  vrbo: { label: "Vrbo", short: "V", className: "bg-cyan-100 text-cyan-950 border-cyan-500" },
   ical: { label: "iCal · canal sin identificar", short: "I", className: "bg-violet-100 text-violet-950 border-violet-500" },
 };
+
+/** Style of a block. iCal blocks take the channel of the feed that imported them (Airbnb, Booking, Vrbo). */
+export function blockStyle(block: Pick<CalendarBlock, "source" | "channel">) {
+  if (block.source === "ical") {
+    if (block.channel === "airbnb") return CALENDAR_SOURCES.airbnb;
+    if (block.channel === "booking") return CALENDAR_SOURCES.bookingChannel;
+    if (block.channel === "vrbo") return CALENDAR_SOURCES.vrbo;
+  }
+  return CALENDAR_SOURCES[block.source];
+}
 
 /** Decode the finite canonical date range returned by PostgREST; fail closed on unexpected data. */
 export function parseCalendarPeriod(value: unknown): DateRange {

@@ -47,11 +47,19 @@ describe("authenticated calendar reads", () => {
     expect(f.from).toHaveBeenCalledOnce();
   });
   it("paginates beyond 1000 and hides nonmanual notes/identifiers", async () => {
-    const f = fake([{ data: [unit], error: null }, { data: Array.from({ length: 1000 }, () => row), error: null }, { data: [{ ...row, source: "ical", feed_id: "secret", external_uid: "secret", note: "private" }], error: null }]);
+    const f = fake([{ data: [unit], error: null }, { data: Array.from({ length: 1000 }, () => row), error: null }, { data: [{ ...row, source: "ical", feed_id: "secret", external_uid: "secret", note: "private" }], error: null }, { data: [], error: null }]);
     const result = await readCalendar(f.ctx, "2027-02");
     expect(result.blocks).toHaveLength(1001);
-    expect(result.blocks.at(-1)).toEqual({ id: "b1", unitId: "u1", start: "2027-01-30", end: "2027-02-02", source: "ical", note: null });
+    expect(result.blocks.at(-1)).toEqual({ id: "b1", unitId: "u1", start: "2027-01-30", end: "2027-02-02", source: "ical", note: null, channel: null });
     expect(f.calls).toContainEqual({ method: "range", args: [1000, 1999] });
+  });
+  it("labels iCal blocks with the channel of their feed", async () => {
+    const f = fake([{ data: [unit], error: null }, { data: [{ ...row, id: "b2", source: "ical", feed_id: "f1" }], error: null }, { data: [{ id: "f1", channel: "airbnb" }], error: null }]);
+    expect((await readCalendar(f.ctx, "2027-02")).blocks[0]).toMatchObject({ id: "b2", source: "ical", channel: "airbnb" });
+  });
+  it("keeps the dates visible when the feeds cannot be read", async () => {
+    const f = fake([{ data: [unit], error: null }, { data: [{ ...row, source: "ical", feed_id: "f1" }], error: null }, { data: null, error: { message: "secret" } }]);
+    expect((await readCalendar(f.ctx, "2027-02")).blocks).toHaveLength(1);
   });
   it("fails closed on query or corrupt period errors", async () => {
     for (const result of [{ data: null, error: { message: "secret" } }, { data: [{ ...row, period: "empty" }], error: null }]) {
