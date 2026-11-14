@@ -44,6 +44,10 @@ begin
      or exists (select 1 from public.unit_components c where c.parent_unit_id = new.child_unit_id) then
     raise exception 'a unit cannot be both a combination and a part of one' using errcode = '23514';
   end if;
+  -- One combination per part: with two, the shadow of one would not be echoed on the other and its calendar would lie.
+  if exists (select 1 from public.unit_components c where c.child_unit_id = new.child_unit_id and c.parent_unit_id <> new.parent_unit_id) then
+    raise exception 'a unit can be part of one combination only' using errcode = '23514';
+  end if;
   return new;
 end;
 $$;
@@ -61,6 +65,9 @@ alter table public.calendar_blocks drop constraint calendar_blocks_no_overlap;
 alter table public.calendar_blocks add constraint calendar_blocks_no_overlap
   exclude using gist (unit_id with =, period with &&) where (not is_echo);
 create index calendar_blocks_derived_from_idx on public.calendar_blocks(derived_from) where derived_from is not null;
+
+-- The constraint's index is partial now (no echoes); keep a plain one for unit/date lookups (availability, quotes, FK cascade).
+create index calendar_blocks_unit_period_idx on public.calendar_blocks using gist (unit_id, period);
 
 -- Creates the shadows of one real block. Related units: the parts of a combination, or the combinations a part belongs to.
 create function private.sync_block_shadows(p_block_id uuid)
@@ -94,8 +101,10 @@ revoke all on function private.sync_block_shadows(uuid) from public, anon, authe
 create function private.calendar_block_shadow_lock()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  if new.derived_from is null and exists (
-    select 1 from public.unit_components c where c.parent_unit_id = new.unit_id or c.child_unit_id = new.unit_id) then
+  -- ALWAYS take it for a real block, even before this unit is part of a combination: set_unit_components holds the same lock while it
+  -- defines one, so a block written concurrently either sees the combination (and writes its shadows) or is seen by its re-sync.
+  -- Updates that change neither dates nor unit (an iCal sync re-writing the same event) do not need it.
+  if new.derived_from is null and (tg_op = 'INSERT' or old.period is distinct from new.period or old.unit_id <> new.unit_id) then
     perform pg_advisory_xact_lock(hashtextextended('combined:' || new.property_id::text, 0));
   end if;
   return new;
@@ -108,7 +117,7 @@ create trigger calendar_blocks_shadow_lock before insert or update of period, un
 create function private.calendar_block_shadow_sync()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  if new.derived_from is null then
+  if new.derived_from is null and (tg_op = 'INSERT' or old.period is distinct from new.period or old.unit_id <> new.unit_id) then
     perform private.sync_block_shadows(new.id);
   end if;
   return null;
@@ -145,6 +154,48 @@ begin
   delete from public.calendar_blocks where id = p_block_id and org_id = p_org_id;
 end;
 $$;
+
+-- A lapsed hold of a villa leaves shadows on its houses (and the other way round): release the holds of the related units too, and
+-- take the property lock BEFORE deleting, so a house booking and a villa booking cannot wait for each other's rows (deadlock).
+create or replace function private.release_expired_holds(p_unit_id uuid default null)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_property uuid;
+  v_count integer;
+begin
+  if p_unit_id is not null then
+    select u.property_id into v_property from public.units u
+     where u.id = p_unit_id and exists (
+       select 1 from public.unit_components c where c.parent_unit_id = u.id or c.child_unit_id = u.id);
+    if v_property is not null then
+      perform pg_advisory_xact_lock(hashtextextended('combined:' || v_property::text, 0));
+    end if;
+  end if;
+  with due as (
+    select b.id from public.bookings b
+    where b.status = 'pending_payment' and b.expires_at <= now()
+      and (p_unit_id is null or b.unit_id = p_unit_id
+           or b.unit_id in (select c.child_unit_id from public.unit_components c where c.parent_unit_id = p_unit_id
+                            union select c.parent_unit_id from public.unit_components c where c.child_unit_id = p_unit_id))
+      and not exists (select 1 from public.payments p where p.booking_id = b.id and p.status = 'pending_review')
+    order by b.id
+    for update skip locked
+  ), expired as (
+    update public.bookings b set status = 'expired', expires_at = null
+    from due where b.id = due.id returning b.id
+  ), freed as (
+    delete from public.calendar_blocks cb
+    using expired where cb.booking_id = expired.id and cb.source = 'booking' returning cb.id
+  )
+  select count(*)::integer into v_count from expired;
+  return v_count;
+end;
+$$;
+revoke all on function private.release_expired_holds(uuid) from public, anon, authenticated;
 
 -- Owner sets which units make up a combination (empty array = no longer a combination). Existing blocks are re-synchronised;
 -- if one of them collides (the villa and a house are already booked for the same dates) the whole change fails with 23P01.

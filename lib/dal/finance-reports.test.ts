@@ -12,15 +12,16 @@ import { listReportUnits, loadReportData } from "./finance-reports";
 
 const ORG = "bf88f504-051f-4fdc-ab73-4fa12d715817";
 
-// units (select -> eq) and manual blocks (select -> eq -> eq), each answered by its own table.
+// units (select -> eq) and manual blocks (select -> eq -> eq -> is), each answered by its own table.
 function clientWith(units: { data: unknown; error: unknown }, blocks: { data: unknown; error: unknown } = { data: [], error: null }) {
   const unitsEq = vi.fn().mockResolvedValue(units);
-  const blocksEqSource = vi.fn().mockResolvedValue(blocks);
+  const blocksIs = vi.fn().mockResolvedValue(blocks);
+  const blocksEqSource = vi.fn(() => ({ is: blocksIs }));
   const blocksEqOrg = vi.fn(() => ({ eq: blocksEqSource }));
   const from = vi.fn((table: string) => ({
     select: vi.fn(() => ({ eq: table === "units" ? unitsEq : blocksEqOrg })),
   }));
-  return { client: { from } as unknown as SupabaseClient<Database>, from, eq: unitsEq, blocksEqOrg, blocksEqSource };
+  return { client: { from } as unknown as SupabaseClient<Database>, from, eq: unitsEq, blocksEqOrg, blocksEqSource, blocksIs };
 }
 
 describe("listReportUnits", () => {
@@ -43,7 +44,7 @@ describe("listReportUnits", () => {
   });
 
   it("attaches only the owner's manual blocks to their house and ignores malformed ranges", async () => {
-    const { client, from, blocksEqOrg, blocksEqSource } = clientWith(
+    const { client, from, blocksEqOrg, blocksEqSource, blocksIs } = clientWith(
       { data: [{ id: "u1", name: "Casa A", active: true, created_at: "2027-01-10T15:00:00Z", updated_at: "2027-01-10T15:00:00Z" }], error: null },
       { data: [{ unit_id: "u1", period: "[2027-03-01,2027-03-05)" }, { unit_id: "u1", period: "[2027-04-10,2027-04-12)" }, { unit_id: "u1", period: "empty" }, { unit_id: "other", period: "[2027-03-01,2027-03-02)" }], error: null }
     );
@@ -51,6 +52,7 @@ describe("listReportUnits", () => {
     expect(from).toHaveBeenCalledWith("calendar_blocks");
     expect(blocksEqOrg).toHaveBeenCalledWith("org_id", ORG);
     expect(blocksEqSource).toHaveBeenCalledWith("source", "manual");
+    expect(blocksIs).toHaveBeenCalledWith("derived_from", null);
     expect(units[0].blockedRanges).toEqual([{ start: "2027-03-01", end: "2027-03-05" }, { start: "2027-04-10", end: "2027-04-12" }]);
   });
 

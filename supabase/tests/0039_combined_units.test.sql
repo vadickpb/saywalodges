@@ -2,12 +2,13 @@
 -- Ids from supabase/seed.sql: org Saywa bf88f504-..., property 131583b5-..., owner a3b45db1-..., staff c5d77e30-...
 -- Fixture units V (villa), A and B (houses). All dates are in 2060, far from seeded data.
 begin;
-select plan(17);
+select plan(18);
 
 insert into public.units (id, org_id, property_id, name, kind, max_guests, included_guests) values
   ('ee212000-0000-4000-8000-00000000000a', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Combo A', 'entire_place', 4, 2),
   ('ee212000-0000-4000-8000-00000000000b', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Combo B', 'entire_place', 4, 2),
-  ('ee212000-0000-4000-8000-0000000000f0', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Combo Villa', 'entire_place', 8, 4);
+  ('ee212000-0000-4000-8000-0000000000f0', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Combo Villa', 'entire_place', 8, 4),
+  ('ee212000-0000-4000-8000-0000000000f1', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Combo Villa 2', 'entire_place', 8, 4);
 
 create temp table res(k text, v uuid);
 grant all on res to public;
@@ -66,7 +67,12 @@ update public.calendar_blocks set period = daterange('2060-06-10', '2060-06-12')
 select is((select period::text from public.calendar_blocks where unit_id = 'ee212000-0000-4000-8000-0000000000f0' and note = 'Ocupada por «Combo A»'), '[2060-06-10,2060-06-12)',
   'the echo follows the dates of its block');
 
--- Defining a combination over bookings that already collide is refused.
+-- A house belongs to one villa only.
+select throws_ok($$insert into public.unit_components (org_id, property_id, parent_unit_id, child_unit_id)
+  values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'ee212000-0000-4000-8000-0000000000f1', 'ee212000-0000-4000-8000-00000000000a')$$,
+  '23514', null, 'a house cannot be part of two combinations');
+
+-- Removing the combination clears its shadows.
 select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be625665fb6d"}', true);
 set local role authenticated;
 select lives_ok($$select public.set_unit_components('bf88f504-051f-4fdc-ab73-4fa12d715817', 'ee212000-0000-4000-8000-0000000000f0', array[]::uuid[])$$, 'the owner removes the combination');
