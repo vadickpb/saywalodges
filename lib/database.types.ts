@@ -1546,6 +1546,7 @@ isOneToOne: true
       };
       spaces: {
         Row: {
+          unit_id: string | null;
           badge_en: string | null;
           badge_es: string | null;
           capacity: string | null;
@@ -1563,6 +1564,7 @@ isOneToOne: true
         };
         ComputedFields: never;
         Insert: {
+          unit_id?: string | null;
           badge_en?: string | null;
           badge_es?: string | null;
           capacity?: string | null;
@@ -1579,6 +1581,7 @@ isOneToOne: true
           sort_order?: number;
         };
         Update: {
+          unit_id?: string | null;
           badge_en?: string | null;
           badge_es?: string | null;
           capacity?: string | null;
@@ -1760,6 +1763,15 @@ isOneToOne: true
       };
       units: {
         Row: {
+          bathrooms: number;
+          bed_details_en: string;
+          bed_details_es: string;
+          bedrooms: number;
+          beds: number;
+          description_en: string;
+          description_es: string;
+          showcase_type: string;
+          sort_order: number;
           active: boolean;
           created_at: string;
           id: string;
@@ -1773,6 +1785,15 @@ isOneToOne: true
         };
         ComputedFields: never;
         Insert: {
+          bathrooms?: number;
+          bed_details_en?: string;
+          bed_details_es?: string;
+          bedrooms?: number;
+          beds?: number;
+          description_en?: string;
+          description_es?: string;
+          showcase_type?: string;
+          sort_order?: number;
           active?: boolean;
           created_at?: string;
           id?: string;
@@ -1785,6 +1806,15 @@ isOneToOne: true
           updated_at?: string;
         };
         Update: {
+          bathrooms?: number;
+          bed_details_en?: string;
+          bed_details_es?: string;
+          bedrooms?: number;
+          beds?: number;
+          description_en?: string;
+          description_es?: string;
+          showcase_type?: string;
+          sort_order?: number;
           active?: boolean;
           created_at?: string;
           id?: string;
