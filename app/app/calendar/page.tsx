@@ -40,7 +40,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   if (selected) {
     try {
       const pricing = await getPricingData();
-      if (pricing) { currency = pricing.currency; prices = nightlyPrices(selected.id, bounds.dates, pricing.rates, pricing.seasons, pricing.currency); }
+      if (pricing) { currency = pricing.currency; prices = nightlyPrices(selected.id, bounds.dates, pricing.rates, pricing.seasons, pricing.currency, pricing.priceRanges); }
     } catch { prices = {}; }
   }
   const href = (target: string) => `/app/calendar?${new URLSearchParams({ month: target, unit: selected?.id ?? "all" })}`;
