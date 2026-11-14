@@ -1,0 +1,43 @@
+name: Scheduled crons
+
+# SD-307: calls the HTTP cron routes every 15 minutes (GitHub Actions is the free scheduler; Vercel Hobby only
+# allows daily crons). Needs two repository secrets: CRON_URL (https://app.<domain>, no trailing slash) and
+# CRON_SECRET (same value as the app's CRON_SECRET). Without them the job is skipped, never failed.
+# GitHub may delay a scheduled run by a few minutes; routes are idempotent. See docs/cron.md.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: scheduled-crons
+  cancel-in-progress: false
+
+jobs:
+  call:
+    name: ${{ matrix.route }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        route: [ical-sync, expire-holds]
+    steps:
+      - name: Call /api/cron/${{ matrix.route }}
+        env:
+          CRON_URL: ${{ secrets.CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          ROUTE: ${{ matrix.route }}
+        run: |
+          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "CRON_URL / CRON_SECRET not set: skipping."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/body -w '%{http_code}' --max-time 120 -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" "$CRON_URL/api/cron/$ROUTE")
+          echo "HTTP $code"
+          [ "$code" = "200" ] || exit 1

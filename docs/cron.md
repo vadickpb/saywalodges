@@ -84,7 +84,9 @@ Ruta: `GET` o `POST /api/cron/ical-sync` (dominio de plataforma). Misma autentic
 
 ## Pasos manuales del dueño (no hechos por el agente)
 1. `CRON_SECRET` configurado (ver arriba).
-2. **Programar** la llamada cada 15 min: el repo **no** define `crons` en Vercel (Hobby solo permite ejecuciones diarias; cada
+2. **Programar** la llamada cada 15 min. **Hecho en el repo**: `.github/workflows/scheduled-crons.yml` llama a `ical-sync` y
+   `expire-holds` cada 15 min. Solo falta crear dos *secrets* del repositorio: `CRON_URL` (`https://app.<dominio>`, sin barra
+   final) y `CRON_SECRET` (el mismo valor que en Vercel). Sin ellos el job se omite. Alternativas previas: el repo **no** define `crons` en Vercel (Hobby solo permite ejecuciones diarias; cada
    15 min exige Pro). Opciones gratuitas: GitHub Actions (`*/15 * * * *` con
    `curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<ROOT_DOMAIN>/api/cron/ical-sync`), cron-job.org, o
    Vercel Cron Pro si el dueño decide pagarlo. Hasta que se programe, **no hay sincronización automática** y el criterio
