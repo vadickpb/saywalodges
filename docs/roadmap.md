@@ -844,6 +844,49 @@ Decisiones de arquitectura: [`docs/adr/`](adr/). Workflow por ticket: skill `tic
 - **Pendiente**: comprobar la advertencia en navegador y medir Lighthouse móvil ≥ 90 en rendimiento y accesibilidad en preview.
   Los resultados de CI sobre tenants sembrados no sustituyen esa medición. Despliegue de BD por el workflow con aprobación.
 
+### [ ] SD-211 · feat(site): units showcase on the public site
+`L` · Depende: SD-204, SD-209 · Review: `R+S`
+- **Problema**: las unidades creadas en el panel no aparecen en la web; los espacios y fotos son de toda la propiedad.
+- **Alcance**:
+  - Unidad: tipo visible (casa, departamento, villa completa, habitación), descripción es/en, dormitorios, camas,
+    baños, foto de portada y orden.
+  - Cada espacio/foto pertenece a una unidad o queda como **área común** (sin unidad); un área común se muestra una
+    sola vez y se enlaza desde todas las unidades.
+  - Web: sección «Casas disponibles» / «Departamentos disponibles» (título según el tipo) con una tarjeta por unidad
+    (foto, huéspedes, dormitorios, camas, baños, precio «desde») y página por unidad con galería, espacios, precio,
+    calendario propio y botón de cotizar con la unidad ya elegida. Con una sola unidad la web queda como hoy.
+  - SEO: URL, metadatos y datos estructurados por unidad.
+- **Criterios**
+  - [ ] Crear, desactivar o reordenar una unidad en el panel cambia la web sin tocar código.
+  - [ ] Una unidad inactiva o de una propiedad no publicada no es legible por `anon` (pgTAP).
+  - [ ] El precio «desde» lo calcula el servidor con `lib/domain/pricing.ts`.
+
+### [ ] SD-212 · feat(db): combined units (whole villa = house A + house B)
+`M` · Depende: SD-211, SD-301 · Review: `R+S`
+- **Problema**: hoy cada unidad tiene su calendario. Con «Casa 1», «Casa 2» y «Villa completa» como tres unidades,
+  reservar la villa no bloquea las casas: es una doble reserva que el constraint actual no ve.
+- **Alcance**: una unidad puede componerse de otras; un bloqueo en la unidad compuesta crea bloqueos en sus
+  componentes y un bloqueo en un componente bloquea la compuesta, en la misma transacción y bajo el constraint de
+  `calendar_blocks` (ADR 0003). Aplica a reservas, bloqueos manuales e iCal. ADR nuevo.
+- **Criterios**
+  - [ ] Reservar la villa impide reservar cualquiera de sus casas esas fechas, y al revés, también en concurrencia (pgTAP).
+  - [ ] Cancelar libera exactamente los bloqueos que creó.
+
+### [ ] SD-213 · feat(site): special dates (New Year, Easter, holidays)
+`M` · Depende: SD-211, SD-421 (precio por rango) · Review: `R+S`
+- **Alcance**: una temporada puede marcarse como **fecha especial** con nombre público es/en, noches mínimas y,
+  opcionalmente, precio de paquete por la estancia completa. La web muestra «Fechas especiales» con cada fecha, la
+  disponibilidad por unidad, el precio y un botón que abre el cotizador con las fechas puestas. El calendario
+  público resalta esos días.
+- **Criterios**
+  - [ ] El precio mostrado es el mismo que cobra el cotizador (un solo cálculo, en el servidor).
+  - [ ] Una fecha especial pasada deja de mostrarse sola.
+
+### [ ] SD-214 · feat: several locations per installation
+`L` · Depende: SD-211 · Review: `R+S` · **Más adelante**
+- **Alcance**: administradores con departamentos en distintas direcciones: ubicación por unidad, filtro por zona y
+  mapa en la web. Se define cuando haya un cliente que lo pida.
+
 ---
 
 ## Fase 3 — Calendario e iCal (M3)
