@@ -101,10 +101,11 @@ revoke all on function private.sync_block_shadows(uuid) from public, anon, authe
 create function private.calendar_block_shadow_lock()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  -- ALWAYS take it for a real block, even before this unit is part of a combination: set_unit_components holds the same lock while it
-  -- defines one, so a block written concurrently either sees the combination (and writes its shadows) or is seen by its re-sync.
-  -- Updates that change neither dates nor unit (an iCal sync re-writing the same event) do not need it.
-  if new.derived_from is null and (tg_op = 'INSERT' or old.period is distinct from new.period or old.unit_id <> new.unit_id) then
+  -- Only for units that are part of a combination: everywhere else adjacent stays never wait for each other (ADR 0003, SD-301).
+  -- Updates that change neither dates nor unit (an iCal sync re-writing the same event) do not need it either.
+  -- The race with a combination being defined is closed on the other side: set_unit_components locks the table (see there).
+  if new.derived_from is null and (tg_op = 'INSERT' or old.period is distinct from new.period or old.unit_id <> new.unit_id)
+     and exists (select 1 from public.unit_components c where c.parent_unit_id = new.unit_id or c.child_unit_id = new.unit_id) then
     perform pg_advisory_xact_lock(hashtextextended('combined:' || new.property_id::text, 0));
   end if;
   return new;
@@ -224,6 +225,9 @@ begin
     raise exception 'not allowed' using errcode = '42501';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('combined:' || v_property::text, 0));
+  -- A block written right now would not see the combination we are about to commit and would get no shadows: wait for the writers in
+  -- flight (they commit or roll back) and hold new ones until we commit. Rare owner action, so a brief calendar pause is fine.
+  lock table public.calendar_blocks in share row exclusive mode;
 
   -- Units whose shadows may change: the old and new parts and the parent.
   select coalesce(array_agg(distinct x), '{}') into v_ids from (
