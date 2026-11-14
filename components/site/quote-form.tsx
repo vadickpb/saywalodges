@@ -9,11 +9,12 @@ import { buttonStyles } from "./ui";
 
 const controlStyles = "min-h-12 w-full min-w-0 rounded-site border border-site-muted bg-site-bg px-3 py-2 text-site-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent aria-invalid:border-site-fg disabled:opacity-60";
 
-export function QuoteForm({ lang, t, units, contactUrl, today }: {
-  lang: string; t: Dict["publicQuote"]; units: QuoteUnit[]; contactUrl: string; today: string;
+export function QuoteForm({ lang, t, units, initialUnitId, contactUrl, today }: {
+  lang: string; t: Dict["publicQuote"]; units: QuoteUnit[]; initialUnitId?: string; contactUrl: string; today: string;
 }) {
   const [state, action, pending] = useActionState(submitPublicQuote.bind(null, lang), {});
-  const [unitId, setUnitId] = useState(units.length === 1 ? units[0].id : "");
+  const initialUnit = units.find((unit) => unit.id === initialUnitId)?.id ?? (units.length === 1 ? units[0].id : "");
+  const [unitId, setUnitId] = useState(initialUnit);
   const [guests, setGuests] = useState(1);
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");

@@ -15,6 +15,7 @@ export const SPACE_CATEGORIES = [
 
 export type SpaceMeta = {
   id: string;
+  unitId: string | null;
   category: "pool" | "rooms" | "common" | "outdoor";
   icon: string;
   label: { en: string; es: string };
@@ -57,7 +58,8 @@ export const getSpaces = cache(async (propertyId: string): Promise<SpaceWithPhot
   }
 
   return (rooms ?? []).map((r) => ({
-    id: r.key,
+    id: r.id,
+    unitId: r.unit_id,
     category: r.category,
     icon: r.icon,
     label: { en: r.label_en, es: r.label_es },

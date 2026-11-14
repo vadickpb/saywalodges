@@ -9,7 +9,7 @@ import { GENERIC_ERROR, NO_CONTEXT_ERROR, getSiteContext, type ActionResult } fr
 import { readText, type FormState } from "../_lib/form-state";
 
 const FIELDS = [
-  "key", "category", "icon", "capacity", "badgeEn", "badgeEs", "labelEn", "labelEs", "descEn", "descEs",
+  "unitId", "key", "category", "icon", "capacity", "badgeEn", "badgeEs", "labelEn", "labelEs", "descEn", "descEs",
 ] as const;
 
 export async function saveSpace(_prev: FormState, formData: FormData): Promise<FormState> {

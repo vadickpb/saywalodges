@@ -1,13 +1,18 @@
 import { notFound } from "next/navigation";
 import { requireActiveOrg } from "@/lib/dal/organizations";
 import { getSpace } from "@/lib/dal/content";
+import { listUnits } from "@/lib/dal/units";
 import { createClient } from "@/lib/supabase/server";
 import { SPACE_CATEGORIES, SPACE_CATEGORY_LABELS, uuidSchema } from "@/lib/domain/content-manager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContentForm, type ContentField } from "@/components/dashboard/content-form";
 import { saveSpace } from "../actions";
 
-const FIELDS: ContentField[] = [
+function fields(units: Awaited<ReturnType<typeof listUnits>>): ContentField[] { return [
+  { name: "unitId", label: "Pertenece a", kind: "select", width: "full", options: [
+    { value: "", label: "Área común (de toda la propiedad)" },
+    ...units.map((unit) => ({ value: unit.id, label: unit.name })),
+  ] },
   { name: "labelEs", label: "Nombre (es)", maxLength: 200 },
   { name: "labelEn", label: "Nombre (en)", maxLength: 200 },
   { name: "key", label: "Clave (minúsculas, números y guiones)", maxLength: 200 },
@@ -23,9 +28,9 @@ const FIELDS: ContentField[] = [
   { name: "badgeEn", label: "Etiqueta (en, opcional)", maxLength: 200 },
   { name: "descEs", label: "Descripción (es)", kind: "textarea", maxLength: 2000 },
   { name: "descEn", label: "Descripción (en)", kind: "textarea", maxLength: 2000 },
-];
+]; }
 
-const EMPTY = { category: "rooms", icon: "🛏️" };
+const EMPTY = { unitId: "", category: "rooms", icon: "🛏️" };
 
 export default async function SpaceEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,12 +39,17 @@ export default async function SpaceEditPage({ params }: { params: Promise<{ id: 
 
   const { activeOrg } = await requireActiveOrg();
   if (!activeOrg) notFound();
-  const space = isNew ? null : await getSpace(await createClient(), activeOrg.id, id);
+  const supabase = await createClient();
+  const [space, units] = await Promise.all([
+    isNew ? Promise.resolve(null) : getSpace(supabase, activeOrg.id, id),
+    listUnits(supabase, activeOrg.id),
+  ]);
   if (!isNew && !space) notFound();
 
   const initial: Record<string, string> = space
     ? {
         key: space.key,
+        unitId: space.unitId ?? "",
         category: space.category,
         icon: space.icon,
         capacity: space.capacity ?? "",
@@ -59,7 +69,7 @@ export default async function SpaceEditPage({ params }: { params: Promise<{ id: 
       </CardHeader>
       <CardContent>
         <ContentForm
-          fields={FIELDS}
+          fields={fields(units)}
           initial={initial}
           action={saveSpace}
           id={space?.id}

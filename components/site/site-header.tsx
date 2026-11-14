@@ -16,9 +16,11 @@ type Props = {
   links: Link[];
   // Whether the header starts transparent on top of a hero photo.
   overImage: boolean;
+  languageHref?: string;
+  bookingHref?: string;
 };
 
-export function SiteHeader({ dict, lang, name, logoUrl, links, overImage }: Props) {
+export function SiteHeader({ dict, lang, name, logoUrl, links, overImage, languageHref, bookingHref = "#availability" }: Props) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -74,7 +76,7 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage }: Prop
 
         <div className="flex items-center gap-2">
           <a
-            href={`/${otherLang}`}
+            href={languageHref ?? `/${otherLang}`}
             hrefLang={otherLang}
             aria-label={dict.switchLanguage}
             className="rounded-site px-2.5 py-2 text-xs font-semibold uppercase tracking-widest opacity-85 hover:opacity-100"
@@ -82,7 +84,7 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage }: Prop
             {otherLang}
           </a>
           <a
-            href="#availability"
+            href={bookingHref}
             className={`${transparent ? buttonStyles.light : buttonStyles.primary} px-5! py-2.5! max-sm:hidden`}
           >
             {dict.book}
@@ -114,7 +116,7 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage }: Prop
               </a>
             ))}
           </nav>
-          <a href="#availability" onClick={() => setOpen(false)} className={`${buttonStyles.primary} mt-8 w-full`}>
+          <a href={bookingHref} onClick={() => setOpen(false)} className={`${buttonStyles.primary} mt-8 w-full`}>
             {dict.book}
           </a>
         </div>

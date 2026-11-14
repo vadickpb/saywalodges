@@ -1,15 +1,30 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import type { UnitInput } from "@/lib/domain/units";
+import type { ShowcaseType, UnitInput } from "@/lib/domain/units";
 
 type Client = SupabaseClient<Database>;
 export type Unit = UnitInput & { id: string };
 type Result = { ok: true } | { ok: false };
-const COLUMNS = "id, name, kind, max_guests, included_guests, active";
+const COLUMNS = "id, name, kind, max_guests, included_guests, active, showcase_type, description_es, description_en, bedrooms, beds, bed_details_es, bed_details_en, bathrooms, sort_order";
+type UnitRow = Pick<Database["public"]["Tables"]["units"]["Row"],
+  "id" | "name" | "kind" | "max_guests" | "included_guests" | "active" | "showcase_type" | "description_es" |
+  "description_en" | "bedrooms" | "beds" | "bed_details_es" | "bed_details_en" | "bathrooms" | "sort_order">;
 
-function toUnit(row: Pick<Database["public"]["Tables"]["units"]["Row"], "id" | "name" | "kind" | "max_guests" | "included_guests" | "active">): Unit {
-  return { id: row.id, name: row.name, kind: row.kind, maxGuests: row.max_guests, includedGuests: row.included_guests, active: row.active };
+function showcaseType(value: string): ShowcaseType {
+  switch (value) {
+    case "apartment": case "villa": case "room": return value;
+    default: return "house";
+  }
+}
+
+function toUnit(row: UnitRow): Unit {
+  return {
+    id: row.id, name: row.name, kind: row.kind, maxGuests: row.max_guests, includedGuests: row.included_guests, active: row.active,
+    showcaseType: showcaseType(row.showcase_type), descriptionEs: row.description_es, descriptionEn: row.description_en,
+    bedrooms: row.bedrooms, beds: row.beds, bedDetailsEs: row.bed_details_es, bedDetailsEn: row.bed_details_en,
+    bathrooms: row.bathrooms, sortOrder: row.sort_order,
+  };
 }
 
 // Callers resolve orgId through requireActiveOrg(), never a client cookie or
@@ -33,7 +48,12 @@ export async function getUnit(supabase: Client, orgId: string, id: string): Prom
 }
 
 function columns(input: UnitInput) {
-  return { name: input.name, kind: input.kind, max_guests: input.maxGuests, included_guests: input.includedGuests, active: input.active };
+  return {
+    name: input.name, kind: input.kind, max_guests: input.maxGuests, included_guests: input.includedGuests, active: input.active,
+    showcase_type: input.showcaseType, description_es: input.descriptionEs, description_en: input.descriptionEn,
+    bedrooms: input.bedrooms, beds: input.beds, bed_details_es: input.bedDetailsEs, bed_details_en: input.bedDetailsEn,
+    bathrooms: input.bathrooms, sort_order: input.sortOrder,
+  };
 }
 
 export async function createUnit(supabase: Client, orgId: string, propertyId: string, input: UnitInput): Promise<Result> {

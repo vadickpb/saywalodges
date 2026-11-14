@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireActiveOrg } from "@/lib/dal/organizations";
 import { listSpaces } from "@/lib/dal/content";
+import { listUnits } from "@/lib/dal/units";
 import { createClient } from "@/lib/supabase/server";
 import { SPACE_CATEGORY_LABELS } from "@/lib/domain/content-manager";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,11 @@ import { deleteSpaceAction, moveSpaceAction } from "./actions";
 
 export default async function SpacesPage() {
   const { activeOrg } = await requireActiveOrg();
-  const spaces = activeOrg ? await listSpaces(await createClient(), activeOrg.id) : [];
+  const supabase = await createClient();
+  const [spaces, units] = activeOrg
+    ? await Promise.all([listSpaces(supabase, activeOrg.id), listUnits(supabase, activeOrg.id)])
+    : [[], []];
+  const unitNames = new Map(units.map((unit) => [unit.id, unit.name]));
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,6 +40,7 @@ export default async function SpacesPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-foreground">{space.labelEs}</p>
                     <p className="truncate text-sm text-muted-foreground">{space.labelEn}</p>
+                    <p className="truncate text-xs text-muted-foreground">{space.unitId ? unitNames.get(space.unitId) ?? "Unidad no disponible" : "Área común"}</p>
                   </div>
                   <Badge variant="secondary">{SPACE_CATEGORY_LABELS[space.category]}</Badge>
                   <div className="flex items-center gap-1">

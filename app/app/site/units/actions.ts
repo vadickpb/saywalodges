@@ -12,7 +12,10 @@ const PATH = "/app/site/units";
 const idSchema = z.uuid();
 
 export async function saveUnit(_previous: FormState, formData: FormData): Promise<FormState> {
-  const values = readText(formData, ["name", "kind", "maxGuests", "includedGuests", "active"]);
+  const values = readText(formData, [
+    "name", "kind", "maxGuests", "includedGuests", "active", "showcaseType", "descriptionEs", "descriptionEn",
+    "bedrooms", "beds", "bedDetailsEs", "bedDetailsEn", "bathrooms", "sortOrder",
+  ]);
   const ctx = await getSiteContext();
   if (!ctx) return { ok: false, formError: NO_CONTEXT_ERROR, values };
   const idRaw = formData.get("id");
