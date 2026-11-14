@@ -15,6 +15,7 @@ const FILE = "0bcf73ac-1c1d-4418-9982-2edde9a3e50c";
 const SPACE = "72e893c1-2512-4360-9244-361f1bd50c3f";
 
 const validSpace = {
+  unitId: "",
   key: "pool",
   category: "pool",
   icon: "🏊",
@@ -32,6 +33,11 @@ describe("spaceInputSchema", () => {
     const parsed = spaceInputSchema.parse(validSpace);
     expect(parsed.capacity).toBeNull();
     expect(parsed.badgeEn).toBeNull();
+    expect(parsed.unitId).toBeNull();
+  });
+  it("accepts a unit id and rejects arbitrary ownership values", () => {
+    expect(spaceInputSchema.parse({ ...validSpace, unitId: FILE }).unitId).toBe(FILE);
+    expect(spaceInputSchema.safeParse({ ...validSpace, unitId: "another-house" }).success).toBe(false);
   });
   it("rejects a key with uppercase or spaces", () => {
     expect(spaceInputSchema.safeParse({ ...validSpace, key: "Queen A" }).success).toBe(false);

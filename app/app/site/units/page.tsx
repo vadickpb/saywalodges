@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireActiveOrg } from "@/lib/dal/organizations";
 import { createClient } from "@/lib/supabase/server";
 import { listUnits } from "@/lib/dal/units";
-import { UNIT_KIND_LABELS } from "@/lib/domain/units";
+import { SHOWCASE_TYPE_LABELS, UNIT_KIND_LABELS } from "@/lib/domain/units";
 import { RowAction } from "@/components/dashboard/row-action";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ export default async function UnitsPage() {
                     <Link href={`/app/site/units/${unit.id}`} className="break-words font-medium text-primary hover:underline">{unit.name}</Link>
                     <Badge variant={unit.active ? "default" : "secondary"}>{unit.active ? "Activa" : "Inactiva"}</Badge>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{UNIT_KIND_LABELS[unit.kind]} · Hasta {unit.maxGuests} huéspedes · {unit.includedGuests} incluidos en la tarifa base</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{SHOWCASE_TYPE_LABELS[unit.showcaseType]} · {UNIT_KIND_LABELS[unit.kind]} · Hasta {unit.maxGuests} huéspedes · {unit.includedGuests} incluidos en la tarifa base · Orden {unit.sortOrder}</p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Button asChild variant="outline" size="sm"><Link href={`/app/site/units/${unit.id}`}>Editar</Link></Button>

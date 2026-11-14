@@ -23,16 +23,19 @@ type Props = {
   lightboxLabels: LightboxLabels;
   intro: string;
   spaces: SpaceCard[];
+  label?: string;
+  title?: string;
+  sectionId?: string;
 };
 
-export function Spaces({ dict, lightboxLabels, intro, spaces }: Props) {
+export function Spaces({ dict, lightboxLabels, intro, spaces, label, title, sectionId = "spaces" }: Props) {
   const [open, setOpen] = useState<{ space: SpaceCard; index: number } | null>(null);
   if (spaces.length === 0) return null;
 
   return (
-    <section id="spaces" className="scroll-mt-20 py-20 sm:py-28">
+    <section id={sectionId} className="scroll-mt-20 py-20 sm:py-28">
       <Container>
-        <SectionHeading label={dict.label} title={dict.title} />
+        <SectionHeading label={label ?? dict.label} title={title ?? dict.title} />
         {intro && <p className="mt-5 max-w-2xl text-base leading-relaxed text-site-muted sm:text-lg">{intro}</p>}
 
         <ul className="mt-12 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">

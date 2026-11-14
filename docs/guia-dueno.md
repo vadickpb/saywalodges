@@ -105,6 +105,15 @@ Si eliges otro CSV, vuelve a revisar la vista previa y emparejar sus espacios.
 2. Completa una fila por casa o habitación con precios en la moneda de tu propiedad, elige el CSV y pulsa **Ver vista previa**; revisa también las filas omitidas y sus motivos.
 3. Pulsa **Confirmar importación** y revisa cuántas casas se crearon o actualizaron; un nombre existente actualiza sus datos y su tarifa base.
 
+## Mostrar mis casas en la web
+
+1. Abre **Sitio > Unidades reservables**, crea o edita cada casa y completa el tipo visible, las descripciones en español e inglés, dormitorios, camas, detalle de camas, baños y orden. Déjala **Activa** para publicarla.
+2. Abre **Sitio > Espacios**. En cada habitación o ambiente elige **Pertenece a** y selecciona su casa. Después añade o reordena sus fotos como siempre: las fotos siguen perteneciendo al espacio.
+3. Para piscina, jardín, estacionamiento u otro lugar que usan todas las casas, elige **Área común (de toda la propiedad)**. Esos espacios se muestran aparte y no se duplican dentro de una casa.
+4. Configura la tarifa base de cada unidad. La web muestra el menor precio base como «desde»; el cotizador siempre vuelve a calcular el importe exacto en el servidor según fechas y huéspedes.
+
+Cuando hay dos o más unidades activas, la portada muestra una tarjeta para cada una y una página con sus fotos, espacios, calendario y cotizador. Con una sola unidad activa, la portada conserva el diseño habitual.
+
 ## Ahorrar tokens (y dinero)
 
 - **Una sesión de Claude por lote.** Al empezar un lote, abre una sesión nueva: la memoria y `docs/cola.md`

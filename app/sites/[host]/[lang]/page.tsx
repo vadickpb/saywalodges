@@ -15,6 +15,7 @@ import { getPublicRates } from "@/lib/dal/public/rates";
 import { getPhotosConfig } from "@/lib/dal/public/photos";
 import { getSpaces } from "@/lib/dal/public/spaces";
 import { getActiveUnits } from "@/lib/dal/public/units";
+import { getShowcaseUnits } from "@/lib/dal/public/showcase-units";
 import { getPublicUnitAvailability } from "@/lib/dal/public/availability";
 import { buildMonthGrid, resolveCalendarMonth, resolveUnitId } from "@/lib/domain/public-availability";
 import { formatPublicPrice, formatSeasonRange } from "@/lib/domain/public-rates";
@@ -32,6 +33,7 @@ import { Faq } from "@/components/site/faq";
 import { Contact } from "@/components/site/contact";
 import { SiteFooter } from "@/components/site/site-footer";
 import { MobileCta } from "@/components/site/mobile-cta";
+import { UnitsShowcase } from "@/components/site/units-showcase";
 
 export default async function SitePage({
   params,
@@ -60,12 +62,16 @@ export default async function SitePage({
       console.error(`SitePage: loading units of ${site.slug} failed:`, error);
       return [];
     });
+    const showcaseUnits = await getShowcaseUnits(property.id).catch((error: unknown) => {
+      console.error(`SitePage: loading unit showcase of ${site.slug} failed:`, error);
+      return [];
+    });
     // Like units, rates are optional: a failure hides the price cards, not the site.
     const rates = await getPublicRates(property.id, property.currency).catch((error: unknown) => {
       console.error(`SitePage: loading rates of ${site.slug} failed:`, error);
       return null;
     });
-    data = { property, photos, spaces, amenities, distances, units, rates };
+    data = { property, photos, spaces, amenities, distances, units, showcaseUnits, rates };
   } catch (error) {
     // Same reasoning as app/sites/[host]/[lang]/layout.tsx's resolveSite:
     // a real DB failure would otherwise 404 silently, indistinguishable
@@ -74,7 +80,7 @@ export default async function SitePage({
     notFound();
   }
 
-  const { property, photos, spaces, amenities, distances, units, rates } = data;
+  const { property, photos, spaces, amenities, distances, units, showcaseUnits, rates } = data;
   const { content } = property;
   const videoUrl = await getPublicHeroVideo(property.orgId, lang);
   const mediaCopy = guestGuideCopy(lang);
@@ -93,6 +99,8 @@ export default async function SitePage({
     answer: pick(item.answer, lang),
   }));
   const address = [property.addressLocality, property.addressRegion].filter(Boolean).join(", ");
+  const hasUnitShowcase = showcaseUnits.length >= 2;
+  const visibleSpaces = hasUnitShowcase ? spaces.filter((space) => space.unitId === null) : spaces;
 
   // Public availability: month and unit come from the URL, so both are untrusted. The
   // unit must be one of this property's own active units; the month is clamped to the
@@ -114,7 +122,8 @@ export default async function SitePage({
   // Only link to sections that will actually render for this tenant.
   const links = [
     photos.gallery.length > 0 && { href: "#gallery", label: dict.nav.gallery },
-    spaces.length > 0 && { href: "#spaces", label: dict.nav.spaces },
+    hasUnitShowcase && { href: "#accommodations", label: dict.unitsShowcase.label },
+    visibleSpaces.length > 0 && { href: "#spaces", label: hasUnitShowcase ? dict.unitsShowcase.commonAreasTitle : dict.nav.spaces },
     rateCards.length > 0 && { href: "#rates", label: dict.nav.rates },
     unitId !== null && { href: "#availability-calendar", label: dict.nav.availability },
     { href: "#location", label: dict.nav.location },
@@ -156,11 +165,19 @@ export default async function SitePage({
           amenities={amenities.map((row) => resolveAmenity(row, lang))}
         />
         <Gallery dict={dict.gallery} name={property.name} photos={photos.gallery} />
+        <UnitsShowcase
+          dict={dict.unitsShowcase}
+          lang={lang}
+          units={showcaseUnits}
+          price={(cents) => formatPublicPrice(cents, property.currency, lang)}
+        />
         <Spaces
           dict={dict.spaces}
           lightboxLabels={dict.gallery}
-          intro={pick(content.spacesIntro, lang)}
-          spaces={spaces.map((space) => ({
+          intro={hasUnitShowcase ? "" : pick(content.spacesIntro, lang)}
+          label={hasUnitShowcase ? dict.unitsShowcase.commonAreasLabel : undefined}
+          title={hasUnitShowcase ? dict.unitsShowcase.commonAreasTitle : undefined}
+          spaces={visibleSpaces.map((space) => ({
             id: space.id,
             icon: space.icon,
             name: pick(space.label, lang),

@@ -50,6 +50,7 @@ export type SpaceItem = SpaceInput & { id: string; sortOrder: number };
 function toSpaceItem(r: Database["public"]["Tables"]["spaces"]["Row"]): SpaceItem {
   return {
     id: r.id,
+    unitId: r.unit_id,
     key: r.key,
     // The DB enum and SPACE_CATEGORIES match; the fallback only guards drift.
     category: SPACE_CATEGORIES.find((c) => c === r.category) ?? "rooms",
@@ -85,6 +86,7 @@ export async function getSpace(supabase: Client, orgId: string, id: string): Pro
 
 function spaceColumns(s: SpaceInput) {
   return {
+    unit_id: s.unitId,
     key: s.key,
     category: s.category,
     icon: s.icon,

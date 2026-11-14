@@ -30,6 +30,7 @@ const nullableText = (max: number) =>
     .transform((v) => (v === "" ? null : v));
 
 export const spaceInputSchema = z.object({
+  unitId: z.union([z.literal(""), z.uuid("Elige una unidad válida")]).transform((value) => value || null),
   key: required.regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
   category: z.enum(SPACE_CATEGORIES),
   icon: z.string().trim().max(20),
