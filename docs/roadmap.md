@@ -1926,6 +1926,94 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
         mención en el aviso de privacidad de la transferencia a Meta y registro del opt-in con evidencia (fecha, texto mostrado).
   - [ ] Cada plantilla se prueba con el número de prueba de Meta.
 
+### [ ] SD-1010 · feat(whatsapp): automation rules and send queue
+`M` · Depende: SD-1009 · Review: `R+S`
+- **Alcance**: reglas configurables por el dueño («al confirmar la reserva», «N días antes de la llegada», «al salir»)
+  que eligen una plantilla aprobada; cola de envíos idempotente (una fila por reserva y regla), horario permitido en
+  `America/Lima` y ejecución programada como `docs/cron.md`.
+- **Criterios**
+  - [ ] Ejecutar el programador dos veces no envía dos veces (pgTAP + Vitest).
+  - [ ] Sin opt-in o con la regla apagada no sale ningún mensaje.
+
+### [ ] SD-1011 · feat(whatsapp): owner alerts
+`S` · Depende: SD-1009 · Review: `R+S`
+- **Alcance**: avisos al número del dueño (reserva nueva, comprobante subido, conflicto de calendario), con el correo
+  como respaldo si el envío falla.
+
+### [ ] SD-1012 · feat(whatsapp): inbound inbox and auto-reply
+`M` · Depende: SD-1010 · Review: `R+S`
+- **Alcance**: guardar mensajes entrantes del webhook (retención definida, Ley 29733), bandeja simple en el panel y
+  respuesta automática dentro de la ventana de 24 h con el enlace del cotizador. Sin IA en esta entrega.
+- **Criterios**
+  - [ ] Un mensaje entrante nunca dispara más de una respuesta automática por ventana.
+
+## Fase 11 — Comercialización
+
+Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas) se reparte en SD-1110 a SD-1112.
+
+### [ ] SD-1101 · docs(adr): product core and customization levels
+`S` · Depende: — · Review: `R`
+- **Alcance**: ADR con los tres niveles (configuración, módulos, a medida detrás de interruptor) y la regla de no crear
+  ramas ni copias por cliente; actualizar `CLAUDE.md` (aún dice «SaaS multi-tenant») con aprobación del dueño.
+
+### [ ] SD-1102 · refactor: white-label audit
+`M` · Depende: SD-1101 · Review: `R+S`
+- **Alcance**: quitar valores fijos de Saywa Lodges (`config/site.ts`, `lib/env.ts`, `lib/domain/site-theme.ts`,
+  textos y metadatos); todo sale de la configuración de la instalación o de la base.
+- **Criterios**
+  - [ ] Un test falla si «saywalodges» o «Saywa Lodges» aparece fuera de seeds, demo, tests y docs.
+  - [ ] Una instalación local con otro nombre y dominio no muestra la marca Saywa en sitio, panel ni correos.
+
+### [ ] SD-1103 · feat(settings): per-installation modules
+`M` · Depende: SD-1101 · Review: `R+S`
+- **Alcance**: interruptores por instalación (finanzas, guía privada, WhatsApp, pago en línea, CRM) leídos solo en
+  servidor; un módulo apagado no aparece en la navegación y sus rutas y acciones responden 404.
+- **Criterios**
+  - [ ] Con un módulo apagado, sus server actions y rutas no ejecutan nada (tests).
+
+### [ ] SD-1104 · feat(demo): rich demo data and guided tour
+`M` · Depende: SD-1007 · Review: `R`
+- **Alcance**: seed ficticio con casas, 12 meses de reservas y finanzas, bloqueos de canales y guía; botón «Entrar a la
+  demo» sin escribir contraseña; recorrido guiado de 5 pasos.
+
+### [ ] SD-1105 · feat(site): legal pages and complaints book
+`M` · Depende: — · Review: `R+S`
+- **Alcance**: páginas editables de privacidad y términos, y Libro de Reclamaciones virtual (formulario público con
+  límite por origen, constancia por correo y bandeja en el panel). El texto legal lo aporta cada cliente.
+
+### [ ] SD-1106 · docs: client manual, in-panel help and support intake
+`S` · Depende: — · Review: `R`
+- **Alcance**: manual del cliente (PDF y web), ayuda contextual en el panel, plantillas de incidencia y canal de soporte.
+
+### [ ] SD-1107 · chore(legal): license and contract templates
+`S` · Depende: D9 · Review: `R`
+- **Alcance**: `LICENSE` según D9, plantilla de contrato de licencia y mantenimiento (borrador para revisión legal) y
+  nota en el README sobre el uso permitido del código.
+
+### [ ] SD-1108 · feat(ops): full data export
+`M` · Depende: — · Review: `R+S`
+- **Alcance**: exportación completa de la instalación (solo dueño) en un archivo con CSV por tabla y fotos; prefijos de
+  fórmula neutralizados como en SD-601.
+
+### [ ] SD-1110 · feat(marketing): vendor site base
+`M` · Depende: D7, D8 · Review: `R+S` (toca `proxy.ts`)
+- **Alcance**: modo `DEPLOYMENT_MODE=vendor` con rutas propias (404 en instalaciones), landing reutilizando el PR #45,
+  botón «Probar demo» y CTA a WhatsApp. Lighthouse móvil ≥ 90.
+
+### [ ] SD-1111 · feat(marketing): packages, case study and lead form
+`M` · Depende: SD-1110, D4, D10 · Review: `R+S`
+- **Alcance**: paquetes y precios, caso Saywa Lodges, preguntas frecuentes y formulario de contacto con protección
+  anti-abuso. Ningún precio, cifra ni testimonio sin aprobación del dueño.
+
+### [ ] SD-1112 · feat(marketing): SEO content
+`S` · Depende: SD-1110 · Review: `R`
+- **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.
+
+### [ ] SD-904 · chore(workflow): GitHub issues and project board
+`S` · Depende: — · Review: `R`
+- **Alcance**: un issue por ticket abierto del roadmap con hito y etiquetas, tablero público, plantillas de issue y
+  regla «el PR cierra su issue».
+
 ## Propuesta de ticket fuera del alcance actual
 
 - **Mantenimiento de dependencias y revisión de avisos de seguridad** (convertido en SD-705): `npm audit` durante SD-206

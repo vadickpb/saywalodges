@@ -13,6 +13,10 @@ otro. El dueño responde cuando quiera (basta escribir «D3: sí»). Al decidir,
 | D3 | Plazo de conservación de comprobantes aprobados | 5 años propuestos; validar finalidad y obligaciones contables. La Ley 29733 no fija ese plazo (`docs/cron.md`, SD-412) | Habilitar su borrado en un ticket posterior; el cron SD-412 siempre protege aprobados |
 | D4 | Precio de instalación y de mantenimiento mensual | Fijarlo con los costos por cliente (Supabase Pro + Vercel Pro + dominio) | SD-1006 |
 | D5 | Iniciar la verificación del negocio en Meta (WhatsApp Cloud API) | Empezar ya: tarda semanas y no depende del código (`docs/whatsapp.md`) | SD-1009 |
+| D7 | Nombre comercial del producto | Mantener «Saywa Direct»; «Saywa Lodges» queda solo como alojamiento y caso de éxito | SD-1110 |
+| D8 | Dónde vive la web de ventas y con qué dominio | Mismo repositorio en modo `vendor`, proyecto Vercel y dominio propios | SD-1110 |
+| D9 | Licencia y visibilidad del repositorio (hoy público y sin licencia) | Público con licencia propietaria: se puede leer, no reutilizar comercialmente | SD-1107 |
+| D10 | Paquetes de venta y módulos de cada uno | Base (web, calendario, reservas) y Pro (+ finanzas, WhatsApp, pago en línea) | SD-1111 |
 
 ## Decididas
 

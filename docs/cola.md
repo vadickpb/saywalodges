@@ -66,6 +66,22 @@ Objetivo: que cada instalación arranque con los datos del cliente y se maneje c
 | SD-420 | Asistente de importación único (unidades, tarifas, huéspedes, reservas, gastos) y edición rápida | Claude (RPC) + Codex (pantallas) | en curso: casas y tarifas base hechas (#96, #97); faltan gastos/ingresos, huéspedes y reservas directas (SD-601) y edición rápida |
 | SD-421 | Calendario estilo Airbnb, adaptable a móvil, con precios por noche y acciones por rango | Codex (+ revisión de Claude) | en curso: calendario móvil (#95) y precio por noche visible (#98); falta cambiar precio por rango (tabla + RPC) y reutilizarlo en el sitio público |
 
+Se suman a este lote SD-307 (sincronización iCal automática) y SD-807 (ingresos automáticos), ambos de Claude.
+
+## Lotes 6 a 10 · Comercialización
+
+Plan y motivos del orden: [`plan-comercial.md`](plan-comercial.md). El lote 3 queda repartido entre los lotes 6, 8 y 9.
+
+| Lote | Objetivo | Tickets | Quién |
+|---|---|---|---|
+| 6 | Vendible tal cual | SD-1101, SD-1102, SD-1103, SD-903, SD-1107 | Claude (1101, 1103, 903), Codex (1102, 1107) |
+| 7 | Demo y web de ventas | SD-1007, SD-1104, SD-1110, SD-1111, SD-1112 | Codex; Claude revisa 1110 (`proxy.ts`) |
+| 8 | WhatsApp automático | SD-1009, SD-1010, SD-1011, SD-1012 | Claude (1010, 1012), Codex (1009, 1011) |
+| 9 | Entrega al cliente | SD-1105, SD-1106, SD-1108, SD-605, SD-606 | Claude (1108, 605), Codex (1105, 1106, 606) |
+| 10 | CRM y portafolio | SD-601, SD-602, SD-904, SD-703 | Claude (601, 602), Codex (904, 703) |
+
+El lote 4 (Mercado Pago) va entre el 9 y el 10.
+
 ## Después (sin lote)
 
 | Ticket | Qué | Quién | Estado |
