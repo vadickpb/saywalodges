@@ -1500,6 +1500,9 @@ isOneToOne: true
       };
       seasons: {
         Row: {
+          is_special: boolean;
+          public_name_en: string;
+          public_name_es: string;
           created_at: string;
           end_date: string;
           id: string;
@@ -1512,6 +1515,9 @@ isOneToOne: true
         };
         ComputedFields: never;
         Insert: {
+          is_special?: boolean;
+          public_name_en?: string;
+          public_name_es?: string;
           created_at?: string;
           end_date: string;
           id?: string;
@@ -1523,6 +1529,9 @@ isOneToOne: true
           updated_at?: string;
         };
         Update: {
+          is_special?: boolean;
+          public_name_en?: string;
+          public_name_es?: string;
           created_at?: string;
           end_date?: string;
           id?: string;
