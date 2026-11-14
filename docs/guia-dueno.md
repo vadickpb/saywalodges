@@ -133,3 +133,12 @@ Sin esto el auto-merge queda apagado y todo sigue funcionando como antes (Claude
 1. En `/app/calendar`, selecciona el mes y una unidad y pulsa **Ver calendario**.
 2. Toca el día de inicio y la fecha de salida (queda libre); en escritorio también puedes arrastrar entre ambos días.
 3. En el panel inferior, revisa las noches, añade una nota opcional y pulsa **Bloquear fechas**; toca un bloqueo manual para ver su detalle o eliminarlo.
+
+### Cambiar el precio de unas fechas
+
+1. En `/app/calendar`, selecciona el mes y una unidad, pulsa **Ver calendario** y elige el inicio y la salida del rango. El rango debe estar libre de noches ocupadas y puede abarcar hasta 366 noches.
+2. En el panel inferior, pulsa **Cambiar precio**, escribe el precio por noche y, si hace falta, un mínimo de noches solo para esas fechas.
+3. Pulsa **Guardar cambio de precio**. El calendario, el cotizador del panel y la reserva pública usarán el nuevo importe.
+4. Para volver a la tarifa normal o de temporada, selecciona el rango otra vez, entra en **Cambiar precio** y pulsa **Quitar cambio de precio**.
+
+Si un rango nuevo se cruza con otro cambio, el sistema conserva automáticamente las partes que quedan a los lados. La fecha de salida nunca cambia de precio.
