@@ -16,7 +16,7 @@ export const manualBlockSchema = z.object({
 export type ManualBlockInput = z.infer<typeof manualBlockSchema>;
 export type CalendarSource = "booking" | "ical" | "manual";
 export type CalendarChannel = "airbnb" | "booking" | "vrbo" | "other";
-export type CalendarBlock = DateRange & { id: string; unitId: string; source: CalendarSource; note: string | null; channel?: CalendarChannel | null };
+export type CalendarBlock = DateRange & { id: string; unitId: string; source: CalendarSource; note: string | null; derived: boolean; channel?: CalendarChannel | null };
 
 // SD-301 has no channel metadata yet. Never infer channels from notes, UUIDs or external UIDs.
 export const CALENDAR_SOURCES = {

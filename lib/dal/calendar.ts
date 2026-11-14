@@ -35,7 +35,7 @@ export async function readCalendar(ctx: Context, month: string, unitId?: string)
   const feedOfBlock = new Map<string, string>();
   // PostgREST caps a response at 1000 rows. Read all pages; never silently show occupied days as free.
   for (let offset = 0; ; offset += 1000) {
-    let query = supabase.from("calendar_blocks").select("id, unit_id, period, source, note, feed_id")
+    let query = supabase.from("calendar_blocks").select("id, unit_id, period, source, note, feed_id, derived_from")
       .eq("org_id", orgId).eq("property_id", propertyId).overlaps("period", period).order("id").range(offset, offset + 999);
     if (unitId) query = query.eq("unit_id", unitId);
     const { data, error: blockError } = await query;
@@ -44,7 +44,7 @@ export async function readCalendar(ctx: Context, month: string, unitId?: string)
       throw new Error(CALENDAR_ERROR);
     }
     try {
-      blocks.push(...data.map((row) => ({ id: row.id, unitId: row.unit_id, ...parseCalendarPeriod(row.period), source: row.source, note: row.source === "manual" ? row.note : null })));
+      blocks.push(...data.map((row) => ({ id: row.id, unitId: row.unit_id, ...parseCalendarPeriod(row.period), source: row.source, note: row.source === "manual" ? row.note : null, derived: row.derived_from !== null })));
       for (const row of data) if (row.feed_id) feedOfBlock.set(row.id, row.feed_id);
     } catch (error) {
       console.error("readCalendar invalid period:", error);

@@ -289,7 +289,7 @@ function BlockDetail({ block, onDeleted }: { block: CalendarBlock; onDeleted: ()
     <p className="font-semibold">{daysBetween(block.start, block.end)} noches · salida libre</p>
     <p className="whitespace-pre-wrap break-words text-sm">{block.note || "Sin nota."}</p>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {block.source === "manual" ? <>
+    {block.derived ? <p className="text-sm text-muted-foreground">Se libera sola al cancelar la reserva que la originó.</p> : block.source === "manual" ? <>
       <Button variant="destructive" className="min-h-11 w-full" disabled={pending} onClick={() => setConfirm(true)}>{pending ? "Eliminando…" : "Eliminar bloqueo"}</Button>
       <ConfirmDialog open={confirm} onOpenChange={setConfirm} title="¿Eliminar bloqueo manual?" description={`${block.start} → ${block.end}. Las noches quedarán libres.`} confirmLabel="Eliminar bloqueo" cancelLabel="Cancelar" destructive onConfirm={() => startTransition(async () => {
         try {

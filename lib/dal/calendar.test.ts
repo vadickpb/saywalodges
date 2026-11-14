@@ -17,7 +17,7 @@ function fake(results: Result[], rpcResult: Result = { data: "block", error: nul
   return { ctx: { supabase, orgId: "org", propertyId: "property" }, calls, rpc, from };
 }
 const unit = { id: "u1", name: "Cabaña", active: true };
-const row = { id: "b1", unit_id: "u1", period: "[2027-01-30,2027-02-02)", source: "manual", note: "Reparación" };
+const row = { id: "b1", unit_id: "u1", period: "[2027-01-30,2027-02-02)", source: "manual", note: "Reparación", derived_from: null };
 beforeEach(() => { vi.clearAllMocks(); vi.spyOn(console, "error").mockImplementation(() => {}); });
 describe("authenticated calendar reads", () => {
   it("derives the property from verified active org, never client input", async () => {
@@ -50,12 +50,16 @@ describe("authenticated calendar reads", () => {
     const f = fake([{ data: [unit], error: null }, { data: Array.from({ length: 1000 }, () => row), error: null }, { data: [{ ...row, source: "ical", feed_id: "secret", external_uid: "secret", note: "private" }], error: null }, { data: [], error: null }]);
     const result = await readCalendar(f.ctx, "2027-02");
     expect(result.blocks).toHaveLength(1001);
-    expect(result.blocks.at(-1)).toEqual({ id: "b1", unitId: "u1", start: "2027-01-30", end: "2027-02-02", source: "ical", note: null, channel: null });
+    expect(result.blocks.at(-1)).toEqual({ id: "b1", unitId: "u1", start: "2027-01-30", end: "2027-02-02", source: "ical", note: null, derived: false, channel: null });
     expect(f.calls).toContainEqual({ method: "range", args: [1000, 1999] });
   });
   it("labels iCal blocks with the channel of their feed", async () => {
     const f = fake([{ data: [unit], error: null }, { data: [{ ...row, id: "b2", source: "ical", feed_id: "f1" }], error: null }, { data: [{ id: "f1", channel: "airbnb" }], error: null }]);
     expect((await readCalendar(f.ctx, "2027-02")).blocks[0]).toMatchObject({ id: "b2", source: "ical", channel: "airbnb" });
+  });
+  it("marks generated combination rows as derived", async () => {
+    const f = fake([{ data: [unit], error: null }, { data: [{ ...row, derived_from: "original" }], error: null }]);
+    expect((await readCalendar(f.ctx, "2027-02")).blocks[0]).toMatchObject({ source: "manual", derived: true });
   });
   it("keeps the dates visible when the feeds cannot be read", async () => {
     const f = fake([{ data: [unit], error: null }, { data: [{ ...row, source: "ical", feed_id: "f1" }], error: null }, { data: null, error: { message: "secret" } }]);

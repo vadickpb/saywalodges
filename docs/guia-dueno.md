@@ -114,6 +114,15 @@ Si eliges otro CSV, vuelve a revisar la vista previa y emparejar sus espacios.
 
 Cuando hay dos o más unidades activas, la portada muestra una tarjeta para cada una y una página con sus fotos, espacios, calendario y cotizador. Con una sola unidad activa, la portada conserva el diseño habitual.
 
+## Villa completa y casas
+
+1. Crea las unidades reservables por separado, por ejemplo **Villa completa**, **Casa 1** y **Casa 2**, y déjalas activas.
+2. Abre **Sitio > Unidades reservables > Villa completa**. En **Esta unidad se compone de…**, marca Casa 1 y Casa 2 y pulsa **Guardar composición**. Solo el dueño ve y puede cambiar esta sección.
+3. Desde ese momento, una reserva de la villa bloquea las dos casas. Una reserva de cualquiera de las casas muestra la villa como ocupada, pero Casa 1 y Casa 2 todavía pueden reservarse a la vez.
+4. En el calendario, esos bloqueos indican qué unidad los originó. No se borran a mano: se liberan solos al cancelar la reserva original.
+
+Para deshacer la combinación, vuelve a editar la villa, desmarca todas las casas y guarda. Si ya existen reservas que chocan entre la villa y sus partes en las mismas fechas, resuelve primero esas reservas y vuelve a intentarlo.
+
 ## Ahorrar tokens (y dinero)
 
 - **Una sesión de Claude por lote.** Al empezar un lote, abre una sesión nueva: la memoria y `docs/cola.md`
