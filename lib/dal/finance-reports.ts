@@ -23,8 +23,8 @@ export type ReportData =
 export async function listReportUnits(supabase: Client, orgId: string): Promise<ReportUnit[]> {
   const [units, blocks] = await Promise.all([
     supabase.from("units").select("id, name, active, created_at, updated_at").eq("org_id", orgId),
-    // Only the owner's manual blocks: they are not for sale, so they are not available nights (SD-807).
-    supabase.from("calendar_blocks").select("unit_id, period").eq("org_id", orgId).eq("source", "manual"),
+    // Only the owner's own manual blocks (not the shadows of a combined unit): they are not for sale, so they are not available nights (SD-807).
+    supabase.from("calendar_blocks").select("unit_id, period").eq("org_id", orgId).eq("source", "manual").is("derived_from", null),
   ]);
   if (units.error || blocks.error) {
     console.error("listReportUnits failed:", units.error ?? blocks.error);

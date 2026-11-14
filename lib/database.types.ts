@@ -345,6 +345,8 @@ isOneToOne: true
       };
       calendar_blocks: {
         Row: {
+          derived_from: string | null;
+          is_echo: boolean;
           booking_id: string | null;
           created_at: string;
           expires_at: string | null;
@@ -361,6 +363,8 @@ isOneToOne: true
         };
         ComputedFields: never;
         Insert: {
+          derived_from?: string | null;
+          is_echo?: boolean;
           booking_id?: string | null;
           created_at?: string;
           expires_at?: string | null;
@@ -376,6 +380,8 @@ isOneToOne: true
           updated_at?: string;
         };
         Update: {
+          derived_from?: string | null;
+          is_echo?: boolean;
           booking_id?: string | null;
           created_at?: string;
           expires_at?: string | null;
@@ -1660,6 +1666,30 @@ isOneToOne: true
           },
         ];
       };
+      unit_components: {
+        Row: {
+          child_unit_id: string;
+          created_at: string;
+          org_id: string;
+          parent_unit_id: string;
+          property_id: string;
+        };
+        Insert: {
+          child_unit_id: string;
+          created_at?: string;
+          org_id: string;
+          parent_unit_id: string;
+          property_id: string;
+        };
+        Update: {
+          child_unit_id?: string;
+          created_at?: string;
+          org_id?: string;
+          parent_unit_id?: string;
+          property_id?: string;
+        };
+        Relationships: [];
+      };
       unit_price_overrides: {
         Row: {
           created_at: string;
@@ -2150,6 +2180,10 @@ isOneToOne: true
       health_snapshot: { Args: Record<PropertyKey, never>; Returns: Json };
       import_airbnb_history: {
         Args: { p_fx_rate_pen?: number; p_org_id: string; p_rows: Json };
+        Returns: Json;
+      };
+      set_unit_components: {
+        Args: { p_child_unit_ids: string[]; p_org_id: string; p_parent_unit_id: string };
         Returns: Json;
       };
       set_unit_price_range: {
