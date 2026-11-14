@@ -3,13 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createUnit, deleteUnit, setUnitActive, updateUnit } from "@/lib/dal/units";
+import { createUnit, deleteUnit, setUnitActive, setUnitComponents, updateUnit } from "@/lib/dal/units";
 import { unitInputSchema } from "@/lib/domain/units";
 import { GENERIC_ERROR, NO_CONTEXT_ERROR, getSiteContext, type ActionResult } from "../_lib/context";
 import { readText, type FormState } from "../_lib/form-state";
 
 const PATH = "/app/site/units";
 const idSchema = z.uuid();
+const unitComponentsSchema = z.object({
+  unitId: idSchema,
+  children: z.array(idSchema).max(20),
+}).superRefine(({ unitId, children }, ctx) => {
+  if (new Set(children).size !== children.length) ctx.addIssue({ code: "custom", path: ["children"], message: "No repitas unidades." });
+  if (children.includes(unitId)) ctx.addIssue({ code: "custom", path: ["children"], message: "Una unidad no puede contenerse a sí misma." });
+});
 
 export async function saveUnit(_previous: FormState, formData: FormData): Promise<FormState> {
   const values = readText(formData, [
@@ -51,5 +58,15 @@ export async function deleteUnitAction(formData: FormData): Promise<ActionResult
   const result = await deleteUnit(ctx.supabase, ctx.orgId, id.data);
   if (!result.ok) return { ok: false, error: GENERIC_ERROR };
   revalidatePath(PATH, "layout");
+  return { ok: true };
+}
+
+export async function setUnitComponentsAction(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const parsed = unitComponentsSchema.safeParse({ unitId: formData.get("unitId"), children: formData.getAll("children") });
+  if (!parsed.success) return { ok: false, error: GENERIC_ERROR };
+  const result = await setUnitComponents(parsed.data.unitId, parsed.data.children);
+  if (!result.ok) return result;
+  revalidatePath(PATH, "layout");
+  revalidatePath("/app/calendar");
   return { ok: true };
 }

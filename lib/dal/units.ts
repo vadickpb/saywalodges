@@ -2,10 +2,19 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import type { ShowcaseType, UnitInput } from "@/lib/domain/units";
+import { requireActiveOrg } from "@/lib/dal/organizations";
+import { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
 
 type Client = SupabaseClient<Database>;
 export type Unit = UnitInput & { id: string };
 type Result = { ok: true } | { ok: false };
+export type UnitComponents = { parentUnitId: string | null; childUnitIds: string[] };
+export type SetUnitComponentsResult = { ok: true } | { ok: false; error: string };
+export const UNIT_COMPONENTS_ERROR = "No se pudo guardar la composición de la unidad. Intenta de nuevo.";
+export const UNIT_COMPONENTS_OVERLAP_ERROR = "Hay reservas que chocan entre esta unidad y alguna de sus partes en las mismas fechas. Resuélvelas primero.";
+export const UNIT_COMPONENTS_CHAIN_ERROR = "Una unidad no puede ser combinación y parte de otra a la vez.";
+export const UNIT_COMPONENTS_OWNER_ERROR = "Solo el dueño puede configurar las unidades combinadas.";
 const COLUMNS = "id, name, kind, max_guests, included_guests, active, showcase_type, description_es, description_en, bedrooms, beds, bed_details_es, bed_details_en, bathrooms, sort_order";
 type UnitRow = Pick<Database["public"]["Tables"]["units"]["Row"],
   "id" | "name" | "kind" | "max_guests" | "included_guests" | "active" | "showcase_type" | "description_es" |
@@ -90,4 +99,35 @@ export async function deleteUnit(supabase: Client, orgId: string, id: string): P
     return { ok: false };
   }
   return { ok: true };
+}
+
+/** Read the combination involving one unit inside the organization selected by the signed-in member. */
+export async function listUnitComponents(unitId: string): Promise<UnitComponents> {
+  if (!z.uuid().safeParse(unitId).success) throw new Error(UNIT_COMPONENTS_ERROR);
+  const { activeOrg } = await requireActiveOrg();
+  if (!activeOrg) throw new Error(UNIT_COMPONENTS_ERROR);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("unit_components").select("parent_unit_id, child_unit_id")
+    .eq("org_id", activeOrg.id).or(`parent_unit_id.eq.${unitId},child_unit_id.eq.${unitId}`);
+  if (error) {
+    console.error("listUnitComponents failed:", error.code ?? "UNKNOWN");
+    throw new Error(UNIT_COMPONENTS_ERROR);
+  }
+  const parent = data.find((row) => row.child_unit_id === unitId)?.parent_unit_id ?? null;
+  return { parentUnitId: parent, childUnitIds: data.filter((row) => row.parent_unit_id === unitId).map((row) => row.child_unit_id) };
+}
+
+/** Replace a parent's parts using only the active organization verified from the session. */
+export async function setUnitComponents(parentUnitId: string, childUnitIds: string[]): Promise<SetUnitComponentsResult> {
+  const { activeOrg } = await requireActiveOrg();
+  if (!activeOrg || activeOrg.role !== "owner") return { ok: false, error: UNIT_COMPONENTS_OWNER_ERROR };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_unit_components", {
+    p_org_id: activeOrg.id, p_parent_unit_id: parentUnitId, p_child_unit_ids: childUnitIds,
+  });
+  if (!error) return { ok: true };
+  if (error.code === "23P01") return { ok: false, error: UNIT_COMPONENTS_OVERLAP_ERROR };
+  if (error.code === "23514") return { ok: false, error: UNIT_COMPONENTS_CHAIN_ERROR };
+  console.error("setUnitComponents failed:", error.code ?? "UNKNOWN");
+  return { ok: false, error: UNIT_COMPONENTS_ERROR };
 }
