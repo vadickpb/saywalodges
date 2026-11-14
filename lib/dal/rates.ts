@@ -110,7 +110,7 @@ export async function simulateSavedPricing(input: z.infer<typeof simulationSchem
   if (!data || !unit) return null;
   // Only scenario fields come from the caller. Currency, capacity and every
   // monetary amount are loaded under the verified tenant's session and RLS.
-  return quoteStay({ ...input, unit, currency: data.currency, rates: data.rates, seasons: data.seasons, fees: data.fees });
+  return quoteStay({ ...input, unit, currency: data.currency, rates: data.rates, seasons: data.seasons, fees: data.fees, priceRanges: data.priceRanges });
 }
 
 // SD-421 part 3. The RPCs check membership and that the unit belongs to the active organization; errors are never echoed.
@@ -118,7 +118,7 @@ export async function setPriceRange(input: PriceRangeInput): Promise<WriteResult
   const ctx = await getPricingContext();
   if (!ctx) return { ok: false, error: WRITE_ERROR };
   const { error } = await ctx.supabase.rpc("set_unit_price_range", {
-    p_org_id: ctx.orgId, p_unit_id: input.unitId, p_start: input.start, p_end: input.end, p_nightly_cents: input.price, p_min_nights: input.minNights ?? undefined,
+    p_org_id: ctx.orgId, p_unit_id: input.unitId, p_start: input.start, p_end: input.end, p_nightly_cents: input.price, p_min_nights: input.minNights,
   });
   if (error) {
     console.error("setPriceRange failed:", error.code);

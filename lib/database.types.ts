@@ -2123,7 +2123,7 @@ isOneToOne: true
         Returns: Json;
       };
       set_unit_price_range: {
-        Args: { p_end: string; p_min_nights?: number; p_nightly_cents: number; p_org_id: string; p_start: string; p_unit_id: string };
+        Args: { p_end: string; p_min_nights: number | null; p_nightly_cents: number; p_org_id: string; p_start: string; p_unit_id: string };
         Returns: Json;
       };
       clear_unit_price_range: {

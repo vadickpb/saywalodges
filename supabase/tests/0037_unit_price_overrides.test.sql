@@ -2,7 +2,7 @@
 -- Ids from supabase/seed.sql: org Saywa bf88f504-..., property 131583b5-..., owner a3b45db1-..., staff c5d77e30-..., Demo owner bd6a1c86-...
 -- 2050-03-04 is a Friday; no seeded season reaches 2050. Base rate 100.00, weekend (Fri/Sat) 120.00, 2 included guests.
 begin;
-select plan(12);
+select plan(11);
 
 insert into public.units (id, org_id, property_id, name, kind, max_guests, included_guests) values
   ('ee421000-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'Range Unit', 'entire_place', 4, 2);
