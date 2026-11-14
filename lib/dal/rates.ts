@@ -4,6 +4,7 @@ import { getPropertyId } from "@/lib/dal/content";
 import { createClient } from "@/lib/supabase/server";
 import type { SeasonInput, RateInput, FeeInput, PricingSection } from "@/lib/domain/rates-management";
 import { quoteStay } from "@/lib/domain/pricing";
+import type { PriceRangeInput, ClearPriceRangeInput } from "@/lib/domain/price-ranges";
 import type { z } from "zod";
 import type { simulationSchema } from "@/lib/domain/rates-management";
 
@@ -27,19 +28,21 @@ export async function getPricingData() {
     supabase.from("seasons").select("id,name,start_date,end_date,priority").eq("org_id", orgId).eq("property_id", propertyId).order("start_date").order("id"),
     supabase.from("unit_rates").select("id,unit_id,season_id,nightly_cents,weekend_nightly_cents,extra_guest_cents,min_nights").eq("org_id", orgId).eq("property_id", propertyId).order("created_at").order("id"),
     supabase.from("fees").select("id,unit_id,name,kind,amount_cents").eq("org_id", orgId).eq("property_id", propertyId).order("name").order("id"),
+    supabase.from("unit_price_overrides").select("unit_id,start_date,end_date,nightly_cents,min_nights").eq("org_id", orgId).eq("property_id", propertyId).order("start_date").order("id"),
   ]);
   if (results.some((r) => r.error)) {
     console.error("getPricingData failed:", results.map((r) => r.error));
     throw new Error("No se pudieron cargar las tarifas.");
   }
-  const [property, units, seasons, rates, fees] = results;
-  if (!property.data || !units.data || !seasons.data || !rates.data || !fees.data) throw new Error("No se pudieron cargar las tarifas.");
+  const [property, units, seasons, rates, fees, priceRanges] = results;
+  if (!property.data || !units.data || !seasons.data || !rates.data || !fees.data || !priceRanges.data) throw new Error("No se pudieron cargar las tarifas.");
   return {
     currency: property.data.currency,
     units: units.data.map((u) => ({ id: u.id, name: u.name, active: u.active, maxGuests: u.max_guests, includedGuests: u.included_guests })),
     seasons: seasons.data.map((s) => ({ id: s.id, name: s.name, startDate: s.start_date, endDate: s.end_date, priority: s.priority })),
     rates: rates.data.map((r) => ({ id: r.id, unitId: r.unit_id, seasonId: r.season_id, nightlyCents: r.nightly_cents, weekendNightlyCents: r.weekend_nightly_cents, extraGuestCents: r.extra_guest_cents, minNights: r.min_nights })),
     fees: fees.data.map((f) => ({ id: f.id, unitId: f.unit_id, name: f.name, kind: f.kind, amountCents: f.amount_cents })),
+    priceRanges: priceRanges.data.map((r) => ({ unitId: r.unit_id, startDate: r.start_date, endDate: r.end_date, nightlyCents: r.nightly_cents, minNights: r.min_nights })),
   };
 }
 export type PricingData = NonNullable<Awaited<ReturnType<typeof getPricingData>>>;
@@ -107,5 +110,30 @@ export async function simulateSavedPricing(input: z.infer<typeof simulationSchem
   if (!data || !unit) return null;
   // Only scenario fields come from the caller. Currency, capacity and every
   // monetary amount are loaded under the verified tenant's session and RLS.
-  return quoteStay({ ...input, unit, currency: data.currency, rates: data.rates, seasons: data.seasons, fees: data.fees });
+  return quoteStay({ ...input, unit, currency: data.currency, rates: data.rates, seasons: data.seasons, fees: data.fees, priceRanges: data.priceRanges });
+}
+
+// SD-421 part 3. The RPCs check membership and that the unit belongs to the active organization; errors are never echoed.
+export async function setPriceRange(input: PriceRangeInput): Promise<WriteResult> {
+  const ctx = await getPricingContext();
+  if (!ctx) return { ok: false, error: WRITE_ERROR };
+  const { error } = await ctx.supabase.rpc("set_unit_price_range", {
+    p_org_id: ctx.orgId, p_unit_id: input.unitId, p_start: input.start, p_end: input.end, p_nightly_cents: input.price, p_min_nights: input.minNights,
+  });
+  if (error) {
+    console.error("setPriceRange failed:", error.code);
+    return { ok: false, error: WRITE_ERROR };
+  }
+  return { ok: true };
+}
+
+export async function clearPriceRange(input: ClearPriceRangeInput): Promise<WriteResult> {
+  const ctx = await getPricingContext();
+  if (!ctx) return { ok: false, error: WRITE_ERROR };
+  const { error } = await ctx.supabase.rpc("clear_unit_price_range", { p_org_id: ctx.orgId, p_unit_id: input.unitId, p_start: input.start, p_end: input.end });
+  if (error) {
+    console.error("clearPriceRange failed:", error.code);
+    return { ok: false, error: WRITE_ERROR };
+  }
+  return { ok: true };
 }

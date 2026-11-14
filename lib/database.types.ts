@@ -1657,6 +1657,42 @@ isOneToOne: true
           },
         ];
       };
+      unit_price_overrides: {
+        Row: {
+          created_at: string;
+          end_date: string;
+          id: string;
+          min_nights: number | null;
+          nightly_cents: number;
+          org_id: string;
+          property_id: string;
+          start_date: string;
+          unit_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          end_date: string;
+          id?: string;
+          min_nights?: number | null;
+          nightly_cents: number;
+          org_id: string;
+          property_id: string;
+          start_date: string;
+          unit_id: string;
+        };
+        Update: {
+          created_at?: string;
+          end_date?: string;
+          id?: string;
+          min_nights?: number | null;
+          nightly_cents?: number;
+          org_id?: string;
+          property_id?: string;
+          start_date?: string;
+          unit_id?: string;
+        };
+        Relationships: [];
+      };
       unit_rates: {
         Row: {
           created_at: string;
@@ -2084,6 +2120,14 @@ isOneToOne: true
       health_snapshot: { Args: Record<PropertyKey, never>; Returns: Json };
       import_airbnb_history: {
         Args: { p_fx_rate_pen?: number; p_org_id: string; p_rows: Json };
+        Returns: Json;
+      };
+      set_unit_price_range: {
+        Args: { p_end: string; p_min_nights: number | null; p_nightly_cents: number; p_org_id: string; p_start: string; p_unit_id: string };
+        Returns: Json;
+      };
+      clear_unit_price_range: {
+        Args: { p_end: string; p_org_id: string; p_start: string; p_unit_id: string };
         Returns: Json;
       };
       import_units_and_rates: {

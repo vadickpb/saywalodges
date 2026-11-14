@@ -31,6 +31,14 @@ const quoteInputSchema = z.object({
     endDate: z.string(),
     priority: nonNegativeInteger,
   })),
+  // SD-421: per-house price ranges replace the nightly amount of their dates (twin of unit_price_overrides in private.price_stay).
+  priceRanges: z.array(z.object({
+    unitId: identifier,
+    startDate: z.string(),
+    endDate: z.string(),
+    nightlyCents: nonNegativeInteger,
+    minNights: positiveInteger.nullable(),
+  })).default([]),
   fees: z.array(z.object({
     id: identifier,
     unitId: identifier,
@@ -40,10 +48,11 @@ const quoteInputSchema = z.object({
   })),
 });
 
-export type QuoteStayInput = z.infer<typeof quoteInputSchema>;
+export type QuoteStayInput = z.input<typeof quoteInputSchema>;
 export type PricingRate = QuoteStayInput["rates"][number];
 export type PricingSeason = QuoteStayInput["seasons"][number];
 export type PricingFee = QuoteStayInput["fees"][number];
+export type PricingPriceRange = NonNullable<QuoteStayInput["priceRanges"]>[number];
 
 export type PricingError =
   | { code: "INVALID_INPUT" }
@@ -150,6 +159,19 @@ export function quoteStay(rawInput: unknown): QuoteStayResult {
     rateIds.add(rate.id);
     rateBySeason.set(rate.seasonId, rate);
   }
+  const ranges: { start: number; end: number; nightlyCents: number; minNights: number | null }[] = [];
+  for (const range of input.priceRanges) {
+    if (range.unitId !== input.unit.id) continue;
+    const start = parseDate(range.startDate);
+    const end = parseDate(range.endDate);
+    if (start === null || end === null || end <= start) return failure({ code: "INVALID_CONFIGURATION" });
+    ranges.push({ start, end, nightlyCents: range.nightlyCents, minNights: range.minNights });
+  }
+  // Ranges of one house never overlap (the database enforces it); two covering one night would be an ambiguous price.
+  const rangeAt = (ms: number) => {
+    const hits = ranges.filter((range) => ms >= range.start && ms < range.end);
+    return hits.length > 1 ? "AMBIGUOUS" as const : hits[0];
+  };
   const unitFees = input.fees.filter((fee) => fee.unitId === input.unit.id);
   if (new Set(unitFees.map((fee) => fee.id)).size !== unitFees.length) return failure({ code: "INVALID_CONFIGURATION" });
 
@@ -175,11 +197,16 @@ export function quoteStay(rawInput: unknown): QuoteStayResult {
     // permission to silently charge the lower base/high-season amount.
     const rate = rateBySeason.get(winner?.id ?? null);
     if (!rate) return failure({ code: "MISSING_RATE", date });
-    // The arrival night's rate alone sets the minimum length of this stay.
-    if (index === 0 && nightsCount < rate.minNights) return failure({ code: "MIN_NIGHTS", requiredNights: rate.minNights });
+    // A price range replaces the nightly amount of its dates; extra guests and (unless the range sets its own) the minimum stay
+    // still come from the winning rate.
+    const range = rangeAt(ms);
+    if (range === "AMBIGUOUS") return failure({ code: "INVALID_CONFIGURATION" });
+    // The arrival night alone sets the minimum length of this stay.
+    const minNights = range?.minNights ?? rate.minNights;
+    if (index === 0 && nightsCount < minNights) return failure({ code: "MIN_NIGHTS", requiredNights: minNights });
     const day = new Date(ms).getUTCDay();
     const isWeekend = day === 5 || day === 6;
-    const nightlyCents = isWeekend ? (rate.weekendNightlyCents ?? rate.nightlyCents) : rate.nightlyCents;
+    const nightlyCents = range ? range.nightlyCents : isWeekend ? (rate.weekendNightlyCents ?? rate.nightlyCents) : rate.nightlyCents;
     const extras = BigInt(extraGuests) * BigInt(rate.extraGuestCents);
     const total = BigInt(nightlyCents) + extras;
     accommodation += total;

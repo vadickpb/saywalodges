@@ -35,7 +35,7 @@ async function prepare(input: QuoteRequest): Promise<Prepared | null> {
 
   const result = quoteStay({
     ...input, unit, depositPercent: property.data.deposit_percent, currency: data.currency,
-    rates: data.rates, seasons: data.seasons, fees: data.fees,
+    rates: data.rates, seasons: data.seasons, fees: data.fees, priceRanges: data.priceRanges,
   });
 
   // Holds that already expired do not block the dates: create_booking_from_quote releases them first.
