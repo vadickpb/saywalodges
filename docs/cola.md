@@ -66,7 +66,11 @@ Objetivo: que cada instalación arranque con los datos del cliente y se maneje c
 | SD-420 | Asistente de importación único (unidades, tarifas, huéspedes, reservas, gastos) y edición rápida | Claude (RPC) + Codex (pantallas) | en curso: casas y tarifas base hechas (#96, #97); faltan gastos/ingresos, huéspedes y reservas directas (SD-601) y edición rápida |
 | SD-421 | Calendario estilo Airbnb, adaptable a móvil, con precios por noche y acciones por rango | Codex (+ revisión de Claude) | en curso: calendario móvil (#95) y precio por noche visible (#98); falta cambiar precio por rango (tabla + RPC) y reutilizarlo en el sitio público |
 
-Se suman a este lote SD-307 (sincronización iCal automática) y SD-807 (ingresos automáticos), ambos de Claude.
+| SD-211 | Unidades visibles en la web: tarjetas, página por casa, fotos y espacios por unidad, áreas comunes | Claude (BD) + Codex (web y panel) | pendiente |
+| SD-212 | Villa completa = Casa 1 + Casa 2, sin doble reserva | Claude | pendiente |
+| SD-213 | Fechas especiales en la web (Año Nuevo, Semana Santa, feriados) | Claude (BD) + Codex (web) | pendiente; después del precio por rango |
+
+Orden: precio por rango (SD-421) → SD-211 → SD-212 → SD-213. Se suman a este lote SD-307 (sincronización iCal automática) y SD-807 (ingresos automáticos), ambos de Claude.
 
 ## Lotes 6 a 10 · Comercialización
 
