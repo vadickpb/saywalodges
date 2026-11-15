@@ -18,6 +18,7 @@ export default async function AirbnbImportPage() {
         Puedes volver a importar el mismo archivo con seguridad: las reservas duplicadas no se registran otra vez.
       </p>
       <AirbnbImportForm units={units} />
+      <Link href="/app/finance/importar-movimientos" className="text-sm underline">Importar ingresos y gastos →</Link>
     </div>
   );
 }

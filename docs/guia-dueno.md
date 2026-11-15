@@ -99,6 +99,18 @@ Puedes importar el mismo archivo otra vez con seguridad: las reservas duplicadas
 omiten. Las estadías que aún no terminan llegan por el calendario y no se importan como ingresos históricos.
 Si eliges otro CSV, vuelve a revisar la vista previa y emparejar sus espacios.
 
+## Importar ingresos y gastos desde Excel/CSV
+
+1. Como dueño, abre **Finanzas > Importar ingresos y gastos** y pulsa **Descargar plantilla**.
+2. Abre la plantilla en Excel o tu hoja de cálculo, completa los movimientos y guárdala como archivo **CSV**.
+   Usa una fila por movimiento y escribe el nombre exacto de la casa, o deja esa celda vacía.
+3. Elige el CSV y pulsa **Ver vista previa**. Revisa las filas válidas, los totales, las categorías que irán a
+   «Otros ingresos/egresos» y las filas omitidas. Si hay movimientos en USD, indica el tipo de cambio.
+4. Pulsa **Importar** y revisa el resultado.
+
+Puedes corregir y volver a importar el mismo archivo: los movimientos ya importados se detectan como duplicados
+y no se registran otra vez.
+
 ## Importar casas y tarifas
 
 1. Como dueño, abre **Sitio > Unidades reservables > Importar desde CSV** y pulsa **Descargar plantilla**.
