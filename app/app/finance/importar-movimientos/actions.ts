@@ -49,7 +49,7 @@ export async function financeCsvImportAction(_prev: FinanceCsvImportState | null
 
   if (options.data.mode === "preview") {
     const categories = await listCategories(ctx.supabase, ctx.orgId);
-    const known = new Set(categories.filter((c) => !c.archived).map((c) => `${c.kind}|${c.name.trim().toLowerCase()}`));
+    const known = new Set(categories.filter((c) => !c.archived && c.systemKey !== "rental" && c.systemKey !== "platform_commission").map((c) => `${c.kind}|${c.name.trim().toLowerCase()}`));
     const unknown = new Set<string>();
     for (const r of parsed.rows) {
       if (r.category && !known.has(`${r.kind}|${r.category.trim().toLowerCase()}`)) unknown.add(r.category);

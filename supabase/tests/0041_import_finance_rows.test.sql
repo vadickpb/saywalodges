@@ -1,7 +1,7 @@
 -- SD-420: owner-only, atomic, idempotent CSV import of manual income/expenses into the finance ledger.
 -- Ids from supabase/seed.sql: org Saywa bf88f504-..., Saywa owner a3b45db1-..., staff c5d77e30-..., Demo owner bd6a1c86-... (org ff24bacc-...).
 begin;
-select plan(14);
+select plan(15);
 
 insert into public.units (id, org_id, property_id, name, kind, max_guests, included_guests, active) values
   ('ee420000-0000-4000-8000-000000000001', 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'CSV Unit', 'room', 4, 4, true);
