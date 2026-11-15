@@ -56,6 +56,10 @@ jobs:
   db:
     name: supabase db reset, pgTAP
     runs-on: ubuntu-latest
+    # SD-1102: the production build/start refuses to run without these (no hard-coded brand), also in the HTTP smokes below.
+    env:
+      NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+      NEXT_PUBLIC_PRODUCT_NAME: "Test accommodation"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
