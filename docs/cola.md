@@ -47,7 +47,7 @@ Decisiones del dueño que bloquean este lote: ver [`docs/decisiones-pendientes.m
 
 | Ticket | Qué | Quién | Estado |
 |---|---|---|---|
-| SD-903 | Versiones: `release-please` (CHANGELOG + etiquetas `vX.Y.Z`); `main` → demo, versión → clientes | Claude | pendiente |
+| SD-903 | Versiones: `release-please` (CHANGELOG + etiquetas `vX.Y.Z`); `main` → demo, versión → clientes | Claude | en curso (lote 6) |
 | SD-605 | Registro de auditoría (cambios de cuentas de pago, aprobaciones) | Claude | pendiente |
 | SD-606 | Errores y logs centralizados | Codex | pendiente |
 | SD-1009 | WhatsApp: plantillas de reserva y opt-in del huésped | Codex (+ revisión de seguridad) | pendiente |
