@@ -1756,14 +1756,14 @@ Decisiones (moneda, dos bases de cálculo, permisos, comprobantes privados): ADR
     apareciendo como atrasados hasta 12 meses); propuesta de ticket aparte.
 
 
-### [ ] SD-807 · feat(finance): automatic income from bookings and calendar
+### [x] SD-807 · feat(finance): automatic income from bookings and calendar
 `M` · Depende: SD-305, SD-401, SD-803 · Review: `R+S`
 - **Alcance**: reservas directas: al confirmar el pago se crea el ingreso (`source = booking`, `external_ref`
   = pago, idempotente). Airbnb/Booking: iCal solo trae fechas, así que cada estadía importada sin ingreso
   aparece en "Alquileres por completar" con limpieza sugerida. Ocupación de SD-804 descuenta bloqueos del dueño.
 - **Criterios**
   - [ ] Reprocesar el mismo pago o el mismo evento iCal no duplica movimientos. Implementado y probado con Vitest;
-        pgTAP `0021_finance_booking_income.test.sql` (89 asserts) **pendiente de correr en CI** (Docker local no respondió).
+        pgTAP `0021_finance_booking_income.test.sql` (89 asserts) verde en CI; migración y DAL en `main`.
 - **Nota (SD-807, en revisión)**:
   - `confirm_payment(org, pago, fx?)` aprueba el pago y escribe el ingreso (`source = booking`, `external_ref` = id del pago,
     `created_by` nulo) en la misma transacción; el índice único `(org_id, source, external_ref)` impide un segundo ingreso.
