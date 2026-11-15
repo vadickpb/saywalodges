@@ -126,3 +126,7 @@ lib/domain/               pure business logic: pricing, dates, availability, fin
 supabase/migrations/      versioned schema with RLS      supabase/tests/   pgTAP
 docs/                     architecture, ADRs, roadmap, workflow
 ```
+
+## Licencia y uso del código
+
+El código es público para que se pueda **leer y evaluar** (portafolio), pero **no tiene licencia de reutilización**: no se puede usar en producción, copiar, modificar ni ofrecer a terceros sin un acuerdo escrito. Ver [`LICENSE`](LICENSE). Plantilla comercial (borrador para revisión legal): [`docs/legal/contrato-licencia-mantenimiento.md`](docs/legal/contrato-licencia-mantenimiento.md).
