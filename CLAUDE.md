@@ -2,7 +2,9 @@
 
 # Saywa Direct
 
-SaaS multi-tenant de reservas directas para alojamientos independientes en Perú.
+Producto de reservas directas para alojamientos independientes en Perú, instalado por cliente (ADR 0010, 0019):
+un solo código, personalización por configuración, módulos o función a medida detrás de interruptor; nunca ramas por cliente.
+Conserva `org_id` + RLS como segunda barrera de seguridad.
 Stack: Next.js 16 (App Router, `proxy.ts`), React 19, TypeScript strict, Tailwind v4,
 Supabase (Postgres + RLS, Auth, Storage), Vercel.
 Roadmap y tickets: `docs/roadmap.md`. Decisiones de arquitectura: `docs/adr/`.
