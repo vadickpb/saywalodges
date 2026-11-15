@@ -21,13 +21,26 @@ describe("management money inputs", () => {
   });
 });
 describe("season forms", () => {
-  const season = { name: " Navidad ", startDate: "2027-12-24", endDate: "2027-12-26", priority: "20" };
+  const season = {
+    name: " Navidad ", startDate: "2027-12-24", endDate: "2027-12-26", priority: "20",
+    isSpecial: "false", publicNameEs: "", publicNameEn: "",
+  };
   it("accepts civil ranges crossing a year and trims names", () => {
-    expect(seasonInputSchema.parse({ ...season, endDate: "2028-01-02" })).toMatchObject({ name: "Navidad", priority: 20 });
+    expect(seasonInputSchema.parse({ ...season, endDate: "2028-01-02" })).toMatchObject({ name: "Navidad", priority: 20, isSpecial: false });
+  });
+  it("requires at least one trimmed public name for a special date", () => {
+    expect(seasonInputSchema.parse({ ...season, isSpecial: "true", publicNameEs: " Año Nuevo " })).toMatchObject({
+      isSpecial: true, publicNameEs: "Año Nuevo", publicNameEn: "",
+    });
+    expect(seasonInputSchema.safeParse({ ...season, isSpecial: "true", publicNameEs: " ", publicNameEn: "" }).success).toBe(false);
+  });
+  it("accepts empty public names for an ordinary season", () => {
+    expect(seasonInputSchema.safeParse(season).success).toBe(true);
   });
   it.each([
     { endDate: "2027-12-24" }, { endDate: "2027-12-23" }, { startDate: "2027-02-29" },
     { startDate: "0000-01-01" }, { priority: "-1" }, { priority: "1.5" }, { priority: "2147483648" }, { name: " " }, { name: "x".repeat(201) },
+    { isSpecial: "yes" }, { publicNameEs: "x".repeat(121) },
   ])("rejects invalid season %j", (changes) => expect(seasonInputSchema.safeParse({ ...season, ...changes }).success).toBe(false));
 });
 describe("rate and fee forms", () => {

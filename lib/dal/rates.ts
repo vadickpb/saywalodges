@@ -25,7 +25,7 @@ export async function getPricingData() {
   const results = await Promise.all([
     supabase.from("properties").select("currency").eq("org_id", orgId).eq("id", propertyId).single(),
     supabase.from("units").select("id,name,active,max_guests,included_guests").eq("org_id", orgId).eq("property_id", propertyId).order("name").order("id"),
-    supabase.from("seasons").select("id,name,start_date,end_date,priority").eq("org_id", orgId).eq("property_id", propertyId).order("start_date").order("id"),
+    supabase.from("seasons").select("id,name,start_date,end_date,priority,is_special,public_name_es,public_name_en").eq("org_id", orgId).eq("property_id", propertyId).order("start_date").order("id"),
     supabase.from("unit_rates").select("id,unit_id,season_id,nightly_cents,weekend_nightly_cents,extra_guest_cents,min_nights").eq("org_id", orgId).eq("property_id", propertyId).order("created_at").order("id"),
     supabase.from("fees").select("id,unit_id,name,kind,amount_cents").eq("org_id", orgId).eq("property_id", propertyId).order("name").order("id"),
     supabase.from("unit_price_overrides").select("unit_id,start_date,end_date,nightly_cents,min_nights").eq("org_id", orgId).eq("property_id", propertyId).order("start_date").order("id"),
@@ -39,7 +39,10 @@ export async function getPricingData() {
   return {
     currency: property.data.currency,
     units: units.data.map((u) => ({ id: u.id, name: u.name, active: u.active, maxGuests: u.max_guests, includedGuests: u.included_guests })),
-    seasons: seasons.data.map((s) => ({ id: s.id, name: s.name, startDate: s.start_date, endDate: s.end_date, priority: s.priority })),
+    seasons: seasons.data.map((s) => ({
+      id: s.id, name: s.name, startDate: s.start_date, endDate: s.end_date, priority: s.priority,
+      isSpecial: s.is_special, publicNameEs: s.public_name_es, publicNameEn: s.public_name_en,
+    })),
     rates: rates.data.map((r) => ({ id: r.id, unitId: r.unit_id, seasonId: r.season_id, nightlyCents: r.nightly_cents, weekendNightlyCents: r.weekend_nightly_cents, extraGuestCents: r.extra_guest_cents, minNights: r.min_nights })),
     fees: fees.data.map((f) => ({ id: f.id, unitId: f.unit_id, name: f.name, kind: f.kind, amountCents: f.amount_cents })),
     priceRanges: priceRanges.data.map((r) => ({ unitId: r.unit_id, startDate: r.start_date, endDate: r.end_date, nightlyCents: r.nightly_cents, minNights: r.min_nights })),
@@ -68,7 +71,10 @@ export async function savePricingRow(id: string | null, value: SaveInput): Promi
   const result = await (async () => {
     if (value.section === "seasons") {
       const v = value.input;
-      const fields = { name: v.name, start_date: v.startDate, end_date: v.endDate, priority: v.priority };
+      const fields = {
+        name: v.name, start_date: v.startDate, end_date: v.endDate, priority: v.priority,
+        is_special: v.isSpecial, public_name_es: v.publicNameEs, public_name_en: v.publicNameEn,
+      };
       return id ? supabase.from("seasons").update(fields).eq("org_id", orgId).eq("property_id", propertyId).eq("id", id).select("id")
         : supabase.from("seasons").insert({ ...scope, ...fields }).select("id");
     }

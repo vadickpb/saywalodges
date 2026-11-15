@@ -11,7 +11,7 @@ export async function PricingList({ section }: { section: PricingSection }) {
   if (!data) return <p>No tienes una propiedad activa.</p>;
   const unitName = (id: string) => data.units.find((u) => u.id === id)?.name ?? "Unidad eliminada";
   const rows = section === "seasons" ? data.seasons.map((s) => ({
-    id: s.id, title: s.name, detail: `${s.startDate} → ${s.endDate} (fin excluido) · Prioridad ${s.priority}`,
+    id: s.id, title: s.name, detail: `${s.startDate} → ${s.endDate} (fin excluido) · Prioridad ${s.priority}${s.isSpecial ? ` · Fecha especial: ${s.publicNameEs || s.publicNameEn}` : ""}`,
   })) : section === "fees" ? data.fees.map((f) => ({
     id: f.id, title: `${unitName(f.unitId)} · ${f.name}`, detail: `${formatPrice(f.amountCents, data.currency)} · ${FEE_LABELS[f.kind]}`,
   })) : data.rates.map((r) => ({

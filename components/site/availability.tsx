@@ -7,6 +7,7 @@ import type { CalendarCell, CalendarWeek, DayStatus, MonthNavigation } from "@/l
 import { Container, SectionHeading, buttonStyles } from "./ui";
 
 type Unit = { id: string; name: string };
+type SpecialDateRange = { startDate: string; endDate: string; name: string };
 
 type Props = {
   dict: Dict["availability"];
@@ -19,6 +20,7 @@ type Props = {
   nav: MonthNavigation;
   // null when the calendar could not be loaded: say so, never show it as all free.
   weeks: CalendarWeek[] | null;
+  specialDates?: SpecialDateRange[];
 };
 
 const ANCHOR = "availability-calendar";
@@ -35,18 +37,20 @@ function href(unitId: string, month: IsoMonth) {
   return `?unit=${encodeURIComponent(unitId)}&month=${month}#${ANCHOR}`;
 }
 
-function Day({ cell, month, year, dict }: { cell: CalendarCell; month: string; year: number; dict: Props["dict"] }) {
+function Day({ cell, month, year, dict, specialDates }: { cell: CalendarCell; month: string; year: number; dict: Props["dict"]; specialDates: SpecialDateRange[] }) {
   const { weekdays } = dict;
   // dayOfWeek is 0 = Sunday; the grid and the dictionary start on Monday.
   const weekday = weekdays[(dayOfWeek(cell.date) + 6) % 7] ?? "";
-  const status = dict[cell.status] + (cell.today ? `, ${dict.today}` : "");
+  const special = specialDates.find((date) => cell.date >= date.startDate && cell.date < date.endDate);
+  const status = dict[cell.status] + (cell.today ? `, ${dict.today}` : "") + (special ? `, ${format(dict.specialDate, { name: special.name })}` : "");
   return (
     <td className="p-0.5 text-center">
       <span
-        className={`flex aspect-square min-h-10 items-center justify-center rounded-site text-sm tabular-nums ${CELL_STYLES[cell.status]} ${cell.today ? "ring-2 ring-site-accent ring-offset-1" : ""}`}
+        className={`relative flex aspect-square min-h-10 items-center justify-center rounded-site text-sm tabular-nums ${CELL_STYLES[cell.status]} ${cell.today ? "ring-2 ring-site-accent ring-offset-1" : ""} ${special ? "outline outline-1 outline-offset-[-2px] outline-site-accent" : ""}`}
       >
         <span className="sr-only">{format(dict.dayLabel, { weekday, day: cell.day, month, year, status })}</span>
         <span aria-hidden="true">{cell.day}</span>
+        {special && <span aria-hidden="true" className="absolute bottom-1 size-1 rounded-full bg-site-accent" />}
       </span>
     </td>
   );
@@ -72,7 +76,7 @@ function MonthLink({ to, label, children }: { to: string | null; label: string; 
 // Free / occupied nights per unit. Server-rendered and navigated with plain links
 // (?unit=…&month=…), so it works without JavaScript and the page never receives
 // anything but dates already reduced to a status.
-export function Availability({ dict, waUrl, waLabel, units, unitId, nav, weeks, quoteHref, quoteLabel }: Props) {
+export function Availability({ dict, waUrl, waLabel, units, unitId, nav, weeks, quoteHref, quoteLabel, specialDates = [] }: Props) {
   const { year, month } = parseIsoMonth(nav.month);
   const monthName = dict.months[month - 1] ?? "";
   const title = format(dict.monthLabel, { month: monthName, year });
@@ -135,7 +139,7 @@ export function Availability({ dict, waUrl, waLabel, units, unitId, nav, weeks, 
                   {weeks.map((week, w) => (
                     <tr key={w}>
                       {week.map((cell, i) =>
-                        cell ? <Day key={cell.date} cell={cell} month={monthName} year={year} dict={dict} /> : <td key={`pad-${i}`} aria-hidden="true" />,
+                        cell ? <Day key={cell.date} cell={cell} month={monthName} year={year} dict={dict} specialDates={specialDates} /> : <td key={`pad-${i}`} aria-hidden="true" />,
                       )}
                     </tr>
                   ))}
@@ -147,6 +151,12 @@ export function Availability({ dict, waUrl, waLabel, units, unitId, nav, weeks, 
                   <span aria-hidden="true" className={`size-5 rounded-site ${CELL_STYLES.free}`} />
                   {dict.legendFree}
                 </li>
+                {specialDates.length > 0 && (
+                  <li className="flex items-center gap-2">
+                    <span aria-hidden="true" className="size-5 rounded-site border border-site-accent" />
+                    {dict.specialDateLegend}
+                  </li>
+                )}
                 <li className="flex items-center gap-2">
                   <span aria-hidden="true" className={`size-5 rounded-site ${CELL_STYLES.occupied}`} />
                   {dict.legendOccupied}
