@@ -15,7 +15,7 @@ otro. El dueño responde cuando quiera (basta escribir «D3: sí»). Al decidir,
 | D5 | Iniciar la verificación del negocio en Meta (WhatsApp Cloud API) | Empezar ya: tarda semanas y no depende del código (`docs/whatsapp.md`) | SD-1009 |
 | D7 | Nombre comercial del producto | Mantener «Saywa Direct»; «Saywa Lodges» queda solo como alojamiento y caso de éxito | SD-1110 |
 | D8 | Dónde vive la web de ventas y con qué dominio | Mismo repositorio en modo `vendor`, proyecto Vercel y dominio propios | SD-1110 |
-| D9 | Licencia y visibilidad del repositorio (hoy público y sin licencia) | Público con licencia propietaria: se puede leer, no reutilizar comercialmente | SD-1107 |
+| D9 | Licencia y visibilidad del repositorio | **Asumida** la recomendación en SD-1107 (`LICENSE` propietaria, código visible). Cambia el nombre del titular en `LICENSE` si no es el correcto | — |
 | D10 | Paquetes de venta y módulos de cada uno | Base (web, calendario, reservas) y Pro (+ finanzas, WhatsApp, pago en línea) | SD-1111 |
 
 ## Decididas

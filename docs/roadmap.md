@@ -2028,7 +2028,7 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 `S` · Depende: — · Review: `R`
 - **Alcance**: manual del cliente (PDF y web), ayuda contextual en el panel, plantillas de incidencia y canal de soporte.
 
-### [ ] SD-1107 · chore(legal): license and contract templates
+### [x] SD-1107 · chore(legal): license and contract templates
 `S` · Depende: D9 · Review: `R`
 - **Alcance**: `LICENSE` según D9, plantilla de contrato de licencia y mantenimiento (borrador para revisión legal) y
   nota en el README sobre el uso permitido del código.
