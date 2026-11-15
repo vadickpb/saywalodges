@@ -2191,6 +2191,10 @@ isOneToOne: true
         Args: { p_fx_rate_pen?: number; p_org_id: string; p_rows: Json };
         Returns: Json;
       };
+      import_finance_rows: {
+        Args: { p_fx_rate_pen?: number; p_org_id: string; p_rows: Json };
+        Returns: Json;
+      };
       set_unit_components: {
         Args: { p_child_unit_ids: string[]; p_org_id: string; p_parent_unit_id: string };
         Returns: Json;
@@ -2283,7 +2287,7 @@ isOneToOne: true
       finance_kind: "income" | "expense";
       finance_payment_method:
         "cash" | "bank_transfer" | "yape_plin" | "card" | "platform" | "other";
-      finance_source: "manual" | "booking" | "ical" | "airbnb_csv";
+      finance_source: "manual" | "booking" | "ical" | "airbnb_csv" | "csv_import";
       ical_channel: "airbnb" | "booking" | "vrbo" | "other";
       membership_role: "owner" | "staff";
       payment_account_kind: "yape" | "plin" | "bank_account";
@@ -2437,7 +2441,7 @@ export const Constants = {
         "platform",
         "other",
       ],
-      finance_source: ["manual", "booking", "ical", "airbnb_csv"],
+      finance_source: ["manual", "booking", "ical", "airbnb_csv", "csv_import"],
       ical_channel: ["airbnb", "booking", "vrbo", "other"],
       membership_role: ["owner", "staff"],
       payment_account_kind: ["yape", "plin", "bank_account"],
