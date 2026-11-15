@@ -7,6 +7,7 @@ import { cn } from "cn";
 import { ExternalLink, LogOut } from "lucide-react";
 import { SITE_URL } from "@/config/site";
 import { env } from "@/lib/env";
+import { disabledNavHrefs } from "@/lib/modules";
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveOrg, getOrgProperty } from "@/lib/dal/organizations";
 import { getSiteUrl } from "@/lib/dal/public/site";
@@ -104,7 +105,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <html lang="es" className={`${geist.variable} h-full antialiased`}>
       <body className={cn("dashboard min-h-screen", isDark && "dark")}>
         <div className="flex min-h-screen flex-col md:flex-row">
-          <DashboardNav />
+          <DashboardNav hiddenHrefs={disabledNavHrefs()} />
 
           <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
             {env.DEMO_MODE === "true" && (

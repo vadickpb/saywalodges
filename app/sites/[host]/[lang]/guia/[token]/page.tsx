@@ -1,3 +1,4 @@
+import { requireModule } from "@/lib/modules";
 import { HouseGuideContent } from "@/components/site/house-guide-content";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
@@ -23,6 +24,7 @@ export async function generateMetadata({params}:{params:Promise<{host:string;lan
  return {...privateMetadata,title:{absolute:`${guestGuideCopy(lang).documentTitle} – ${await propertyName(host)}`}};
 }
 export default async function GuidePage({params}:{params:Promise<{host:string;lang:string;token:string}>}) {
+  requireModule(\"guide\"); // SD-1103: layouts render in parallel with pages, so the page guards itself too
  const{host,lang,token}=await params;if(!hasLocale(lang)||!guideTokenSchema.safeParse(token).success)notFound();
  const dict=guestGuideCopy(lang);const session=(await cookies()).get(guideCookieName(token))?.value;
  const guide=await readGuide(host,token,session);

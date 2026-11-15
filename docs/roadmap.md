@@ -2007,12 +2007,15 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
   - [ ] Un test falla si «saywalodges» o «Saywa Lodges» aparece fuera de seeds, demo, tests y docs.
   - [ ] Una instalación local con otro nombre y dominio no muestra la marca Saywa en sitio, panel ni correos.
 
-### [ ] SD-1103 · feat(settings): per-installation modules
+### [x] SD-1103 · feat(settings): per-installation modules
 `M` · Depende: SD-1101 · Review: `R+S`
 - **Alcance**: interruptores por instalación (finanzas, guía privada, WhatsApp, pago en línea, CRM) leídos solo en
   servidor; un módulo apagado no aparece en la navegación y sus rutas y acciones responden 404.
 - **Criterios**
-  - [ ] Con un módulo apagado, sus server actions y rutas no ejecutan nada (tests).
+  - [x] Con un módulo apagado, sus server actions y rutas no ejecutan nada (tests: `lib/modules-off.test.ts`).
+- **Nota**: variable `MODULES_DISABLED` (lista separada por comas: `finance, guide, whatsapp, online_payments, crm`; vacío = todo
+  encendido, así las instalaciones actuales no cambian). Un nombre desconocido falla al arrancar. Finanzas: `getFinanceContext` devuelve
+  `null`; guía: acciones y rutas; WhatsApp: webhook 404; CRM: página de huéspedes. `online_payments` queda reservado hasta el lote 4.
 
 ### [ ] SD-1104 · feat(demo): rich demo data and guided tour
 `M` · Depende: SD-1007 · Review: `R`

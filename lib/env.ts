@@ -41,6 +41,9 @@ const envSchema = z.object({
   // Server-only (SD-701). "1" sends the CSP as Content-Security-Policy-Report-Only (violations are logged
   // by the browser, nothing is blocked) — for validating a new policy on a preview before enforcing it.
   CSP_REPORT_ONLY: z.string().optional(),
+  // Server-only (SD-1103, ADR 0019). Comma list of product modules switched OFF for this installation:
+  // finance, guide, whatsapp, online_payments, crm. Empty (default) = everything on. Validated in lib/modules.ts.
+  MODULES_DISABLED: z.string().optional(),
 });
 
 function loadEnv() {

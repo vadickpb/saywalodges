@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { moduleEnabled } from "@/lib/modules";
 import { recordWhatsappStatus } from "@/lib/dal/whatsapp";
 import { errorName, log, newRequestId } from "@/lib/log";
 import { parseWebhookConfig } from "@/lib/whatsapp/config";
@@ -38,6 +39,8 @@ async function readCapped(request: Request): Promise<Buffer | null> {
 }
 
 export async function GET(request: Request) {
+  // SD-1103: WhatsApp module off -> the route does not exist (no handshake, no signature check, nothing stored).
+  if (!moduleEnabled("whatsapp")) return new NextResponse(null, { status: 404 });
   const config = parseWebhookConfig();
   const challenge = config ? verifyHandshake(new URL(request.url).searchParams, config.verifyToken) : null;
   if (challenge === null) return new NextResponse(null, { status: 403, headers: { "Cache-Control": "no-store" } });
@@ -45,6 +48,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // SD-1103: WhatsApp module off -> the route does not exist (no handshake, no signature check, nothing stored).
+  if (!moduleEnabled("whatsapp")) return new NextResponse(null, { status: 404 });
   const requestId = newRequestId();
   const headers = { "Cache-Control": "no-store", "x-request-id": requestId };
   const config = parseWebhookConfig();
