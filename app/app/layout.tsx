@@ -5,7 +5,7 @@ import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { cn } from "cn";
 import { ExternalLink, LogOut } from "lucide-react";
-import { SITE_URL } from "@/config/site";
+import { PRODUCT_NAME, SITE_URL } from "@/config/site";
 import { env } from "@/lib/env";
 import { disabledNavHrefs } from "@/lib/modules";
 import { createClient } from "@/lib/supabase/server";
@@ -26,6 +26,7 @@ const THEME_COOKIE = "dashboard-theme";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  title: { default: PRODUCT_NAME, template: `%s · ${PRODUCT_NAME}` },
 };
 
 export const viewport: Viewport = {
@@ -80,7 +81,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <>
                 <p className="text-lg font-medium text-foreground">Todavía no perteneces a ninguna organización</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Pídele a quien administra tu alojamiento en Saywa Direct que te invite, o escríbenos si crees
+                  Pídele a quien administra tu alojamiento en {PRODUCT_NAME} que te invite, o escríbenos si crees
                   que esto es un error.
                 </p>
               </>

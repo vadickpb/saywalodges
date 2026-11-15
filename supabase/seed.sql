@@ -162,8 +162,17 @@ UPDATE "public"."properties" SET "published" = true WHERE "slug" = 'saywa-lodges
 -- lib/domain/site-content.ts). Copy moved verbatim from the old
 -- dictionaries/; FAQ answers only state facts already in this file
 -- (capacity, pets_allowed = false, distances) or the previous site copy.
+-- Keep the first installation's complete theme here instead of relying on a
+-- product preset: new installations must never inherit these client colors.
 UPDATE "public"."properties" SET
-  "theme" = $j${"preset": "andino"}$j$::jsonb,
+  "theme" = $j${
+    "preset": "neutral",
+    "primary": "#2D4A3E",
+    "accent": "#8A5F10",
+    "background": "#FAF7F2",
+    "fontPair": "editorial",
+    "radius": "soft"
+  }$j$::jsonb,
   "content" = $j${
     "region": {"en": "Sacred Valley · Urubamba · Cusco · Peru", "es": "Valle Sagrado · Urubamba · Cusco · Perú"},
     "headline": {"en": "Private country house in Urubamba", "es": "Casa de campo privada en Urubamba"},

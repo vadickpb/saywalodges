@@ -111,7 +111,7 @@ describe("getSiteAppearance", () => {
   it("falls back to the default preset and empty copy for invalid JSON", async () => {
     const supabase = stubSupabase({ data: { theme: { primary: "red" }, content: "x" }, error: null });
     const result = await getSiteAppearance(supabase, "org-1");
-    expect(result?.theme.preset).toBe("andino");
+    expect(result?.theme.preset).toBe("neutral");
     expect(result?.content).toEqual({});
   });
 

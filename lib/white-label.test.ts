@@ -1,0 +1,57 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { extname, join, relative, sep } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const ROOT = process.cwd();
+const FORBIDDEN_BRAND = /saywalodges|saywa lodges/i;
+const TEXT_EXTENSIONS = new Set([".css", ".cts", ".html", ".js", ".json", ".jsx", ".md", ".mjs", ".mts", ".sql", ".toml", ".ts", ".tsx", ".txt", ".yaml", ".yml"]);
+const TEXT_FILENAMES = new Set([".env.example"]);
+const GENERATED_DIRECTORIES = new Set([".git", ".next", "coverage", "node_modules"]);
+
+const ALLOWLIST: { matches: (path: string) => boolean; reason: string }[] = [
+  // Local seed data intentionally preserves the first installation as a development fixture.
+  { matches: (path) => /^supabase\/seed(?:\.|$)/.test(path), reason: "local seed fixture" },
+  // Operational scripts may reference legacy repository or fixture identifiers that are never rendered to a customer.
+  { matches: (path) => path.startsWith("scripts/"), reason: "development and operations tooling" },
+  // Documentation records project history and installation-specific examples.
+  { matches: (path) => path.startsWith("docs/"), reason: "documentation and historical record" },
+  // Tests use concrete legacy values to prove tenant isolation and transformations.
+  { matches: (path) => /(?:^|\/)\w[^/]*\.test\.[^/]+$/.test(path), reason: "test fixture" },
+  // End-to-end fixtures exercise the existing first installation locally.
+  { matches: (path) => path.startsWith("e2e/"), reason: "end-to-end fixture" },
+  // Demo modules contain explicitly synthetic content and are not production defaults.
+  { matches: (path) => /^lib\/demo(?:\/|[.-])/.test(path) || /^app\/(?:.*\/)?demo(?:\/|$)/.test(path), reason: "demo-only code" },
+  // The README may name the repository and its public reference installation.
+  { matches: (path) => /^README(?:\.|$)/i.test(path), reason: "repository overview" },
+  // GitHub metadata and workflows can reference the legacy repository name.
+  { matches: (path) => path.startsWith(".github/"), reason: "repository automation" },
+  // Deployment templates are operator inputs and never become customer-facing defaults by themselves.
+  { matches: (path) => path.startsWith("deploy/"), reason: "deployment templates" },
+  // Applied migrations are immutable; this historical backfill created the first tenant before white-label support.
+  { matches: (path) => path === "supabase/migrations/20261016040806_organizations_and_org_scoping.sql", reason: "immutable historical migration" },
+];
+
+function filesUnder(directory: string): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isSymbolicLink() || (entry.isDirectory() && GENERATED_DIRECTORIES.has(entry.name))) continue;
+    const absolute = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...filesUnder(absolute));
+    else if (entry.isFile() && (TEXT_FILENAMES.has(entry.name) || TEXT_EXTENSIONS.has(extname(entry.name)))) files.push(absolute);
+  }
+  return files;
+}
+
+describe("white-label production guard", () => {
+  it("keeps client-specific brand values out of production files", () => {
+    const files = filesUnder(ROOT).map((absolute) => ({ absolute, path: relative(ROOT, absolute).split(sep).join("/") }));
+    expect(files.map(({ path }) => path)).toEqual(expect.arrayContaining([".env.example", "config/site.ts", "vitest.config.mts"]));
+
+    const violations = files
+      .filter(({ path }) => !ALLOWLIST.some((entry) => entry.matches(path)))
+      .filter(({ absolute }) => FORBIDDEN_BRAND.test(readFileSync(absolute, "utf8")))
+      .map(({ path }) => path);
+
+    expect(violations, "Move client branding to the database, deployment config, or an explicitly justified fixture.").toEqual([]);
+  });
+});

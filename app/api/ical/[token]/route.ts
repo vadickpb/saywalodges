@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PRODUCT_NAME, SITE_HOST } from "@/config/site";
 import { getIcalExport } from "@/lib/dal/ical-feeds";
 import { buildIcs } from "@/lib/ical/export";
 import { errorName, log, newRequestId } from "@/lib/log";
@@ -26,7 +27,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
 
   let ics: string;
   try {
-    ics = buildIcs({ name: payload.unit, events: payload.blocks, now: new Date() });
+    ics = buildIcs({ name: payload.unit, events: payload.blocks, now: new Date(), productName: PRODUCT_NAME, uidDomain: SITE_HOST });
   } catch (error) {
     log("error", "ical.export.failed", { requestId, route: ROUTE, status: 500, errorName: errorName(error) });
     return new NextResponse("No se pudo generar el calendario.", { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });

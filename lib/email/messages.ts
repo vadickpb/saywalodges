@@ -19,7 +19,7 @@ export const emailMessages = {
 
     channels: { airbnb: "Airbnb", booking: "Booking.com", vrbo: "Vrbo", other: "otro canal" },
     footer: "Enviado por {brand}. Si no esperabas este correo, puedes ignorarlo.",
-    poweredBy: "Con tecnología de Saywa Direct.",
+    poweredBy: "Con tecnología de {product}.",
     test: {
       subject: "Correo de prueba · {brand}",
       preheader: "La configuración de correo funciona.",
@@ -63,7 +63,7 @@ export const emailMessages = {
 
     channels: { airbnb: "Airbnb", booking: "Booking.com", vrbo: "Vrbo", other: "another channel" },
     footer: "Sent by {brand}. If you weren't expecting this email, you can ignore it.",
-    poweredBy: "Powered by Saywa Direct.",
+    poweredBy: "Powered by {product}.",
     test: {
       subject: "Test email · {brand}",
       preheader: "Your email setup works.",

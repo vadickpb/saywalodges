@@ -41,7 +41,8 @@ secretos generados y **no se commitea**):
 3. `auth`: Site URL, redirect `https://app.<dominio>/auth/callback` y **desactiva el registro de usuarios nuevos** (si no se puede por API, el script te lo pide y no sigue al `seed`).
 4. `seed`: crea el owner (ya confirmado, sin contraseña), la organización, la propiedad **sin publicar** y la membresía `owner`.
 5. `vercel`: crea el proyecto desde el repo, carga las variables (las sensibles solo en producción) y añade `<dominio>` y
-   `app.<dominio>`. Los *previews* quedan desactivados en el proyecto del cliente.
+   `app.<dominio>`. También fija `NEXT_PUBLIC_SITE_URL=https://app.<dominio>` y
+   `NEXT_PUBLIC_PRODUCT_NAME` al nombre del alojamiento. Los *previews* quedan desactivados en el proyecto del cliente.
 Si el script no pudo configurar Auth por API, haz lo que te indica a mano, pon `"signupDisabled": true` en `.install/<slug>.state.json` y continúa con `--step=seed`. Para repetir un solo paso: `--step=keys|migrations|auth|seed|vercel`.
 
 ## 5. DNS (manual, en el proveedor del dominio)

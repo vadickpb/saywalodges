@@ -48,6 +48,8 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key"
           NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key"
+          NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+          NEXT_PUBLIC_PRODUCT_NAME: "Test accommodation"
           ROOT_DOMAIN: "localhost:3000"
         run: npm run build
 
@@ -93,6 +95,7 @@ jobs:
           set -a; . "$RUNNER_TEMP/supabase.env"; set +a
           NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" \
           SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+          NEXT_PUBLIC_SITE_URL="http://app.localhost:3208" NEXT_PUBLIC_PRODUCT_NAME="Test accommodation" \
           ROOT_DOMAIN="localhost:3208" npm run build
 
       - name: Public rates HTTP smoke (SD-208)

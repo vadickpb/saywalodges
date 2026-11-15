@@ -1,5 +1,6 @@
 import "server-only";
 import ExcelJS from "exceljs";
+import { PRODUCT_NAME } from "@/config/site";
 import type { Block, CellValue, Column, ExportModel } from "@/lib/domain/finance-export";
 
 // Turns the workbook model of lib/domain/finance-export.ts into an .xlsx file.
@@ -84,7 +85,7 @@ function writeBlock(ws: ExcelJS.Worksheet, block: Block, startRow: number): { he
 
 export async function renderWorkbook(model: ExportModel): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Saywa Direct";
+  workbook.creator = PRODUCT_NAME;
   for (const sheet of model.sheets) {
     const ws = workbook.addWorksheet(sheet.name);
     // Several blocks share the columns: take the widest each needs.

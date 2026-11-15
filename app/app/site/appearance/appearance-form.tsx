@@ -26,6 +26,7 @@ const INITIAL_STATE: AppearanceState = { ok: false };
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 const PRESET_LABEL: Record<PresetId, string> = {
+  neutral: "Neutral",
   andino: "Andino",
   costa: "Costa",
   selva: "Selva",

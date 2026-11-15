@@ -73,7 +73,7 @@ describe("GET /app/finance/export", () => {
     const res = await call("?from=2027-03-01&to=2027-03-31");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    expect(res.headers.get("content-disposition")).toBe('attachment; filename="saywa-finanzas-2027-03-01_2027-03-31.xlsx"');
+    expect(res.headers.get("content-disposition")).toBe('attachment; filename="finanzas-2027-03-01_2027-03-31.xlsx"');
     expect(res.headers.get("cache-control")).toBe("no-store");
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect(String.fromCharCode(bytes[0], bytes[1])).toBe("PK");

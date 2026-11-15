@@ -15,7 +15,7 @@ export function siteIdentifierFromHost(host: string): string {
   return host.endsWith(`.${env.ROOT_DOMAIN}`) ? host.slice(0, -(env.ROOT_DOMAIN.length + 1)) : host;
 }
 
-// Resolves the `[host]` route param (a bare subdomain like "saywa-lodges",
+// Resolves the `[host]` route param (a bare subdomain like "my-lodge",
 // or a full custom domain) to the tenant's slug. proxy.ts computes which
 // one it is but never queries the DB itself (ADR-0001) — this is where
 // that actually happens, and only here.

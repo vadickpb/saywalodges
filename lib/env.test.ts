@@ -20,6 +20,7 @@ describe("env", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
     process.env.ROOT_DOMAIN = "localhost:3000";
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
   }
 
   it("throws a clear error when SUPABASE_URL is missing", async () => {
@@ -84,11 +85,11 @@ describe("env", () => {
     await expect(import("./env")).rejects.toThrow(/DEPLOYMENT_MODE/);
   });
 
-  it("does not require NEXT_PUBLIC_SITE_URL in platform mode, even in production", async () => {
+  it("requires NEXT_PUBLIC_SITE_URL in production, including platform mode", async () => {
     setValidEnv();
+    delete process.env.NEXT_PUBLIC_SITE_URL;
     vi.stubEnv("NODE_ENV", "production");
-    const { env } = await import("./env");
-    expect(env.DEPLOYMENT_MODE).toBe("platform");
+    await expect(import("./env")).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
     vi.unstubAllEnvs();
   });
 
@@ -96,10 +97,11 @@ describe("env", () => {
     setValidEnv();
     process.env.ROOT_DOMAIN = "cliente.pe";
     process.env.DEPLOYMENT_MODE = "installation";
+    delete process.env.NEXT_PUBLIC_SITE_URL;
     vi.stubEnv("NODE_ENV", "production");
     await expect(import("./env")).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
     vi.resetModules();
-    process.env.NEXT_PUBLIC_SITE_URL = "https://saywalodges.com";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://example.com";
     await expect(import("./env")).rejects.toThrow(/app\.cliente\.pe/);
     vi.resetModules();
     process.env.NEXT_PUBLIC_SITE_URL = "http://app.cliente.pe";
@@ -114,12 +116,11 @@ describe("env", () => {
     vi.unstubAllEnvs();
   });
 
-  it("treats an empty NEXT_PUBLIC_SITE_URL as unset, like config/site.ts does", async () => {
+  it("treats an empty NEXT_PUBLIC_SITE_URL as missing", async () => {
     setValidEnv();
     process.env.NEXT_PUBLIC_SITE_URL = "";
     vi.stubEnv("NODE_ENV", "production");
-    const { env } = await import("./env");
-    expect(env.NEXT_PUBLIC_SITE_URL).toBeUndefined();
+    await expect(import("./env")).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
     vi.unstubAllEnvs();
   });
 
@@ -129,11 +130,11 @@ describe("env", () => {
     await expect(import("./env")).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
   });
 
-  it("installation mode outside production does not require NEXT_PUBLIC_SITE_URL", async () => {
+  it("installation mode outside production still requires the panel URL", async () => {
     setValidEnv();
     process.env.DEPLOYMENT_MODE = "installation";
-    const { env } = await import("./env");
-    expect(env.DEPLOYMENT_MODE).toBe("installation");
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    await expect(import("./env")).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
   });
 
   it("loads successfully with valid vars", async () => {

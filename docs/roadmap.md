@@ -1999,13 +1999,13 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Alcance**: ADR con los tres niveles (configuración, módulos, a medida detrás de interruptor) y la regla de no crear
   ramas ni copias por cliente; actualizar `CLAUDE.md` (aún dice «SaaS multi-tenant») con aprobación del dueño.
 
-### [ ] SD-1102 · refactor: white-label audit
+### [x] SD-1102 · refactor: white-label audit
 `M` · Depende: SD-1101 · Review: `R+S`
 - **Alcance**: quitar valores fijos de Saywa Lodges (`config/site.ts`, `lib/env.ts`, `lib/domain/site-theme.ts`,
   textos y metadatos); todo sale de la configuración de la instalación o de la base.
 - **Criterios**
-  - [ ] Un test falla si «saywalodges» o «Saywa Lodges» aparece fuera de seeds, demo, tests y docs.
-  - [ ] Una instalación local con otro nombre y dominio no muestra la marca Saywa en sitio, panel ni correos.
+  - [x] Un test falla si «saywalodges» o «Saywa Lodges» aparece fuera de seeds, demo, tests y docs.
+  - [x] Una instalación local con otro nombre y dominio no muestra la marca Saywa en sitio, panel ni correos.
 
 ### [x] SD-1103 · feat(settings): per-installation modules
 `M` · Depende: SD-1101 · Review: `R+S`

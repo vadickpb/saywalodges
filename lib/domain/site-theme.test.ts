@@ -13,7 +13,7 @@ import {
 
 describe("resolveTheme", () => {
   it("falls back to the default preset for an empty theme", () => {
-    expect(resolveTheme({})).toEqual({ preset: "andino", ...PRESETS.andino });
+    expect(resolveTheme({})).toEqual({ preset: "neutral", ...PRESETS.neutral });
   });
 
   it("applies a preset and lets individual fields override it", () => {
@@ -44,7 +44,7 @@ describe("resolveTheme", () => {
 
   it("tolerates non-object input (null, string, array)", () => {
     for (const raw of [null, "andino", [1, 2], 42]) {
-      expect(resolveTheme(raw).preset).toBe("andino");
+      expect(resolveTheme(raw).preset).toBe("neutral");
     }
   });
 });
@@ -166,18 +166,27 @@ describe("derived tints", () => {
 
 describe("tenant brands", () => {
   // Mirrors the themes in supabase/seed.sql: the only thing that differs per tenant.
-  const saywa = themeToCssVars(resolveTheme({ preset: "andino" }));
+  const firstInstallation = themeToCssVars(resolveTheme({
+    preset: "neutral",
+    primary: "#2D4A3E",
+    accent: "#8A5F10",
+    background: "#FAF7F2",
+    fontPair: "editorial",
+    radius: "soft",
+  }));
   const demo = themeToCssVars(resolveTheme({ preset: "costa" }));
 
-  it("gives saywa-lodges and demo different brands from the theme alone", () => {
+  it("gives the first installation and demo different brands from the theme alone", () => {
     for (const key of ["--site-primary", "--site-accent", "--site-bg", "--site-font-heading", "--site-radius"]) {
-      expect(saywa[key]).not.toBe(demo[key]);
+      expect(firstInstallation[key]).not.toBe(demo[key]);
     }
   });
 
   it("is deterministic per tenant (no state shared between resolutions)", () => {
     resolveTheme({ preset: "costa", primary: "#010203" });
-    expect(themeToCssVars(resolveTheme({ preset: "andino" }))).toEqual(saywa);
+    expect(themeToCssVars(resolveTheme({
+      preset: "neutral", primary: "#2D4A3E", accent: "#8A5F10", background: "#FAF7F2", fontPair: "editorial", radius: "soft",
+    }))).toEqual(firstInstallation);
     expect(themeToCssVars(resolveTheme({ preset: "costa" }))).toEqual(demo);
   });
 });

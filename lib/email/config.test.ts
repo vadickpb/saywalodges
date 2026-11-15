@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { DEFAULT_BRAND_NAME, getEmailTestSecret, isProductionEnv, isRecipientAllowed, parseEmailBrand, parseEmailConfig, parseSender } from "./config";
 
 const KEY = "re_test_key_not_real";
-const FROM = "Saywa Direct <reservas@mail.example.com>";
+const FROM = "Mi alojamiento <reservas@mail.example.com>";
 
 describe("parseEmailBrand", () => {
   it("defaults to the product name, without 'powered by'", () => {
@@ -17,7 +17,7 @@ describe("parseEmailBrand", () => {
     expect(parseEmailBrand({ EMAIL_BRAND_NAME: "Casa Marian", EMAIL_POWERED_BY: "no" }).poweredBy).toBe(false);
   });
   it("treats a loose spelling of the product name as the product itself", () => {
-    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "saywa   direct", EMAIL_POWERED_BY: "true" }).poweredBy).toBe(false);
+    expect(parseEmailBrand({ EMAIL_BRAND_NAME: "mi   alojamiento", EMAIL_POWERED_BY: "true" }).poweredBy).toBe(false);
   });
   it("cuts by characters, never leaves a trailing space and keeps emoji whole", () => {
     expect(parseEmailBrand({ EMAIL_BRAND_NAME: `${"a".repeat(79)} b` }).name).toBe("a".repeat(79));

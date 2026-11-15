@@ -2,7 +2,7 @@
 // proxy.ts applies these decisions; nothing here authorizes anything (that lives in lib/dal).
 //
 // Two deployment modes:
-//  * "platform" (default, how Saywa runs today): ROOT_DOMAIN and app.<ROOT_DOMAIN> are the platform hosts
+//  * "platform" (default): ROOT_DOMAIN and app.<ROOT_DOMAIN> are the platform hosts
 //    (landing + dashboard/auth/api); <sub>.<ROOT_DOMAIN> and any other host are tenant sites.
 //  * "installation" (ADR 0010, one installation per client): ROOT_DOMAIN IS the client's public site;
 //    app.<ROOT_DOMAIN> serves the panel, auth and every /api/* route; any other host is unknown (404).

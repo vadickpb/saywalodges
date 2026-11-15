@@ -128,7 +128,7 @@ const es: Dict = {
     explore: "Explorar",
     contact: "Contacto",
     rights: "Todos los derechos reservados.",
-    poweredBy: "Reservas directas con Saywa Direct",
+    poweredBy: "Reservas directas con {product}",
   },
   publicQuote: {
     title: "Cotiza tu estadía",

@@ -8,7 +8,7 @@ import { z } from "zod";
 
 export const FONT_PAIRS = ["editorial", "modern", "classic"] as const;
 export const RADII = ["sharp", "soft", "round"] as const;
-export const PRESET_IDS = ["andino", "costa", "selva", "colonial", "noche"] as const;
+export const PRESET_IDS = ["neutral", "andino", "costa", "selva", "colonial", "noche"] as const;
 
 export type FontPair = (typeof FONT_PAIRS)[number];
 export type Radius = (typeof RADII)[number];
@@ -24,15 +24,15 @@ export type ResolvedTheme = {
 };
 
 export const PRESETS: Record<PresetId, Omit<ResolvedTheme, "preset">> = {
-  // Saywa Lodges' original brand: forest green + Andean gold on warm cream.
-  andino: { primary: "#2D4A3E", accent: "#8A5F10", background: "#FAF7F2", fontPair: "editorial", radius: "soft" },
+  neutral: { primary: "#334155", accent: "#475569", background: "#F8FAFC", fontPair: "modern", radius: "soft" },
+  andino: { primary: "#3F3C58", accent: "#9A3412", background: "#F8F7FA", fontPair: "editorial", radius: "soft" },
   costa: { primary: "#0E4D64", accent: "#C2410C", background: "#F7FAFB", fontPair: "modern", radius: "round" },
   selva: { primary: "#14532D", accent: "#A16207", background: "#F6F8F3", fontPair: "classic", radius: "soft" },
   colonial: { primary: "#7F1D1D", accent: "#1E3A5F", background: "#FBF8F4", fontPair: "classic", radius: "sharp" },
   noche: { primary: "#E2C88F", accent: "#D97706", background: "#141518", fontPair: "modern", radius: "soft" },
 };
 
-const DEFAULT_PRESET: PresetId = "andino";
+const DEFAULT_PRESET: PresetId = "neutral";
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 

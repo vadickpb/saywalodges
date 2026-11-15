@@ -130,7 +130,7 @@ const en = {
     explore: "Explore",
     contact: "Contact",
     rights: "All rights reserved.",
-    poweredBy: "Direct booking powered by Saywa Direct",
+    poweredBy: "Direct booking powered by {product}",
   },
   publicQuote: {
     title: "Quote your stay",
