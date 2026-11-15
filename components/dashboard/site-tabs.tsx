@@ -15,11 +15,11 @@ const TABS = [
   { href: "/app/site/photos", label: "Fotos" },
 ];
 
-export function SiteTabs() {
+export function SiteTabs({ hiddenHrefs = [] }: { hiddenHrefs?: string[] }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Secciones del sitio" className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
-      {TABS.map((tab) => {
+      {TABS.filter((tab) => !hiddenHrefs.includes(tab.href)).map((tab) => {
         const active = tab.href === "/app/site" ? pathname === tab.href : (pathname === tab.href || pathname.startsWith(`${tab.href}/`));
         return (
           <Link

@@ -1,3 +1,4 @@
+import { requireModule } from "@/lib/modules";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getOwnerPublishedGuide } from "@/lib/dal/guest-guide";
@@ -16,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function OwnerGuidePrintPage() {
+  requireModule("guide"); // SD-1103: layouts render in parallel with pages, so the page guards itself too
   const data = await getOwnerPublishedGuide();
   if (!data) notFound();
   return <article className={`${styles.guide} mx-auto w-full max-w-3xl px-5 py-12`}>

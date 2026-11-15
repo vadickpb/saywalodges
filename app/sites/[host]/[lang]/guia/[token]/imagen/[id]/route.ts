@@ -1,7 +1,9 @@
+import { moduleEnabled } from "@/lib/modules";
 import { cookies } from "next/headers";
 import { guideCookieName,visitorGuideImage } from "@/lib/dal/guest-guide";
 import { guideTokenSchema } from "@/lib/domain/house-guide";
 export async function GET(_request:Request,{params}:{params:Promise<{host:string;lang:string;token:string;id:string}>}) {
+ if(!moduleEnabled('guide'))return new Response('Not found',{status:404});
  const{host,token,id}=await params;
  const session=guideTokenSchema.safeParse(token).success?(await cookies()).get(guideCookieName(token))?.value:undefined;
  const image=await visitorGuideImage(host,token,session,id);

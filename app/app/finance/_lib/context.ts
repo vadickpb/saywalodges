@@ -1,4 +1,5 @@
 import "server-only";
+import { moduleEnabled } from "@/lib/modules";
 import { requireActiveOrg } from "@/lib/dal/organizations";
 import { createClient } from "@/lib/supabase/server";
 
@@ -7,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 // data access goes through the session client, so RLS is the authority; `role`
 // only decides what the UI offers (totals and profit are owner-only).
 export async function getFinanceContext() {
+  // SD-1103: with the finance module off every page, action and route handler gets no context (404 / generic error).
+  if (!moduleEnabled("finance")) return null;
   const { activeOrg } = await requireActiveOrg();
   if (!activeOrg) return null;
   const supabase = await createClient();

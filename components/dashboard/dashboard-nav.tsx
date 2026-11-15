@@ -26,14 +26,15 @@ const NAV_ITEMS: NavItem[] = [
 // and don't know the current route — a server layout can't read the
 // pathname either, so this thin client wrapper is the one place that calls
 // usePathname() and feeds both of them the same activeHref.
-export function DashboardNav() {
+export function DashboardNav({ hiddenHrefs = [] }: { hiddenHrefs?: string[] }) {
+  const items = NAV_ITEMS.filter((item) => !hiddenHrefs.includes(item.href));
   const pathname = usePathname();
   // Nested routes (/app/site/spaces) keep their section highlighted.
-  const activeHref = NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.href ?? pathname;
+  const activeHref = items.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.href ?? pathname;
   return (
     <>
-      <SidebarNav items={NAV_ITEMS} activeHref={activeHref} />
-      <MobileBottomNav items={NAV_ITEMS} activeHref={activeHref} />
+      <SidebarNav items={items} activeHref={activeHref} />
+      <MobileBottomNav items={items} activeHref={activeHref} />
     </>
   );
 }
