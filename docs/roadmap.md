@@ -1994,7 +1994,7 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 
 Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas) se reparte en SD-1110 a SD-1112.
 
-### [ ] SD-1101 · docs(adr): product core and customization levels
+### [x] SD-1101 · docs(adr): product core and customization levels
 `S` · Depende: — · Review: `R`
 - **Alcance**: ADR con los tres niveles (configuración, módulos, a medida detrás de interruptor) y la regla de no crear
   ramas ni copias por cliente; actualizar `CLAUDE.md` (aún dice «SaaS multi-tenant») con aprobación del dueño.
