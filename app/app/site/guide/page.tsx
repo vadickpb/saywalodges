@@ -2,7 +2,7 @@ import { requireModule } from "@/lib/modules";
 import { getGuideEditor } from "@/lib/dal/guest-guide";
 import { GuideEditor } from "./guide-editor";
 export default async function GuidePage() {
-  requireModule(\"guide\"); // SD-1103: layouts render in parallel with pages, so the page guards itself too
+  requireModule("guide"); // SD-1103: layouts render in parallel with pages, so the page guards itself too
  const data=await getGuideEditor();
  if(!data)return <p>Solo el dueño puede administrar la guía privada de la casa.</p>;
  if(data.unavailable)return <p>La guía todavía no está disponible. Falta habilitar la actualización de la base de datos.</p>;
