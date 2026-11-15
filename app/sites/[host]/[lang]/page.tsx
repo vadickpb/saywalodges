@@ -17,6 +17,8 @@ import { getSpaces } from "@/lib/dal/public/spaces";
 import { getActiveUnits } from "@/lib/dal/public/units";
 import { getShowcaseUnits } from "@/lib/dal/public/showcase-units";
 import { getPublicUnitAvailability } from "@/lib/dal/public/availability";
+import { getSpecialDates } from "@/lib/dal/public/special-dates";
+import { todayInLima } from "@/lib/domain/dates";
 import { buildMonthGrid, resolveCalendarMonth, resolveUnitId } from "@/lib/domain/public-availability";
 import { formatPublicPrice, formatSeasonRange } from "@/lib/domain/public-rates";
 import { format } from "@/lib/domain/format";
@@ -34,6 +36,8 @@ import { Contact } from "@/components/site/contact";
 import { SiteFooter } from "@/components/site/site-footer";
 import { MobileCta } from "@/components/site/mobile-cta";
 import { UnitsShowcase } from "@/components/site/units-showcase";
+import { SpecialDates } from "@/components/site/special-dates";
+import { publicSpecialDateName } from "@/lib/domain/special-dates";
 
 export default async function SitePage({
   params,
@@ -44,6 +48,7 @@ export default async function SitePage({
 }) {
   const { host, lang } = await params;
   if (!hasLocale(lang)) notFound();
+  const publicLang = lang === "es" ? "es" : "en";
 
   const site = await getSiteByHost(host);
   if (!site) notFound();
@@ -71,7 +76,11 @@ export default async function SitePage({
       console.error(`SitePage: loading rates of ${site.slug} failed:`, error);
       return null;
     });
-    data = { property, photos, spaces, amenities, distances, units, showcaseUnits, rates };
+    const specialDates = await getSpecialDates(property.id, todayInLima()).catch((error: unknown) => {
+      console.error(`SitePage: loading special dates of ${site.slug} failed:`, error);
+      return [];
+    });
+    data = { property, photos, spaces, amenities, distances, units, showcaseUnits, rates, specialDates };
   } catch (error) {
     // Same reasoning as app/sites/[host]/[lang]/layout.tsx's resolveSite:
     // a real DB failure would otherwise 404 silently, indistinguishable
@@ -80,7 +89,7 @@ export default async function SitePage({
     notFound();
   }
 
-  const { property, photos, spaces, amenities, distances, units, showcaseUnits, rates } = data;
+  const { property, photos, spaces, amenities, distances, units, showcaseUnits, rates, specialDates } = data;
   const { content } = property;
   const videoUrl = await getPublicHeroVideo(property.orgId, lang);
   const mediaCopy = guestGuideCopy(lang);
@@ -125,6 +134,7 @@ export default async function SitePage({
     hasUnitShowcase && { href: "#accommodations", label: dict.unitsShowcase.label },
     visibleSpaces.length > 0 && { href: "#spaces", label: hasUnitShowcase ? dict.unitsShowcase.commonAreasTitle : dict.nav.spaces },
     rateCards.length > 0 && { href: "#rates", label: dict.nav.rates },
+    specialDates.length > 0 && { href: "#special-dates", label: dict.nav.specialDates },
     unitId !== null && { href: "#availability-calendar", label: dict.nav.availability },
     { href: "#location", label: dict.nav.location },
     faq.length > 0 && { href: "#faq", label: dict.nav.faq },
@@ -188,6 +198,7 @@ export default async function SitePage({
           }))}
         />
         <Rates dict={dict.rates} cards={rateCards} waUrl={waUrl} />
+        <SpecialDates dates={specialDates} dict={dict.specialDates} lang={publicLang} />
         {unitId && (
           <Availability
             dict={dict.availability}
@@ -199,6 +210,11 @@ export default async function SitePage({
             unitId={unitId}
             nav={monthNav}
             weeks={weeks}
+            specialDates={specialDates.map((date) => ({
+              startDate: date.startDate,
+              endDate: date.endDate,
+              name: publicSpecialDateName({ es: date.publicNameEs, en: date.publicNameEn }, publicLang),
+            }))}
           />
         )}
         <Location

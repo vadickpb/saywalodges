@@ -9,7 +9,7 @@ import type { StayQuote } from "@/lib/domain/pricing";
 import { readText, type FormState } from "../site/_lib/form-state";
 
 export async function savePricingAction(section: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  const values = readText(formData, ["name", "startDate", "endDate", "priority", "unitId", "seasonId", "nightlyAmount", "weekendAmount", "extraAmount", "minNights", "kind", "amount"]);
+  const values = readText(formData, ["name", "startDate", "endDate", "priority", "isSpecial", "publicNameEs", "publicNameEn", "unitId", "seasonId", "nightlyAmount", "weekendAmount", "extraAmount", "minNights", "kind", "amount"]);
   const rawId = formData.get("id");
   const parsedId = z.union([z.uuid(), z.literal(""), z.null()]).safeParse(rawId);
   const parsedSection = pricingSectionSchema.safeParse(section);

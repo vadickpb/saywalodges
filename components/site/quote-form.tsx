@@ -9,15 +9,15 @@ import { buttonStyles } from "./ui";
 
 const controlStyles = "min-h-12 w-full min-w-0 rounded-site border border-site-muted bg-site-bg px-3 py-2 text-site-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent aria-invalid:border-site-fg disabled:opacity-60";
 
-export function QuoteForm({ lang, t, units, initialUnitId, contactUrl, today }: {
-  lang: string; t: Dict["publicQuote"]; units: QuoteUnit[]; initialUnitId?: string; contactUrl: string; today: string;
+export function QuoteForm({ lang, t, units, initialUnitId, initialCheckIn, initialCheckOut, contactUrl, today }: {
+  lang: string; t: Dict["publicQuote"]; units: QuoteUnit[]; initialUnitId?: string; initialCheckIn?: string; initialCheckOut?: string; contactUrl: string; today: string;
 }) {
   const [state, action, pending] = useActionState(submitPublicQuote.bind(null, lang), {});
   const initialUnit = units.find((unit) => unit.id === initialUnitId)?.id ?? (units.length === 1 ? units[0].id : "");
   const [unitId, setUnitId] = useState(initialUnit);
   const [guests, setGuests] = useState(1);
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
+  const [checkIn, setCheckIn] = useState(initialCheckIn ?? "");
+  const [checkOut, setCheckOut] = useState(initialCheckOut ?? "");
   const formRef = useRef<HTMLFormElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const maxGuests = quoteGuestLimit(units, unitId);

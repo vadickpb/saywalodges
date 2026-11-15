@@ -114,6 +114,15 @@ Si eliges otro CSV, vuelve a revisar la vista previa y emparejar sus espacios.
 
 Cuando hay dos o más unidades activas, la portada muestra una tarjeta para cada una y una página con sus fotos, espacios, calendario y cotizador. Con una sola unidad activa, la portada conserva el diseño habitual.
 
+## Fechas especiales (Año Nuevo, Semana Santa)
+
+1. Abre **Tarifas > Temporadas** y crea una temporada que cubra toda la estadía, desde la llegada hasta el día de salida. Usa una prioridad alta para que gane sobre las temporadas normales.
+2. Marca **Es una fecha especial (se muestra en la web)** y escribe el nombre público en español, en inglés o en ambos idiomas.
+3. Abre **Tarifas por unidad** y añade la tarifa de esa temporada para cada casa activa. Revisa también el mínimo de noches; si falta una tarifa, la web mostrará «Consultar» en vez de un precio.
+4. Comprueba la portada: la sección muestra disponibilidad y precio total de la estadía completa. El botón **Cotizar estas fechas** abre el cotizador con la casa, la llegada y la salida ya seleccionadas.
+
+Si una casa tiene un cambio de precio para parte del rango, ese importe reemplaza la tarifa de temporada en esas noches, igual que en cualquier otra cotización.
+
 ## Villa completa y casas
 
 1. Crea las unidades reservables por separado, por ejemplo **Villa completa**, **Casa 1** y **Casa 2**, y déjalas activas.

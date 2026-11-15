@@ -19,7 +19,7 @@ type FormState = {
 export type ContentField = {
   name: string;
   label: string;
-  kind?: "text" | "textarea" | "select" | "number" | "date";
+  kind?: "text" | "textarea" | "select" | "number" | "date" | "checkbox";
   min?: number;
   max?: number;
   step?: number;
@@ -86,8 +86,24 @@ export function ContentForm({ fields, initial, action, id, submitLabel, resetOnS
               key={field.name}
               className={cn("flex flex-col gap-1.5", (field.width === "full" || field.kind === "textarea") && "sm:col-span-2")}
             >
-              <Label htmlFor={fieldId}>{field.label}</Label>
-              {field.kind === "textarea" ? (
+              {field.kind !== "checkbox" && <Label htmlFor={fieldId}>{field.label}</Label>}
+              {field.kind === "checkbox" ? (
+                <div className="flex min-h-9 items-center gap-2">
+                  <input
+                    key={inputKey}
+                    id={fieldId}
+                    name={field.name}
+                    type="checkbox"
+                    value="true"
+                    defaultChecked={value(field.name) === "true"}
+                    aria-invalid={fieldErrors ? true : undefined}
+                    aria-describedby={fieldErrors ? `${fieldId}-error` : undefined}
+                    className="size-4 rounded border-input accent-primary"
+                  />
+                  <input type="hidden" name={field.name} value="false" />
+                  <Label htmlFor={fieldId}>{field.label}</Label>
+                </div>
+              ) : field.kind === "textarea" ? (
                 <Textarea key={inputKey} {...common} rows={3} />
               ) : field.kind === "select" ? (
                 <select

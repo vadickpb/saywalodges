@@ -29,8 +29,14 @@ export default async function PricingEditPage({ params }: { params: Promise<{ se
       { name: "priority", label: "Prioridad (gana la más alta)", kind: "number", min: 0, step: 1 },
       { name: "startDate", label: "Inicio (incluido)", kind: "date" },
       { name: "endDate", label: "Fin (primer día sin esta temporada)", kind: "date" },
+      { name: "isSpecial", label: "Es una fecha especial (se muestra en la web)", kind: "checkbox", width: "full" },
+      { name: "publicNameEs", label: "Nombre público en español", maxLength: 120 },
+      { name: "publicNameEn", label: "Nombre público en inglés", maxLength: 120 },
     ];
-    initial = { name: season?.name ?? "", priority: String(season?.priority ?? 0), startDate: season?.startDate ?? "", endDate: season?.endDate ?? "" };
+    initial = {
+      name: season?.name ?? "", priority: String(season?.priority ?? 0), startDate: season?.startDate ?? "", endDate: season?.endDate ?? "",
+      isSpecial: String(season?.isSpecial ?? false), publicNameEs: season?.publicNameEs ?? "", publicNameEn: season?.publicNameEn ?? "",
+    };
   } else if (section === "rates") {
     const rate = data.rates.find((r) => r.id === id);
     fields = [unitField,
@@ -52,7 +58,7 @@ export default async function PricingEditPage({ params }: { params: Promise<{ se
   const back = section === "rates" ? "/app/rates" : `/app/rates/${section}`;
   return <Card><CardHeader><CardTitle>{editing ? "Editar" : "Añadir"} · {SECTION_LABELS[section]}</CardTitle></CardHeader><CardContent className="space-y-4">
     <Link className="text-sm underline" href={back}>Volver al listado</Link>
-    {section === "seasons" && <p className="text-sm text-muted-foreground">No se permiten temporadas que se crucen con la misma prioridad. Después de crearla, añade su tarifa en cada unidad.</p>}
+    {section === "seasons" && <p className="text-sm text-muted-foreground">No se permiten temporadas que se crucen con la misma prioridad. Después de crearla, añade su tarifa en cada unidad. Si es una fecha especial, escribe al menos uno de los nombres públicos.</p>}
     {section === "rates" && <p className="text-sm text-muted-foreground">Los huéspedes incluidos se configuran en Sitio → Unidades. El mínimo se toma de la tarifa de la noche de llegada.</p>}
     <ContentForm fields={fields} initial={initial} action={savePricingAction.bind(null, section)} id={editing ? id : undefined} submitLabel="Guardar" />
   </CardContent></Card>;

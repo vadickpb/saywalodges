@@ -16,9 +16,24 @@ const integer = z.string().trim().regex(/^\d+$/, "Ingresa un número entero")
   .transform(Number).pipe(z.number().int().min(0).max(PG_MAX));
 const date = z.string().date("Ingresa una fecha válida").refine((value) => !value.startsWith("0000-"), "Ingresa una fecha válida");
 const name = z.string().trim().min(1, "Obligatorio").max(200, "Máximo 200 caracteres");
+const publicName = z.string().trim().max(120, "Máximo 120 caracteres");
 export const seasonInputSchema = z.object({
-  name, startDate: date, endDate: date, priority: integer,
-}).refine((v) => v.endDate > v.startDate, { path: ["endDate"], message: "Debe ser posterior al inicio" });
+  name,
+  startDate: date,
+  endDate: date,
+  priority: integer,
+  isSpecial: z.enum(["true", "false"]).transform((value) => value === "true"),
+  publicNameEs: publicName,
+  publicNameEn: publicName,
+}).superRefine((value, ctx) => {
+  if (value.endDate <= value.startDate) {
+    ctx.addIssue({ code: "custom", path: ["endDate"], message: "Debe ser posterior al inicio" });
+  }
+  if (value.isSpecial && !value.publicNameEs && !value.publicNameEn) {
+    ctx.addIssue({ code: "custom", path: ["publicNameEs"], message: "Escribe al menos un nombre público" });
+    ctx.addIssue({ code: "custom", path: ["publicNameEn"], message: "Escribe al menos un nombre público" });
+  }
+});
 export const rateInputSchema = z.object({
   unitId: z.uuid(), seasonId: z.union([z.literal(""), z.uuid()]).transform((v) => v || null),
   nightlyAmount: moneySchema,
