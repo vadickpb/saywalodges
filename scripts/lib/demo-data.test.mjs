@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { validateDemoData, PRIVATE_BUCKETS, DEMO_ORG_ID, DEMO_PROPERTY_ID, DEMO_STAFF_EMAIL, INSERT_ORDER, TABLE_OF, buildDemoData } from "./demo-data.mjs";
+import { createHash } from "node:crypto";
+import { validateDemoData, PRIVATE_BUCKETS, DEMO_GUIDE_PASSWORD, DEMO_GUIDE_TOKEN, DEMO_ORG_ID, DEMO_PROPERTY_ID, DEMO_STAFF_EMAIL, INSERT_ORDER, TABLE_OF, buildDemoData } from "./demo-data.mjs";
 
 const today = new Date("2026-11-03T05:00:00Z");
 const data = buildDemoData(today, { rootDomain: "demo.example.org" });
@@ -18,10 +19,95 @@ describe("demo data", () => {
     expect(data.property.id).toBe(DEMO_PROPERTY_ID);
     expect(data.membership.role).toBe("staff");
     expect(DEMO_STAFF_EMAIL).toBe("demo-staff@example.com");
+    expect(data.house_guides[0].published).toEqual(data.house_guides[0].draft);
   });
   it("contains nothing from the real Saywa Lodges", () => {
     const text = JSON.stringify(data).toLowerCase();
     for (const real of ["51963416766", "saywalodges", "urubamba", "reservas@"]) expect(text).not.toContain(real);
+    for (const guest of data.guests) {
+      expect(guest.email).toMatch(/@example\.com$/);
+      expect(guest.phone).toBeNull();
+    }
+  });
+  it("has twelve months of past and future confirmed reservations", () => {
+    expect(data.bookings).toHaveLength(12);
+    expect(data.payments).toHaveLength(12);
+    expect(data.guests).toHaveLength(12);
+    expect(data.quotes).toHaveLength(12);
+    const todayIso = "2026-11-03";
+    expect(data.bookings.some((booking) => booking.check_out < todayIso)).toBe(true);
+    expect(data.bookings.some((booking) => booking.check_in > todayIso)).toBe(true);
+    expect(new Set(data.bookings.map((booking) => booking.check_in.slice(0, 7))).size).toBe(12);
+    for (const booking of data.bookings) {
+      expect(booking.status).toBe("confirmed");
+      expect(data.guests.some((guest) => guest.id === booking.guest_id)).toBe(true);
+      expect(data.quotes.some((quote) => quote.id === booking.quote_id)).toBe(true);
+      expect(data.calendar_blocks.some((block) => block.booking_id === booking.id && block.period === `[${booking.check_in},${booking.check_out})`)).toBe(true);
+      const payment = data.payments.find((candidate) => candidate.booking_id === booking.id);
+      expect(payment?.status).toBe("approved");
+      expect(payment?.amount_cents).toBe(booking.total_cents);
+      expect(new Date(booking.created_at).getTime()).toBeLessThanOrEqual(new Date(booking.confirmed_at).getTime());
+      expect(new Date(booking.confirmed_at).getTime()).toBeLessThanOrEqual(today.getTime());
+      const quote = data.quotes.find((candidate) => candidate.id === booking.quote_id);
+      expect(new Date(quote.created_at).getTime()).toBeLessThanOrEqual(new Date(booking.created_at).getTime());
+    }
+  });
+  it("keeps every calendar block non-empty and non-overlapping per unit", () => {
+    const parsed = data.calendar_blocks.map((block) => {
+      const match = /^\[([^,]+),([^\)]+)\)$/.exec(block.period);
+      expect(match, block.id).not.toBeNull();
+      return { ...block, start: match[1], end: match[2] };
+    });
+    for (const block of parsed) expect(block.start < block.end).toBe(true);
+    for (const unit of data.units) {
+      const blocks = parsed.filter((block) => block.unit_id === unit.id).sort((a, b) => a.start.localeCompare(b.start));
+      for (let index = 1; index < blocks.length; index += 1) {
+        expect(blocks[index - 1].end <= blocks[index].start, `${blocks[index - 1].id} overlaps ${blocks[index].id}`).toBe(true);
+      }
+    }
+    expect(data.calendar_blocks.filter((block) => block.source === "ical")).toHaveLength(4);
+  });
+  it("has coherent finance totals and linked costs", () => {
+    const incomes = data.finance_entries.filter((entry) => entry.kind === "income");
+    const expenses = data.finance_entries.filter((entry) => entry.kind === "expense");
+    expect(incomes).toHaveLength(12);
+    expect(new Set(incomes.map((entry) => entry.channel))).toEqual(new Set(["direct", "airbnb"]));
+    expect(expenses.some((entry) => entry.category_key === "platform_commission")).toBe(true);
+    expect(expenses.some((entry) => entry.category_key === "cleaning")).toBe(true);
+    expect(expenses.some((entry) => entry.category_key === "electricity")).toBe(true);
+    for (const income of incomes) {
+      const booking = data.bookings.find((candidate) => candidate.check_in === income.stay_start && candidate.unit_id === income.unit_id);
+      expect(booking).toBeDefined();
+      expect(income.amount_cents).toBe(booking.total_cents);
+      const linked = expenses.filter((expense) => expense.related_entry_id === income.id);
+      if (booking.check_out <= "2026-11-03") {
+        expect(linked.some((expense) => expense.category_key === "cleaning")).toBe(true);
+      } else {
+        expect(linked.some((expense) => expense.category_key === "cleaning")).toBe(false);
+      }
+      if (income.channel === "airbnb") {
+        expect(linked.find((expense) => expense.category_key === "platform_commission")?.amount_cents).toBe(Math.round(income.amount_cents * 0.15));
+      }
+    }
+    const incomeTotal = incomes.reduce((sum, entry) => sum + entry.amount_cents, 0);
+    const expenseTotal = expenses.reduce((sum, entry) => sum + entry.amount_cents, 0);
+    const expectedExpenseTotal = incomes.reduce((sum, income) => {
+      const cleaning = income.stay_end <= "2026-11-03" ? (income.unit_id === data.units[0].id ? 6500 : 12000) : 0;
+      const commission = income.channel === "airbnb" ? Math.round(income.amount_cents * 0.15) : 0;
+      return sum + cleaning + commission;
+    }, 0) + [0, 1, 2, 3, 4, 5].reduce((sum, index) => sum + 8500 + (index % 3) * 500, 0);
+    expect(expenseTotal).toBe(expectedExpenseTotal);
+    expect(expenses.every((entry) => entry.occurred_on <= "2026-11-03")).toBe(true);
+    expect(incomeTotal - expenseTotal).toBeGreaterThan(0);
+    expect(data.payments.reduce((sum, payment) => sum + payment.amount_cents, 0)).toBe(incomeTotal);
+  });
+  it("publishes a fictional private-guide access for the staff tour", () => {
+    expect(DEMO_GUIDE_TOKEN).toHaveLength(43);
+    expect(DEMO_GUIDE_PASSWORD).toBe("demo-guide-2026");
+    expect(data.house_guide_links).toHaveLength(1);
+    expect(data.house_guide_links[0].token_hash).toBe(createHash("sha256").update(DEMO_GUIDE_TOKEN).digest("hex"));
+    expect(data.house_guide_links[0].password_hash).not.toContain(DEMO_GUIDE_PASSWORD);
+    expect(data.house_guide_links[0].expires_at).toBe("2027-11-03T00:00:00.000Z");
   });
   it("uses unique ids and respects the pricing constraints", () => {
     const ids = INSERT_ORDER.flatMap((k) => rows(k)).map((r) => r.id).filter(Boolean);

@@ -6,9 +6,19 @@ Una instalación más, con datos **ficticios**, para que un posible comprador pr
 ## Qué trae
 - Sitio público «Casa Demo Valle» (publicado), 2 unidades, temporada alta (desde el día del reseteo, 120 días), tarifas,
   cargos, espacios, servicios y distancias. Nada de Saywa Lodges ni de clientes reales (`scripts/lib/demo-data.mjs`, con test).
+- Doce meses consecutivos de reservas confirmadas y pagadas (seis pasados y seis futuros), huéspedes ficticios con correos
+  `@example.com`, bloqueos importados de Airbnb y una guía privada publicada. Los ids son fijos y las fechas se calculan
+  desde el día del reseteo; no hay solapes en el calendario y los rangos usan `[check-in, check-out)`.
+- Finanzas de ejemplo en soles: alquileres directos y de Airbnb, comisiones de plataforma, limpieza y servicios. Los
+  costos quedan vinculados a su reserva para mantener datos coherentes. El staff público ve los movimientos por mes; los
+  totales, utilidad y agrupación por alquiler siguen reservados al rol `owner`, igual que en una instalación real.
 - Un único usuario, **`staff`** (no `owner`): `demo-staff@example.com` / `demo-saywa-2026`. Es público a propósito. Su contraseña se
-  vuelve a fijar cada noche por si un visitante la cambia.
+  vuelve a fijar cada noche por si un visitante la cambia. En `/login`, «Entrar a la demo» inicia sesión sin pedirla; la
+  acción y el botón no existen de forma utilizable cuando `DEMO_MODE` está apagado (la acción responde 404 antes de tocar Auth).
 - Banner amarillo en el panel: «Demo: los datos se reinician cada noche…» (variable `DEMO_MODE=true`).
+- Recorrido accesible de cinco pasos (calendario, reservas, finanzas, sitio público y guía). El último abre un enlace privado
+  sembrado para la demo y muestra su contraseña pública. Funciona con teclado
+  (`Tab`, `Enter`, `Esc` para saltar y `→` para avanzar) y guarda el paso en `localStorage`; «Ver recorrido» lo reinicia.
 - **Sin correos**: la demo no tiene `RESEND_API_KEY` (el script de instalación no la carga si `"demo": true`) y en producción, sin
   clave, el envío queda deshabilitado. Ningún visitante puede mandar un correo real desde la demo.
 
@@ -18,7 +28,8 @@ Una instalación más, con datos **ficticios**, para que un posible comprador pr
    tiene la suya, así que apuntarlo a un proyecto de cliente por error aborta antes de borrar nada.
 2. Fija de nuevo la contraseña del staff (o lo crea).
 3. Borra la organización demo (los datos cuelgan de ella con `ON DELETE CASCADE`: reservas, huéspedes, cotizaciones, tarifas…) y la
-   vuelve a crear desde cero.
+   vuelve a crear desde cero. El trigger de la organización crea las categorías financieras; el script resuelve sus ids antes de
+   insertar los movimientos y los atribuye al staff para que pueda verlos con la RLS normal.
 También vacía los archivos que el staff haya subido (fotos y comprobantes, buckets `property-photos` y `finance-receipts`, bajo `<id de la organización>/`), porque el borrado en cascada no los elimina. Los datos de configuración se validan **antes** de borrar nada: un `DEMO_ROOT_DOMAIN` mal escrito aborta con la demo intacta.
 Si falla a mitad, la demo queda incompleta hasta la siguiente ejecución (o hasta lanzar el workflow a mano).
 
@@ -66,7 +77,8 @@ Necesitas un proyecto Supabase nuevo **solo para la demo** y un proyecto Vercel 
    Después: Actions → *Demo reset* → **Run workflow**; también debe terminar en verde.
    Comprueba la protección del Environment: `gh api repos/vadickpb/saywalodges/environments/demo-reset --jq .deployment_branch_policy` debe mostrar `custom_branch_policies: true`.
 7. Registra la demo para recibir migraciones (runbook, paso 10) con un id opaco y, si quieres, el monitoreo (paso 11).
-8. Comprueba: abre `https://<rootDomain>/es` (sitio) y `https://app.<rootDomain>/login` con el staff público; debe verse el banner.
+8. Comprueba: abre `https://<rootDomain>/es` (sitio) y `https://app.<rootDomain>/login`; pulsa «Entrar a la demo». Deben verse
+   el banner y el primer paso del recorrido. En Finanzas, cambia de mes para recorrer los ingresos y egresos ficticios del historial.
 
 ## Lo que un visitante con el staff público puede hacer (riesgo aceptado, dura como mucho un día)
 Cambiar la contraseña del staff (echa a los demás hasta el reseteo), despublicar el sitio, editar textos, WhatsApp y correo del sitio, y crear cotizaciones y reservas de prueba. **No** puede cambiar el anticipo, usar calendarios iCal, ver reportes ni exportar finanzas, invitar usuarios ni llegar a otra organización. Sin `RESEND_API_KEY` la app no envía correos; el correo de recuperación de contraseña sale por el SMTP por defecto de Supabase, que solo entrega a miembros del equipo del proyecto: **no configures SMTP propio en el proyecto demo**.
