@@ -90,7 +90,19 @@ for (const bucket of PRIVATE_BUCKETS) {
 // 4 ── delete the demo organization (ON DELETE CASCADE removes bookings, guests, rates, content…) and rebuild it
 await call(`/rest/v1/organizations?id=eq.${DEMO_ORG_ID}`, { method: "DELETE", prefer: "return=minimal" });
 for (const group of INSERT_ORDER) {
-  await call(`/rest/v1/${TABLE_OF[group]}`, { method: "POST", body: [].concat(data[group]), prefer: "return=minimal" });
+  let rows = [].concat(data[group]);
+  if (group === "finance_entries") {
+    const categories = await call(`/rest/v1/finance_categories?select=id,system_key&org_id=eq.${DEMO_ORG_ID}`);
+    const categoryByKey = new Map(categories.map((category) => [category.system_key, category.id]));
+    rows = rows.map(({ category_key, ...entry }) => {
+      const category_id = categoryByKey.get(category_key);
+      if (!category_id) fail(`Demo finance category is missing: ${category_key}`);
+      // Staff only see their own ledger rows. Attribute the fictional reset data
+      // to the public demo user so the guided finance step is useful.
+      return { ...entry, category_id, created_by: staffId };
+    });
+  }
+  await call(`/rest/v1/${TABLE_OF[group]}`, { method: "POST", body: rows, prefer: "return=minimal" });
 }
 await call("/rest/v1/memberships", { method: "POST", body: { ...data.membership, user_id: staffId }, prefer: "return=minimal" });
 console.log("Demo reset done.");

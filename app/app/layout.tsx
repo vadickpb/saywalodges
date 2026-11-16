@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { cn } from "cn";
@@ -14,9 +14,11 @@ import { getSiteUrl } from "@/lib/dal/public/site";
 import { siteHostFor } from "@/lib/domain/host-routing";
 import { signOut } from "@/app/app/actions";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
+import { DemoTour } from "@/components/dashboard/demo-tour";
 import { OrgSwitcher } from "@/components/dashboard/org-switcher";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
+import { demoLocaleFromAcceptLanguage } from "@/dictionaries/demo";
 import "@/app/globals.css";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -38,6 +40,7 @@ export const viewport: Viewport = {
 // so there's no flash of the wrong theme on load.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
+  const demoLocale = demoLocaleFromAcceptLanguage((await headers()).get("accept-language"));
   const isDark = cookieStore.get(THEME_COOKIE)?.value === "dark";
 
   // The real, authoritative check for each protected page stays on the page
@@ -109,9 +112,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
           <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
             {env.DEMO_MODE === "true" && (
-              <p className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-950 print:hidden">
-                Demo: los datos se reinician cada noche. Puedes probar con libertad; no uses datos reales.
-              </p>
+              <DemoTour siteUrl={siteUrl} locale={demoLocale} />
             )}
             <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 print:hidden md:px-6">
               {orgs.length > 1 ? (

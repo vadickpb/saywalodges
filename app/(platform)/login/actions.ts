@@ -1,9 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { signInSchema, requestPasswordResetSchema } from "@/lib/validation/auth";
 import { SITE_URL } from "@/config/site";
+import { env } from "@/lib/env";
+import { DEMO_STAFF_EMAIL, DEMO_STAFF_PASSWORD } from "@/lib/demo-credentials";
 
 export type SignInState = { error: string } | undefined;
 
@@ -22,6 +25,30 @@ export async function signIn(_prevState: SignInState, formData: FormData): Promi
     // Never surface error.message from the auth provider (CLAUDE.md):
     // it can reveal whether an account exists for a given email.
     return { error: "Invalid email or password." };
+  }
+
+  redirect("/app");
+}
+
+export type DemoSignInState = { error: true } | undefined;
+const demoSignInSchema = z.object({ intent: z.literal("demo") }).strict();
+
+export async function demoSignIn(_prevState: DemoSignInState, formData: FormData): Promise<DemoSignInState> {
+  // This check must stay before validation and client creation: knowing a stale
+  // Server Action id must not make the demo login execute in a normal install.
+  if (env.DEMO_MODE !== "true") notFound();
+
+  const parsed = demoSignInSchema.safeParse({ intent: formData.get("intent") });
+  if (!parsed.success) return { error: true };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: DEMO_STAFF_EMAIL,
+    password: DEMO_STAFF_PASSWORD,
+  });
+  if (error) {
+    console.error("Demo sign-in failed:", error);
+    return { error: true };
   }
 
   redirect("/app");

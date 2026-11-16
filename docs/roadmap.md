@@ -2017,10 +2017,12 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
   encendido, así las instalaciones actuales no cambian). Un nombre desconocido falla al arrancar. Finanzas: `getFinanceContext` devuelve
   `null`; guía: acciones y rutas; WhatsApp: webhook 404; CRM: página de huéspedes. `online_payments` queda reservado hasta el lote 4.
 
-### [ ] SD-1104 · feat(demo): rich demo data and guided tour
+### [x] SD-1104 · feat(demo): rich demo data and guided tour
 `M` · Depende: SD-1007 · Review: `R`
 - **Alcance**: seed ficticio con casas, 12 meses de reservas y finanzas, bloqueos de canales y guía; botón «Entrar a la
   demo» sin escribir contraseña; recorrido guiado de 5 pasos.
+- **Hecho**: datos deterministas y validados, reset en orden de FK, acceso demo protegido por `DEMO_MODE` y recorrido
+  bilingüe accesible con progreso local (este PR).
 
 ### [ ] SD-1105 · feat(site): legal pages and complaints book
 `M` · Depende: — · Review: `R+S`
