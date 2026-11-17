@@ -97,6 +97,37 @@ describe("installation mode", () => {
   });
 });
 
+describe("vendor mode", () => {
+  it("rejects invalid hosts and internal site paths before considering the sales site", () => {
+    expect(decide("bad/host", "/", "vendor")).toEqual({ type: "invalid-host" });
+    expect(decide(ROOT, "/sites/demo/es", "vendor")).toEqual({ type: "not-found" });
+  });
+
+  it("serves only the sales homepage and root metadata files on the root host", () => {
+    expect(decide(ROOT, "/", "vendor")).toEqual({ type: "rewrite-vendor-root" });
+    expect(decide(ROOT, "/robots.txt", "vendor")).toEqual({ type: "pass" });
+    expect(decide(ROOT, "/sitemap.xml", "vendor")).toEqual({ type: "pass" });
+    expect(decide(ROOT, "/robots.txt/extra", "vendor")).toEqual({ type: "not-found" });
+  });
+
+  it("rejects panel, auth, API, tenant, and internal vendor routes on the root host", () => {
+    for (const path of [
+      "/app", "/app/bookings", "/login", "/forgot-password", "/update-password", "/auth/callback",
+      "/api", "/api/health", "/api/whatsapp/webhook", "/es", "/vendor", "/anything",
+    ]) {
+      expect(decide(ROOT, path, "vendor")).toEqual({ type: "not-found" });
+    }
+  });
+
+  it("rejects app.<root>, subdomains, and unrelated domains without a database lookup", () => {
+    for (const host of [`app.${ROOT}`, `demo.${ROOT}`, `www.${ROOT}`, "other.pe"]) {
+      for (const path of ["/", "/robots.txt", "/login", "/api/health"]) {
+        expect(decide(host, path, "vendor")).toEqual({ type: "not-found" });
+      }
+    }
+  });
+});
+
 describe("shouldRefreshSession", () => {
   const s = (host: string, mode: DeploymentMode) => shouldRefreshSession({ host, rootDomain: ROOT, mode });
   it("never refreshes on the client's public site in installation mode", () => {
@@ -107,6 +138,9 @@ describe("shouldRefreshSession", () => {
   });
   it("is unchanged in platform mode", () => {
     for (const host of [ROOT, `app.${ROOT}`, `casa.${ROOT}`, "casa.pe"]) expect(s(host, "platform")).toBe(true);
+  });
+  it("never refreshes a session in vendor mode", () => {
+    for (const host of [ROOT, `app.${ROOT}`, "other.pe"]) expect(s(host, "vendor")).toBe(false);
   });
 });
 
@@ -120,5 +154,8 @@ describe("siteHostFor", () => {
   it("installation: always the root domain", () => {
     expect(siteHostFor({ ...base, mode: "installation" })).toBe(ROOT);
     expect(siteHostFor({ ...base, mode: "installation", customDomain: "other.pe" })).toBe(ROOT);
+  });
+  it("vendor: always the root domain", () => {
+    expect(siteHostFor({ ...base, mode: "vendor" })).toBe(ROOT);
   });
 });

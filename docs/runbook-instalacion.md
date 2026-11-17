@@ -114,3 +114,43 @@ La instalación demo compartida se crea con `"demo": true` y sin el paso `seed`:
   Authentication → SMTP Settings con Resend.
 - **«Could not create the owner»**: ese correo ya existe en el proyecto. Si es tu cuenta, copia su id (Supabase → Authentication → Users) como `ownerUserId` en el archivo de estado y repite `--step=seed`; el script nunca adopta usuarios ajenos.
 - Un paso a medias es seguro de repetir; borrar `.install/<slug>.state.json` solo si quieres regenerar los secretos.
+
+## Desplegar la web de ventas
+
+La web de ventas usa este mismo repositorio, pero vive en un **proyecto Vercel separado** de las instalaciones de
+clientes y de la demo. No necesita una base de datos: el modo `vendor` bloquea panel, autenticación y rutas API antes
+de ejecutar lógica de aplicación.
+
+1. Vercel → **Add New → Project** → importa este repositorio otra vez y asigna un nombre exclusivo para la web de
+   ventas. Conecta únicamente el dominio raíz del producto; no configures `app.<dominio>`.
+2. En **Settings → Environment Variables**, configura para Production:
+   ```dotenv
+   DEPLOYMENT_MODE=vendor
+   ROOT_DOMAIN=<dominio-sin-protocolo>
+   NEXT_PUBLIC_SITE_URL=https://<dominio>
+   NEXT_PUBLIC_PRODUCT_NAME=HostStay
+   VENDOR_DEMO_URL=https://<dominio-de-la-demo>
+   VENDOR_WHATSAPP_NUMBER=51<número-sin-espacios-ni-signo-más>
+   VENDOR_CONTACT_EMAIL=ventas@<dominio>
+   ```
+   Las tres variables `VENDOR_*` son opcionales. El botón de demo y el de WhatsApp no aparecen si falta su variable.
+   «Solicitar proforma» usa WhatsApp primero, luego `VENDOR_CONTACT_EMAIL`; si no hay ningún canal, lleva al bloque de
+   contacto futuro y no muestra una acción final sin destino.
+3. El esquema común de entorno todavía valida las claves Supabase durante el build, aunque el modo `vendor` no las
+   usa. Hasta que se separe ese esquema, añade valores de relleno que no pertenezcan a ningún proyecto real:
+   ```dotenv
+   SUPABASE_URL=https://vendor.invalid
+   SUPABASE_SERVICE_ROLE_KEY=unused-vendor-build
+   NEXT_PUBLIC_SUPABASE_URL=https://vendor.invalid
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=unused-vendor-build
+   ```
+4. Despliega y verifica:
+   ```bash
+   curl -I https://<dominio>/
+   curl -I https://<dominio>/login
+   curl -I https://app.<dominio>/
+   curl https://<dominio>/robots.txt
+   curl https://<dominio>/sitemap.xml
+   ```
+   La portada, `robots.txt` y `sitemap.xml` responden; `/login` y cualquier host distinto del raíz responden `404`.
+   Comprueba además que los botones de demo y WhatsApp solo aparecen cuando sus variables están configuradas.

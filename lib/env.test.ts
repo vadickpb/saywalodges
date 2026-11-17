@@ -85,6 +85,76 @@ describe("env", () => {
     await expect(import("./env")).rejects.toThrow(/DEPLOYMENT_MODE/);
   });
 
+  it("accepts vendor mode and requires NEXT_PUBLIC_SITE_URL in production", async () => {
+    setValidEnv();
+    process.env.ROOT_DOMAIN = "hoststay.example";
+    process.env.DEPLOYMENT_MODE = "vendor";
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    vi.stubEnv("NODE_ENV", "production");
+    await expect(import("./env")).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_SITE_URL = "https://hoststay.example";
+    const { env } = await import("./env");
+    expect(env.DEPLOYMENT_MODE).toBe("vendor");
+    vi.unstubAllEnvs();
+  });
+
+  it("pins the vendor production URL to the HTTPS root origin", async () => {
+    setValidEnv();
+    process.env.ROOT_DOMAIN = "hoststay.example";
+    process.env.DEPLOYMENT_MODE = "vendor";
+    vi.stubEnv("NODE_ENV", "production");
+    for (const invalid of [
+      "http://hoststay.example",
+      "https://www.hoststay.example",
+      "https://hoststay.example/path",
+      "https://hoststay.example?preview=1",
+      "https://user:pass@hoststay.example",
+    ]) {
+      process.env.NEXT_PUBLIC_SITE_URL = invalid;
+      vi.resetModules();
+      await expect(import("./env")).rejects.toThrow(/vendor production/);
+    }
+    vi.unstubAllEnvs();
+  });
+
+  it("validates optional vendor CTA settings and treats empty values as absent", async () => {
+    setValidEnv();
+    process.env.VENDOR_WHATSAPP_NUMBER = "";
+    process.env.VENDOR_CONTACT_EMAIL = "";
+    process.env.VENDOR_DEMO_URL = "";
+    let loaded = await import("./env");
+    expect(loaded.env.VENDOR_WHATSAPP_NUMBER).toBeUndefined();
+    expect(loaded.env.VENDOR_CONTACT_EMAIL).toBeUndefined();
+    expect(loaded.env.VENDOR_DEMO_URL).toBeUndefined();
+
+    vi.resetModules();
+    process.env.VENDOR_WHATSAPP_NUMBER = "+51 987 654 321";
+    await expect(import("./env")).rejects.toThrow(/VENDOR_WHATSAPP_NUMBER/);
+
+    vi.resetModules();
+    process.env.VENDOR_WHATSAPP_NUMBER = "51987654321";
+    process.env.VENDOR_CONTACT_EMAIL = "not-an-email";
+    await expect(import("./env")).rejects.toThrow(/VENDOR_CONTACT_EMAIL/);
+
+    vi.resetModules();
+    process.env.VENDOR_CONTACT_EMAIL = "";
+    process.env.VENDOR_DEMO_URL = "not-a-url";
+    await expect(import("./env")).rejects.toThrow(/VENDOR_DEMO_URL/);
+
+    vi.resetModules();
+    process.env.VENDOR_DEMO_URL = "ftp://demo.hoststay.example";
+    await expect(import("./env")).rejects.toThrow(/http or https/);
+
+    vi.resetModules();
+    process.env.VENDOR_DEMO_URL = "https://demo.hoststay.example";
+    process.env.VENDOR_CONTACT_EMAIL = "ventas@hoststay.example";
+    loaded = await import("./env");
+    expect(loaded.env.VENDOR_WHATSAPP_NUMBER).toBe("51987654321");
+    expect(loaded.env.VENDOR_DEMO_URL).toBe("https://demo.hoststay.example");
+    expect(loaded.env.VENDOR_CONTACT_EMAIL).toBe("ventas@hoststay.example");
+  });
+
   it("requires NEXT_PUBLIC_SITE_URL in production, including platform mode", async () => {
     setValidEnv();
     delete process.env.NEXT_PUBLIC_SITE_URL;

@@ -1,13 +1,14 @@
 // Host-based routing decisions (ADR 0001, ADR 0010). Pure string logic: no I/O, no database.
 // proxy.ts applies these decisions; nothing here authorizes anything (that lives in lib/dal).
 //
-// Two deployment modes:
+// Three deployment modes:
 //  * "platform" (default): ROOT_DOMAIN and app.<ROOT_DOMAIN> are the platform hosts
 //    (landing + dashboard/auth/api); <sub>.<ROOT_DOMAIN> and any other host are tenant sites.
 //  * "installation" (ADR 0010, one installation per client): ROOT_DOMAIN IS the client's public site;
 //    app.<ROOT_DOMAIN> serves the panel, auth and every /api/* route; any other host is unknown (404).
+//  * "vendor" (SD-1110): ROOT_DOMAIN serves only the product sales site; every other host and route is 404.
 
-export type DeploymentMode = "platform" | "installation";
+export type DeploymentMode = "platform" | "installation" | "vendor";
 
 // Dashboard and auth pages are shared, not tenant content: they skip the locale and host rewrites and are
 // never reachable on a tenant's own host (serving them there would let that tenant harvest session cookies
@@ -35,6 +36,7 @@ export type RouteDecision =
   | { type: "not-found" } // 404
   | { type: "pass" } // native routes (app/app, app/(platform), app/api…)
   | { type: "rewrite-panel-root" } // "/" → "/app"
+  | { type: "rewrite-vendor-root" } // "/" → internal "/vendor" route
   | { type: "site"; siteIdentifier: string }; // tenant site: locale redirect, then rewrite to /sites/[host]/…
 
 export function decideRoute(input: { host: string; pathname: string; rootDomain: string; mode: DeploymentMode }): RouteDecision {
@@ -45,6 +47,12 @@ export function decideRoute(input: { host: string; pathname: string; rootDomain:
 
   // /sites/* only exists as an internal rewrite target: never reachable as a literal incoming path, on any host.
   if (pathname === "/sites" || pathname.startsWith("/sites/")) return { type: "not-found" };
+
+  if (mode === "vendor") {
+    if (host !== rootDomain) return { type: "not-found" };
+    if (SITE_ROOT_FILES.some((path) => pathname === path)) return { type: "pass" };
+    return pathname === "/" ? { type: "rewrite-vendor-root" } : { type: "not-found" };
+  }
 
   if (mode === "installation") {
     if (host === panelHost) {
@@ -74,6 +82,7 @@ export function decideRoute(input: { host: string; pathname: string; rootDomain:
 // (the root domain) never carries a session: login lives on app.<root>. Not touching it there keeps a session
 // cookie from ever being re-issued on the public site, even if a future change added a `Domain` attribute.
 export function shouldRefreshSession(input: { host: string; rootDomain: string; mode: DeploymentMode }): boolean {
+  if (input.mode === "vendor") return false;
   return !(input.mode === "installation" && input.host === input.rootDomain);
 }
 
@@ -84,6 +93,7 @@ export function siteHostFor(input: {
   subdomain: string;
   customDomain: string | null;
 }): string {
+  if (input.mode === "vendor") return input.rootDomain;
   if (input.mode === "installation") return input.rootDomain;
   return input.customDomain?.trim() || `${input.subdomain}.${input.rootDomain}`;
 }
