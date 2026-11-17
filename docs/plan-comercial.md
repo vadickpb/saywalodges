@@ -1,4 +1,4 @@
-# Plan comercial — vender Saywa Direct a anfitriones de Airbnb
+# Plan comercial — vender HostStay a anfitriones de Airbnb
 
 Fecha: 2026-11-14. Complementa a [`roadmap.md`](roadmap.md) (qué es cada ticket) y [`cola.md`](cola.md) (orden y
 quién). Modelo de negocio: instalación por cliente, [ADR 0010](adr/0010-installation-per-client.md).
@@ -15,7 +15,7 @@ Tres nombres que no se deben mezclar:
 | Nombre | Qué es | Dónde vive |
 |---|---|---|
 | **Saywa Lodges** | El alojamiento del dueño. Instalación nº 1 y caso de éxito | `saywalodges.com` |
-| **Saywa Direct** (nombre por confirmar, D7) | El producto | Este repositorio |
+| **HostStay** (nombre decidido, D7) | El producto | Este repositorio |
 | **Web de ventas + demo** | Donde se promociona y se prueba el producto | Dominio propio del producto (D8) |
 
 ## 2. Estado actual
