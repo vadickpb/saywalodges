@@ -79,7 +79,7 @@ Plan y motivos del orden: [`plan-comercial.md`](plan-comercial.md). El lote 3 qu
 | Lote | Objetivo | Tickets | Quién |
 |---|---|---|---|
 | 6 | Vendible tal cual | SD-1101, SD-1102, SD-1103, SD-903, SD-1107 | Claude (1101, 1103, 903), Codex (1102, 1107) |
-| 7 | Demo y web de ventas | SD-1007, SD-1104 (hecho), SD-1110 (hecho en este PR), SD-1111, SD-1112 | Codex; Claude revisa 1110 (`proxy.ts`) |
+| 7 | Demo y web de ventas | SD-1007, SD-1104 (hecho), SD-1110 (hecho), SD-1113 (hecho en este PR), SD-1111, SD-1112 | Codex; Claude revisa cambios de riesgo alto |
 | 8 | WhatsApp automático | SD-1009, SD-1010, SD-1011, SD-1012 | Claude (1010, 1012), Codex (1009, 1011) |
 | 9 | Entrega al cliente | SD-1105, SD-1106, SD-1108, SD-605, SD-606 | Claude (1108, 605), Codex (1105, 1106, 606) |
 | 10 | CRM y portafolio | SD-601, SD-602, SD-904, SD-703 | Claude (601, 602), Codex (904, 703) |

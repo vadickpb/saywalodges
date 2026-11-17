@@ -1,0 +1,39 @@
+.hoststay {
+  --hs-ink: #0B1F33;
+  --hs-blue: #12385F;
+  --hs-teal: #14B8A6;
+  --hs-coral: #FF6B4A;
+  --hs-coral-hover: #F45F40;
+  --hs-bg: #F6F9FC;
+  --hs-white: #FFFFFF;
+  --hs-muted: #5B6B7D;
+  background: var(--hs-bg);
+  color: var(--hs-ink);
+  font-family: var(--font-hoststay-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+.hoststay h1, .hoststay h2, .hoststay h3, .hoststay .hoststay-wordmark {
+  font-family: var(--font-hoststay-heading), ui-sans-serif, system-ui, sans-serif;
+}
+
+.hoststay :where(a, button, summary):focus-visible {
+  outline: 3px solid var(--hs-teal);
+  outline-offset: 4px;
+}
+
+.hoststay-primary-action { background: var(--hs-coral); color: var(--hs-ink); }
+.hoststay-primary-action:hover { background: var(--hs-coral-hover); }
+.hoststay-dashboard-glow { animation: hoststay-pulse 4s ease-in-out infinite; }
+
+@keyframes hoststay-pulse {
+  0%, 100% { opacity: .55; transform: scale(.96); }
+  50% { opacity: .9; transform: scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hoststay *, .hoststay *::before, .hoststay *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
