@@ -1,0 +1,17 @@
+import { isVendorImageRequest } from "../vendor-image-request";
+
+const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#0C1A22"/>
+  <path d="M14 31 32 16l18 15v18a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3V31Z" fill="none" stroke="#2DD4BF" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <path d="M25 52V37h14v15M41 23v-7h6v12" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+</svg>`;
+
+export function GET(request: Request) {
+  if (!isVendorImageRequest(request)) return new Response("Not found", { status: 404 });
+  return new Response(icon, {
+    headers: {
+      "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+      "Content-Type": "image/svg+xml; charset=utf-8",
+    },
+  });
+}

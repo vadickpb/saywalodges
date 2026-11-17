@@ -1,33 +1,21 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
-import { Geist } from "next/font/google";
-import { PRODUCT_NAME, SITE_URL } from "@/config/site";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { SITE_URL } from "@/config/site";
 import { env } from "@/lib/env";
 import "@/app/globals.css";
+import "./vendor.css";
 
-const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const description = "Web propia, reservas directas y calendario sincronizado con Airbnb para anfitriones.";
+const bodyFont = Inter({ variable: "--font-hoststay-body", subsets: ["latin"], display: "swap" });
+const headingFont = Plus_Jakarta_Sans({ variable: "--font-hoststay-heading", subsets: ["latin"], display: "swap" });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: `${PRODUCT_NAME} · Solución integral para anfitriones`,
-  description,
-  alternates: { canonical: "/" },
-  openGraph: {
-    type: "website",
-    locale: "es_PE",
-    url: "/",
-    siteName: PRODUCT_NAME,
-    title: `${PRODUCT_NAME} · Solución integral para anfitriones`,
-    description,
-  },
-};
+export const metadata: Metadata = { metadataBase: new URL(SITE_URL) };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#17352b",
+  themeColor: "#0C1A22",
 };
 
 export default async function VendorLayout({ children }: { children: React.ReactNode }) {
@@ -35,8 +23,8 @@ export default async function VendorLayout({ children }: { children: React.React
   await connection();
 
   return (
-    <html lang="es" className={`${geist.variable} scroll-smooth antialiased`}>
-      <body className="min-h-screen bg-cream text-charcoal">{children}</body>
+    <html lang="es" className={`${bodyFont.variable} ${headingFont.variable} scroll-smooth antialiased`}>
+      <body className="hoststay min-h-screen">{children}</body>
     </html>
   );
 }

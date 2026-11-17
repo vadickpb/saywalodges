@@ -2057,6 +2057,15 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 `S` · Depende: SD-1110 · Review: `R`
 - **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.
 
+### [x] SD-1113 · feat(marketing): HostStay brand identity and vendor site redesign
+`M` · Depende: SD-1110, D4, D7, D8 · Review: `R`
+- **Alcance**: identidad visual B2B propia para HostStay, landing móvil con propuesta, funciones, comparación,
+  puesta en marcha, demo opcional, preguntas frecuentes y CTA por canales configurados; sin precios, cifras,
+  testimonios ni material de clientes. SEO de marca con metadata, Open Graph, favicon y datos estructurados.
+- **Verificación**: lint sin errores (3 avisos preexistentes), `typecheck`, 136 archivos / 1746 pruebas Vitest
+  (incluido `lib/white-label.test.ts`), build vendor y Lighthouse móvil 100/100/100 en rendimiento,
+  accesibilidad y SEO. OG/icon responden 200 solo en el host vendor; otros hosts reciben 404.
+
 ### [ ] SD-904 · chore(workflow): GitHub issues and project board
 `S` · Depende: — · Review: `R`
 - **Alcance**: un issue por ticket abierto del roadmap con hito y etiquetas, tablero público, plantillas de issue y

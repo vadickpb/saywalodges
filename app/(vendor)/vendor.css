@@ -1,0 +1,34 @@
+.hoststay {
+  --hs-ink: #0C1A22;
+  --hs-blue: #163640;
+  --hs-teal: #2DD4BF;
+  --hs-teal-hover: #5EEAD4;
+  --hs-bg: #F6F9FC;
+  --hs-white: #FFFFFF;
+  --hs-muted: #5B6B7D;
+  background: var(--hs-bg);
+  color: var(--hs-ink);
+  font-family: var(--font-hoststay-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+.hoststay h1, .hoststay h2, .hoststay h3, .hoststay .hoststay-wordmark {
+  font-family: var(--font-hoststay-heading), ui-sans-serif, system-ui, sans-serif;
+}
+
+.hoststay :where(a, button, summary):focus-visible {
+  outline: 3px solid var(--hs-teal);
+  outline-offset: 4px;
+}
+
+.hoststay-primary-action { background: var(--hs-teal); color: var(--hs-ink); }
+.hoststay-primary-action:hover { background: var(--hs-teal-hover); }
+.hoststay-title-accent { color: var(--hs-teal); display: inline-block; position: relative; padding-bottom: .18em; }
+.hoststay-title-accent::after { content: ""; position: absolute; inset: auto 0 0; height: .16em; border-top: .06em solid currentColor; border-radius: 50%; transform: rotate(-2deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hoststay *, .hoststay *::before, .hoststay *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
