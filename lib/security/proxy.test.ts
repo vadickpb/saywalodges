@@ -168,3 +168,42 @@ describe("proxy CSP · installation mode", () => {
     expect(getClaims).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("proxy CSP · vendor mode", () => {
+  beforeEach(() => {
+    env.DEPLOYMENT_MODE = "vendor";
+  });
+  afterEach(() => {
+    env.DEPLOYMENT_MODE = "platform";
+  });
+
+  it("rewrites only the root homepage to the internal vendor route without refreshing a session", async () => {
+    const res = await get("localhost:3000", "/");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-middleware-rewrite")).toContain("/vendor");
+    expect(res.headers.get("x-middleware-request-x-nonce")).toBe(nonceOf(res.headers.get("content-security-policy") ?? ""));
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["app.localhost:3000", "/"],
+    ["localhost:3000", "/app"],
+    ["localhost:3000", "/login"],
+    ["localhost:3000", "/api/health"],
+    ["localhost:3000", "/vendor"],
+    ["other.test", "/"],
+  ])("rejects host %s path %s", async (host, path) => {
+    const res = await get(host, path);
+    expect(res.status).toBe(404);
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it("passes robots and sitemap without refreshing a session", async () => {
+    for (const path of ["/robots.txt", "/sitemap.xml"]) {
+      const res = await get("localhost:3000", path);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-middleware-request-x-nonce")).toBeTruthy();
+    }
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+});

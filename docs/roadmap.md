@@ -2043,7 +2043,7 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Alcance**: exportación completa de la instalación (solo dueño) en un archivo con CSV por tabla y fotos; prefijos de
   fórmula neutralizados como en SD-601.
 
-### [ ] SD-1110 · feat(marketing): vendor site base
+### [x] SD-1110 · feat(marketing): vendor site base
 `M` · Depende: D7, D8 · Review: `R+S` (toca `proxy.ts`)
 - **Alcance**: modo `DEPLOYMENT_MODE=vendor` con rutas propias (404 en instalaciones), landing reutilizando el PR #45,
   botón «Probar demo» y CTA a WhatsApp. Lighthouse móvil ≥ 90.

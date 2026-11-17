@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { getSiteByHost, getSiteUrl, siteIdentifierFromHost } from "@/lib/dal/public/site";
 import { getProperty } from "@/lib/dal/public/property";
 import { getShowcaseUnits } from "@/lib/dal/public/showcase-units";
+import { SITE_URL } from "@/config/site";
+import { env } from "@/lib/env";
 
 // Reads the request's host (not a param — this file is a root-level
 // special route, outside app/sites/[host]) so it's per-tenant, per ADR-0001.
@@ -10,6 +12,10 @@ import { getShowcaseUnits } from "@/lib/dal/public/showcase-units";
 // docs: "sitemap.js is cached by default unless it uses a Request-time
 // API") — intentional, this must vary by host.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (env.DEPLOYMENT_MODE === "vendor") {
+    return [{ url: SITE_URL, changeFrequency: "monthly", priority: 1 }];
+  }
+
   const host = (await headers()).get("host") ?? "";
   const site = await getSiteByHost(siteIdentifierFromHost(host));
   if (!site) return [];

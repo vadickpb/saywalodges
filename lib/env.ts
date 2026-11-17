@@ -20,8 +20,9 @@ const envSchema = z.object({
   ROOT_DOMAIN: z.string().min(1).default("localhost:3000"),
   // Server-only (SD-1001, ADR 0010). "platform" serves tenant sites under
   // <sub>.<ROOT_DOMAIN>. "installation" is one installation per client: ROOT_DOMAIN is the client's public
-  // site and app.<ROOT_DOMAIN> serves the panel, auth and every /api/* route.
-  DEPLOYMENT_MODE: z.enum(["platform", "installation"]).default("platform"),
+  // site and app.<ROOT_DOMAIN> serves the panel, auth and every /api/* route. "vendor" serves only the
+  // product sales site on ROOT_DOMAIN; it has no panel, auth or API surface.
+  DEPLOYMENT_MODE: z.enum(["platform", "installation", "vendor"]).default("platform"),
   // Public URL of the panel (password-reset redirects, dashboard metadata). Required in production and whenever
   // DEPLOYMENT_MODE=installation (checked below). Development platform mode uses http://localhost:3000.
   NEXT_PUBLIC_SITE_URL: z.preprocess(
@@ -31,6 +32,22 @@ const envSchema = z.object({
   NEXT_PUBLIC_PRODUCT_NAME: z.preprocess(
     (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
     z.string().trim().min(1).max(80).optional(),
+  ),
+  // Server-only (SD-1110). Sales-site CTAs are absent when these are unset.
+  VENDOR_WHATSAPP_NUMBER: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().trim().regex(/^\d{8,15}$/, "VENDOR_WHATSAPP_NUMBER must contain 8 to 15 digits, including country code").optional(),
+  ),
+  VENDOR_CONTACT_EMAIL: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().trim().email("VENDOR_CONTACT_EMAIL must be a valid email address").optional(),
+  ),
+  VENDOR_DEMO_URL: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string()
+      .url("VENDOR_DEMO_URL must be a valid URL")
+      .refine((value) => /^https?:\/\//i.test(value), "VENDOR_DEMO_URL must use http or https")
+      .optional(),
   ),
   // Server-only (SD-408). Bearer secret for /api/cron/*. Optional so dev/build work
   // without it: when absent or shorter than 32 chars the cron route refuses every call.
@@ -85,6 +102,19 @@ function loadEnv() {
     if (!url || url.origin !== `https://${expectedHost}` || url.username || url.password) {
       throw new Error(
         `Invalid environment configuration:\n  - NEXT_PUBLIC_SITE_URL: in installation mode it must be the panel URL (https://${expectedHost}).\n\nCheck .env.local against .env.example.`
+      );
+    }
+  }
+
+  // Vendor mode: public metadata and the sitemap use this origin. Pin it to the only accepted host so a typo cannot
+  // publish canonical URLs for another domain. Local development remains free to use http://localhost.
+  if (parsed.data.DEPLOYMENT_MODE === "vendor" && process.env.NODE_ENV === "production") {
+    const siteUrl = parsed.data.NEXT_PUBLIC_SITE_URL;
+    const url = siteUrl ? new URL(siteUrl) : null;
+    const hasOnlyOrigin = url && url.pathname === "/" && !url.search && !url.hash && !url.username && !url.password;
+    if (!url || url.origin !== `https://${parsed.data.ROOT_DOMAIN}` || !hasOnlyOrigin) {
+      throw new Error(
+        `Invalid environment configuration:\n  - NEXT_PUBLIC_SITE_URL: in vendor production it must be the public sales origin (https://${parsed.data.ROOT_DOMAIN}).\n\nCheck .env.local against .env.example.`,
       );
     }
   }

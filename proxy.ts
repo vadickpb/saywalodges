@@ -127,6 +127,12 @@ async function route(request: NextRequest, nonce: string, csp: string) {
     return applySessionRefresh(NextResponse.rewrite(new URL("/app", request.url), forwardInit(request, nonce, csp)), refresh);
   }
 
+  // The public URL remains "/". The internal segment avoids conflicting with app/(platform)/page.tsx: Next route
+  // groups cannot define two pages that resolve to the same URL, even when deployment modes are mutually exclusive.
+  if (decision.type === "rewrite-vendor-root") {
+    return NextResponse.rewrite(new URL("/vendor", request.url), forwardInit(request, nonce, csp));
+  }
+
   // Native routes (landing, dashboard, auth, api, special files). forwardInit forwards the request headers
   // refreshSession already mutated via request.cookies.set — NextResponse.next() with no argument would silently
   // discard that mutation.
