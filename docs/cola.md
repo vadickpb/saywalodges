@@ -83,6 +83,7 @@ Plan y motivos del orden: [`plan-comercial.md`](plan-comercial.md). El lote 3 qu
 | 8 | WhatsApp automático | SD-1009, SD-1010, SD-1011, SD-1012 | Claude (1010, 1012), Codex (1009, 1011) |
 | 9 | Entrega al cliente | SD-1105, SD-1106, SD-1108, SD-605, SD-606 | Claude (1108, 605), Codex (1105, 1106, 606) |
 | 10 | CRM y portafolio | SD-601, SD-602, SD-904, SD-703 | Claude (601, 602), Codex (904, 703) |
+| 11 | Marketing con datos propios | SD-1201, SD-1202, SD-1203, SD-1204, SD-1205, SD-1206 | Claude (1201, 1203, 1204, 1206), Codex (1202, 1205, pantallas) |
 
 El lote 4 (Mercado Pago) va entre el 9 y el 10.
 

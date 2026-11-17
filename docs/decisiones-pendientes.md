@@ -17,6 +17,7 @@ otro. El dueño responde cuando quiera (basta escribir «D3: sí»). Al decidir,
 | D8 | Dónde vive la web de ventas y con qué dominio | Mismo repositorio en modo `vendor`, proyecto Vercel y dominio propios | SD-1110 |
 | D9 | Licencia y visibilidad del repositorio | **Asumida** la recomendación en SD-1107 (`LICENSE` propietaria, código visible). Cambia el nombre del titular en `LICENSE` si no es el correcto | — |
 | D10 | Paquetes de venta y módulos de cada uno | Base (web, calendario, reservas) y Pro (+ finanzas, WhatsApp, pago en línea) | SD-1111 |
+| D11 | Herramienta de publicación en redes y cuentas (Facebook, Instagram profesional, TikTok empresa, Google Business Profile) | Metricool (o Buffer) para programar; el sistema solo genera y mide, no publica | SD-1203 |
 
 ## Decididas
 
