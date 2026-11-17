@@ -2062,6 +2062,47 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Alcance**: un issue por ticket abierto del roadmap con hito y etiquetas, tablero público, plantillas de issue y
   regla «el PR cierra su issue».
 
+### [ ] SD-1201 · feat(marketing): tracked links and booking attribution
+`M` · Depende: — · Review: `R+S`
+- **Alcance**: enlaces con parámetros `utm_*` y código de campaña que el panel genera por publicación; el sitio público
+  guarda el origen (red, campaña, publicación) en la cotización y la reserva, sin cookies de seguimiento de terceros.
+  Reporte en finanzas/reportes: visitas, cotizaciones, reservas e ingresos por red y por publicación.
+- **Criterios**
+  - [ ] Una reserva creada desde un enlace con `utm_source` queda atribuida a ese origen (el servidor la lee; nunca se acepta del cliente como monto).
+  - [ ] Sin parámetros, la reserva queda como «directo» y nada falla.
+
+### [ ] SD-1202 · feat(site): link-in-bio page
+`S` · Depende: SD-1201 · Review: `R`
+- **Alcance**: página pública liviana (`/enlaces`) para Instagram y TikTok con casas, fechas especiales, WhatsApp y
+  cotizador, con enlaces ya etiquetados. Módulo apagable desde `MODULES_DISABLED`.
+
+### [ ] SD-1203 · feat(marketing): AI content studio (calendar of posts)
+`L` · Depende: SD-1201 · Review: `R+S` · Quién: Claude (prompts, límites) + Codex (pantalla)
+- **Alcance**: el panel arma el calendario mensual de contenido con datos reales (fotos, casas, fechas libres, fechas
+  especiales, reseñas): texto es/en, hashtags, guion de Reel de 15–30 s y fotos sugeridas. El dueño aprueba y exporta
+  (CSV compatible con Metricool/Buffer y texto copiable). **No publica** en redes: la publicación la hace una
+  herramienta externa. Tope de generaciones por organización y sin enviar datos personales de huéspedes al modelo.
+- **Criterios**
+  - [ ] Ningún huésped, email ni teléfono entra al prompt (test).
+  - [ ] Una generación fallida muestra error genérico y no consume cuota.
+
+### [ ] SD-1204 · feat(marketing): reviews and returning-guest campaigns
+`M` · Depende: SD-601, SD-1201 · Review: `R+S`
+- **Alcance**: solicitud de reseña en Google tras el check-out, cupones por campaña o referido (medibles en finanzas) y
+  campañas a huéspedes anteriores solo con consentimiento registrado.
+- **Criterios**
+  - [ ] Sin consentimiento, el huésped no recibe ninguna campaña (test).
+  - [ ] Un cupón no se canjea dos veces ni fuera de su vigencia (pgTAP).
+
+### [ ] SD-1205 · feat(finance): «Airbnb vs. directo» dashboard
+`M` · Depende: SD-1201, SD-419 · Review: `R`
+- **Alcance**: tablero con ingresos, comisión pagada a plataformas y ahorro por reserva directa, por mes y por casa.
+
+### [ ] SD-1206 · feat(pricing): price suggestions
+`M` · Depende: SD-421 · Review: `R+S`
+- **Alcance**: avisos de fechas con baja ocupación o alta demanda y una propuesta de ajuste que el dueño aprueba;
+  nunca cambia precios solo.
+
 ## Propuesta de ticket fuera del alcance actual
 
 - **Mantenimiento de dependencias y revisión de avisos de seguridad** (convertido en SD-705): `npm audit` durante SD-206
