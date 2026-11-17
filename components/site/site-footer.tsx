@@ -1,4 +1,6 @@
 import type { Dict } from "@/dictionaries/en";
+import { PRODUCT_NAME } from "@/config/site";
+import { format } from "@/lib/domain/format";
 import { Container } from "./ui";
 
 type Props = {
@@ -57,7 +59,7 @@ export function SiteFooter({ dict, name, region, links, email, whatsappNumber, w
           <p>
             © {year} {name}. {dict.rights}
           </p>
-          <p>{dict.poweredBy}</p>
+          <p>{format(dict.poweredBy, { product: PRODUCT_NAME })}</p>
         </div>
       </Container>
     </footer>

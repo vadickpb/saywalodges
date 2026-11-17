@@ -1,4 +1,5 @@
 import { requireActiveOrg } from "@/lib/dal/organizations";
+import { PRODUCT_NAME } from "@/config/site";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 // Dashboard landing (app.<ROOT_DOMAIN>/, which proxy.ts rewrites "/" to).
@@ -13,7 +14,7 @@ export default async function AppPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{activeOrg ? `Bienvenido a ${activeOrg.name}` : "Bienvenido a Saywa Direct"}</CardTitle>
+        <CardTitle>{activeOrg ? `Bienvenido a ${activeOrg.name}` : `Bienvenido a ${PRODUCT_NAME}`}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">

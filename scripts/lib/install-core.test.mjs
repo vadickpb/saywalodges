@@ -76,6 +76,7 @@ describe("buildVercelEnv", () => {
     expect(env.DEPLOYMENT_MODE.value).toBe("installation");
     expect(env.ROOT_DOMAIN.value).toBe("casaandina.pe");
     expect(env.NEXT_PUBLIC_SITE_URL.value).toBe("https://app.casaandina.pe");
+    expect(env.NEXT_PUBLIC_PRODUCT_NAME.value).toBe("Casa Andina");
   });
   it("brands the emails and marks secrets as sensitive and production-only", () => {
     expect(env.EMAIL_BRAND_NAME.value).toBe("Casa Andina");

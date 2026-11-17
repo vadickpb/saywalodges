@@ -19,7 +19,7 @@ export function renderEmail(message: EmailMessage, brand: EmailBrand = DEFAULT_B
     ...(content.cta ? [`${content.cta.label}: ${content.cta.url}`, ""] : []),
     "--",
     format(emailMessages[message.lang].footer, { brand: brand.name }),
-    ...(brand.poweredBy ? [emailMessages[message.lang].poweredBy] : []),
+    ...(brand.poweredBy ? [format(emailMessages[message.lang].poweredBy, { product: DEFAULT_BRAND.name })] : []),
   ].join("\n");
   // Subjects are headers: no control characters, bounded length.
   return { subject: cleanText(content.subject, 200), html, text };

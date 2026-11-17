@@ -85,6 +85,7 @@ export function buildVercelEnv(cfg, secrets) {
     ["DEPLOYMENT_MODE", "installation", false],
     ["ROOT_DOMAIN", cfg.rootDomain, false],
     ["NEXT_PUBLIC_SITE_URL", appOrigin(cfg), false],
+    ["NEXT_PUBLIC_PRODUCT_NAME", cfg.name, false],
     ["NEXT_PUBLIC_SUPABASE_URL", secrets.supabaseUrl, false],
     ["NEXT_PUBLIC_SUPABASE_ANON_KEY", secrets.anonKey, false],
     ["SUPABASE_URL", secrets.supabaseUrl, false],

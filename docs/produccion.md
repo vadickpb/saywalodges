@@ -26,7 +26,8 @@ En Vercel → proyecto → Settings → Environment Variables, crear cada variab
 
 | Variable | ¿Secreto? | ¿Obligatoria en producción? / valor o comprobación |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | No, pública | Sí en instalación: `https://app.<dominio>`, sin barra final. Este valor prevalece sobre el ejemplo histórico del sitio público. |
+| `NEXT_PUBLIC_SITE_URL` | No, pública | Sí: `https://app.<dominio>` en una instalación, sin barra final. La aplicación se niega a arrancar en producción si falta. |
+| `NEXT_PUBLIC_PRODUCT_NAME` | No, pública | Sí: nombre del alojamiento o producto que se muestra en el panel, correos y archivos generados. El instalador usa el nombre de la instalación. |
 | `SUPABASE_URL` | No; servidor | Sí. URL del proyecto de esta instalación. |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Sí** | Sí. Clave privilegiada del mismo proyecto, nunca en el navegador. |
 | `NEXT_PUBLIC_SUPABASE_URL` | No, pública | Sí. El mismo proyecto que `SUPABASE_URL`. |
@@ -37,8 +38,8 @@ En Vercel → proyecto → Settings → Environment Variables, crear cada variab
 | `EMAIL_FROM` | No | Sí para correo: remitente válido de dominio verificado en Resend. |
 | `EMAIL_REPLY_TO` | No | Opcional; si se define debe ser remitente válido. Probar una respuesta al correo. |
 | `EMAIL_MODE` | No | Opcional: dejar sin definir o `resend`. `simulate` deshabilita los envíos en producción. |
-| `EMAIL_BRAND_NAME` | No | Opcional; recomendado nombre del alojamiento. Sin valor: `Saywa Direct`. |
-| `EMAIL_POWERED_BY` | No | Opcional: `true` añade el pie si la marca difiere de Saywa Direct. |
+| `EMAIL_BRAND_NAME` | No | Opcional; recomendado nombre del alojamiento. Sin valor: `NEXT_PUBLIC_PRODUCT_NAME`. |
+| `EMAIL_POWERED_BY` | No | Opcional: `true` añade el pie si la marca del correo difiere de `NEXT_PUBLIC_PRODUCT_NAME`. |
 | `EMAIL_ALLOWED_RECIPIENTS` | No; lista privada | Solo pruebas no productivas: direcciones o `@dominio` separados por coma. Vacía impide entregas reales en preview; producción no aplica esa lista. |
 | `EMAIL_TEST_SECRET` | **Sí** | Solo pruebas no productivas: mínimo 16 caracteres para `POST /api/email/test`; no habilita esa ruta en producción. |
 | `EMAIL_ARRIVAL_DAYS` | No | Opcional: entero 0–30, por defecto 3 días, zona `America/Lima`. |

@@ -1,25 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { buildIcs, exportPayloadSchema } from "./export";
+import { buildIcs, exportPayloadSchema, type IcsInput } from "./export";
 
 const now = new Date("2027-03-05T15:04:05.678Z");
 const ev = (id: string, starts: string, ends: string) => ({ id, starts, ends });
 const lines = (ics: string) => ics.split("\r\n");
+const build = (input: Omit<IcsInput, "productName" | "uidDomain">) =>
+  buildIcs({ ...input, productName: "Booking Portal", uidDomain: "app.example.com" });
 
 describe("buildIcs", () => {
   it("writes a valid VCALENDAR with CRLF line endings and a final CRLF", () => {
-    const ics = buildIcs({ name: "Casa Saywa", events: [ev("b1", "2027-03-10", "2027-03-13")], now });
+    const ics = build({ name: "Casa Saywa", events: [ev("b1", "2027-03-10", "2027-03-13")], now });
     expect(ics.startsWith("BEGIN:VCALENDAR\r\nVERSION:2.0\r\n")).toBe(true);
     expect(ics.endsWith("END:VEVENT\r\nEND:VCALENDAR\r\n")).toBe(true);
     expect(ics).not.toMatch(/[^\r]\n/); // no bare LF
     expect(lines(ics)).toEqual([
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//Saywa Direct//Calendar//ES",
+      "PRODID:-//Booking Portal//Calendar//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       "X-WR-CALNAME:Casa Saywa",
       "BEGIN:VEVENT",
-      "UID:b1@saywa.direct",
+      "UID:b1@app.example.com",
       "DTSTAMP:20270305T150405Z",
       "DTSTART;VALUE=DATE:20270310",
       "DTEND;VALUE=DATE:20270313",
@@ -32,31 +34,31 @@ describe("buildIcs", () => {
   });
 
   it("is a valid empty calendar when nothing is occupied", () => {
-    const ics = buildIcs({ name: "x", events: [], now });
+    const ics = build({ name: "x", events: [], now });
     expect(ics).not.toContain("BEGIN:VEVENT");
     expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
   });
 
   it("one VEVENT per block, in the order given, each with its own UID", () => {
-    const ics = buildIcs({ name: "x", events: [ev("a", "2027-01-01", "2027-01-02"), ev("b", "2027-02-01", "2027-02-03")], now });
+    const ics = build({ name: "x", events: [ev("a", "2027-01-01", "2027-01-02"), ev("b", "2027-02-01", "2027-02-03")], now });
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
     expect(ics.indexOf("UID:a@")).toBeLessThan(ics.indexOf("UID:b@"));
   });
 
   it("escapes text values and drops control characters", () => {
-    const ics = buildIcs({ name: "A, B; C\\D\nE\u0007", events: [], now });
+    const ics = build({ name: "A, B; C\\D\nE\u0007", events: [], now });
     expect(ics).toContain("X-WR-CALNAME:A\\, B\\; C\\\\D\\nE\r\n");
   });
 
   it("carries nothing but dates: every event is called Reservado", () => {
-    const ics = buildIcs({ name: "x", events: [ev("a", "2027-01-01", "2027-01-02")], now });
+    const ics = build({ name: "x", events: [ev("a", "2027-01-01", "2027-01-02")], now });
     expect(ics).toContain("SUMMARY:Reservado");
     expect(ics).not.toMatch(/DESCRIPTION|ATTENDEE|ORGANIZER|LOCATION|CONTACT/);
   });
 
   it("folds long lines at 75 octets and never splits a multi-byte character", () => {
     const name = "Casa de campo ñandú ".repeat(12) + "🏡".repeat(30);
-    const ics = buildIcs({ name, events: [], now });
+    const ics = build({ name, events: [], now });
     const encoder = new TextEncoder();
     for (const line of lines(ics)) expect(encoder.encode(line).length).toBeLessThanOrEqual(75);
     const rows = lines(ics);
@@ -68,8 +70,8 @@ describe("buildIcs", () => {
   });
 
   it("refuses a malformed date instead of writing a broken file", () => {
-    expect(() => buildIcs({ name: "x", events: [ev("a", "2027-1-1", "2027-01-02")], now })).toThrow("invalid date");
-    expect(() => buildIcs({ name: "x", events: [ev("a", "2027-01-01", "nope")], now })).toThrow("invalid date");
+    expect(() => build({ name: "x", events: [ev("a", "2027-1-1", "2027-01-02")], now })).toThrow("invalid date");
+    expect(() => build({ name: "x", events: [ev("a", "2027-01-01", "nope")], now })).toThrow("invalid date");
   });
 });
 

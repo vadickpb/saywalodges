@@ -52,7 +52,7 @@ export async function GET(request: Request) {
   return new NextResponse(new Uint8Array(file), {
     headers: {
       "Content-Type": XLSX,
-      "Content-Disposition": `attachment; filename="saywa-finanzas-${parsed.slug}.xlsx"`,
+      "Content-Disposition": `attachment; filename="finanzas-${parsed.slug}.xlsx"`,
       "Cache-Control": "no-store",
     },
   });

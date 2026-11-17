@@ -68,7 +68,7 @@
    mode is dashboard-only; the public site never uses it. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Saywa Direct dashboard palette (SD-107) — indigo/accent violet. Change
+/* Dashboard palette (SD-107) — indigo/accent violet. Change
    --primary/--accent here (both modes) to recolor the whole dashboard. */
 .dashboard {
   --background: #F8FAFC;

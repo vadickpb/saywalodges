@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import { Geist } from "next/font/google";
-import { SITE_URL } from "@/config/site";
+import { PRODUCT_NAME, SITE_URL } from "@/config/site";
 import "@/app/globals.css";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -12,6 +12,7 @@ const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 // localized yet (SD-106+), so a fixed English <html lang>.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  title: { default: PRODUCT_NAME, template: `%s · ${PRODUCT_NAME}` },
 };
 
 export const viewport: Viewport = {

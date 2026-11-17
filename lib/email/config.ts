@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRODUCT_NAME } from "@/config/site";
 
 // Email configuration (SD-306). Deliberately NOT part of lib/env.ts: that
 // schema throws at import time, and a missing Resend key must never break
@@ -91,7 +92,7 @@ export function parseEmailConfig(source: EnvSource = process.env): EmailConfig {
 // Who the emails speak as (SD-1005). One brand per deployment: in an installation (ADR 0010) it is the lodging's
 // name, set by the install script; it defaults to the product name, so nothing changes until it is configured.
 export type EmailBrand = { name: string; poweredBy: boolean };
-export const DEFAULT_BRAND_NAME = "Saywa Direct";
+export const DEFAULT_BRAND_NAME = PRODUCT_NAME;
 export const DEFAULT_BRAND: EmailBrand = { name: DEFAULT_BRAND_NAME, poweredBy: false };
 const BRAND_CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 

@@ -14,7 +14,7 @@ export const exportPayloadSchema = z.object({
 });
 export type ExportPayload = z.infer<typeof exportPayloadSchema>;
 
-export type IcsInput = { name: string; events: ExportPayload["blocks"]; now: Date };
+export type IcsInput = { name: string; events: ExportPayload["blocks"]; now: Date; productName: string; uidDomain: string };
 
 const CRLF = "\r\n";
 const MAX_OCTETS = 75;
@@ -62,11 +62,12 @@ function stamp(now: Date): string {
   return now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 }
 
-export function buildIcs({ name, events, now }: IcsInput): string {
+export function buildIcs({ name, events, now, productName, uidDomain }: IcsInput): string {
+  const productId = escapeText(productName).replace(/\//g, "-");
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Saywa Direct//Calendar//ES",
+    `PRODID:-//${productId}//Calendar//EN`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escapeText(name)}`,
@@ -74,7 +75,7 @@ export function buildIcs({ name, events, now }: IcsInput): string {
   for (const event of events) {
     lines.push(
       "BEGIN:VEVENT",
-      `UID:${event.id}@saywa.direct`,
+      `UID:${event.id}@${uidDomain}`,
       `DTSTAMP:${stamp(now)}`,
       `DTSTART;VALUE=DATE:${dateValue(event.starts)}`,
       `DTEND;VALUE=DATE:${dateValue(event.ends)}`,

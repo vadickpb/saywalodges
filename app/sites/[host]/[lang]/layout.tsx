@@ -58,8 +58,8 @@ export async function generateMetadata({
   const property = await resolveSite(host);
   if (!property) return {};
 
-  // [host] is the stripped siteIdentifier (e.g. "saywa-lodges", not
-  // "saywa-lodges.localhost:3000") — only right for the DB lookup above.
+  // [host] is the stripped siteIdentifier (e.g. "my-lodge", not
+  // "my-lodge.localhost:3000") — only right for the DB lookup above.
   // Metadata URLs need the real external host, from the request itself.
   const realHost = (await headers()).get("host") ?? host;
   const siteUrl = getSiteUrl(realHost);

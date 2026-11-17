@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { EmailConfig } from "./config";
+import { DEFAULT_BRAND_NAME, type EmailConfig } from "./config";
 import { sendEmail, type EmailDeps, type SendEmailInput } from "./send";
 
 const KEY = "re_test_key_not_real";
@@ -40,7 +40,7 @@ describe("sendEmail", () => {
     expect(headers.Authorization).toBe(`Bearer ${KEY}`);
     expect(headers["Idempotency-Key"]).toBe("booking:1:confirmed");
     const body = JSON.parse(init.body as string);
-    expect(body).toMatchObject({ from: resend.mode === "resend" && resend.from, to: [GUEST], subject: "Correo de prueba · Saywa Direct" });
+    expect(body).toMatchObject({ from: resend.mode === "resend" && resend.from, to: [GUEST], subject: `Correo de prueba · ${DEFAULT_BRAND_NAME}` });
     expect(body.html).toContain("Hola Guest Personname,");
     expect(body.text).toContain("Hola Guest Personname,");
   });
@@ -50,10 +50,10 @@ describe("sendEmail", () => {
     await sendEmail(input, { ...deps, brand: { name: "Casa Marian", poweredBy: false } });
     const first = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
     expect(first.subject).toBe("Correo de prueba · Casa Marian");
-    expect(first.html).not.toContain("Saywa Direct");
+    expect(first.html).not.toContain(DEFAULT_BRAND_NAME);
     await sendEmail(input, deps);
     const second = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string);
-    expect(second.subject).toBe("Correo de prueba · Saywa Direct");
+    expect(second.subject).toBe(`Correo de prueba · ${DEFAULT_BRAND_NAME}`);
   });
 
   it("simulates without any network call and returns a recognisable id", async () => {

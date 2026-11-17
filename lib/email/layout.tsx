@@ -1,5 +1,5 @@
 import type { EmailContent } from "./content";
-import type { EmailBrand } from "./config";
+import { DEFAULT_BRAND_NAME, type EmailBrand } from "./config";
 import { format } from "@/lib/domain/format";
 import { emailMessages, type EmailLang } from "./messages";
 
@@ -49,7 +49,7 @@ export function EmailLayout({ lang, content, brand }: { lang: EmailLang; content
                     <tr>
                       <td style={{ padding: "16px 32px 32px", color: "#8b8680", fontSize: 12, lineHeight: "18px" }}>
                         {format(m.footer, { brand: brand.name })}
-                        {brand.poweredBy ? <><br />{m.poweredBy}</> : null}
+                        {brand.poweredBy ? <><br />{format(m.poweredBy, { product: DEFAULT_BRAND_NAME })}</> : null}
                       </td>
                     </tr>
                   </tbody>
