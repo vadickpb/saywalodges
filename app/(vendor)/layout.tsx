@@ -15,7 +15,7 @@ export const metadata: Metadata = { metadataBase: new URL(SITE_URL) };
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0B1F33",
+  themeColor: "#0C1A22",
 };
 
 export default async function VendorLayout({ children }: { children: React.ReactNode }) {
