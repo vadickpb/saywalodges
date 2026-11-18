@@ -39,6 +39,15 @@ export const emailMessages = {
       note: "No se creó ningún bloqueo para evitar una doble reserva. Revisa las fechas y resuélvelo en tu panel.",
       cta: "Ver conflictos",
     },
+    vendorLead: {
+      subject: "Nueva solicitud de proforma · {brand}",
+      preheader: "Alguien pidió una proforma desde la web.",
+      heading: "Nueva solicitud de proforma",
+      lines: "Nombre: {name} · Correo: {email} · Teléfono: {phone}",
+      details: "Alojamientos: {properties} · Paquete de interés: {package}",
+      messageLabel: "Mensaje: {message}",
+      none: "-",
+    },
     icalFeedDown: {
       subject: "Un calendario iCal lleva más de 24 horas sin sincronizar · {brand}",
       preheader: "No pudimos leer el calendario importado.",
@@ -82,6 +91,15 @@ export const emailMessages = {
       bodyMany: "The {channel} sync found {count} new events that clash with dates already taken for {unit}.",
       note: "No block was created, to avoid a double booking. Review the dates and resolve it in your dashboard.",
       cta: "View conflicts",
+    },
+    vendorLead: {
+      subject: "New proposal request · {brand}",
+      preheader: "Someone requested a proposal from the website.",
+      heading: "New proposal request",
+      lines: "Name: {name} · Email: {email} · Phone: {phone}",
+      details: "Properties: {properties} · Package of interest: {package}",
+      messageLabel: "Message: {message}",
+      none: "-",
     },
     icalFeedDown: {
       subject: "An iCal calendar has not synced for over 24 hours · {brand}",

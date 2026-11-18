@@ -2048,10 +2048,12 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Alcance**: modo `DEPLOYMENT_MODE=vendor` con rutas propias (404 en instalaciones), landing reutilizando el PR #45,
   botón «Probar demo» y CTA a WhatsApp. Lighthouse móvil ≥ 90.
 
-### [ ] SD-1111 · feat(marketing): packages, case study and lead form
+### [x] SD-1111 · feat(marketing): packages, case study and lead form
 `M` · Depende: SD-1110, D4, D10 · Review: `R+S`
 - **Alcance**: paquetes y precios, caso Saywa Lodges, preguntas frecuentes y formulario de contacto con protección
   anti-abuso. Ningún precio, cifra ni testimonio sin aprobación del dueño.
+- **Hecho**: paquetes Base/Pro sin precios, FAQ ampliada y formulario (zod, honeypot, tiempo mínimo, tope por IP, correo
+  vía Resend al dueño). Caso Saywa Lodges **pendiente**: requiere datos y autorización del dueño.
 
 ### [ ] SD-1112 · feat(marketing): SEO content
 `S` · Depende: SD-1110 · Review: `R`
