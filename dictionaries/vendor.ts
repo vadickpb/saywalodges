@@ -6,7 +6,7 @@ const es = {
     title: "Gestiona tu casa, tus reservas y tus ganancias,",
     titleAccent: "en un solo lugar.",
     description: "La solución todo en uno para anfitriones de alquileres vacacionales.",
-    demo: "Probar demo", quote: "Solicitar proforma",
+    demo: "Ver sitio de ejemplo", quote: "Solicitar proforma",
     imageAlt: "Casa de campo y departamento administrados con HostStay en una laptop",
     caption: "Imagen ilustrativa · Estados de ejemplo",
     confirmed: "Reserva confirmada", synced: "Calendario sincronizado",
@@ -53,7 +53,12 @@ const es = {
       { title: "Tomas el control", description: "Administras reservas, huéspedes, operación y canal directo desde un solo lugar." },
     ],
   },
-  demo: { eyebrow: "Conócelo por dentro", title: "Explora HostStay a tu ritmo", description: "Recorre una demostración del panel y descubre cómo se siente gestionar tu operación desde un espacio claro.", action: "Probar demo" },
+  demo: {
+    eyebrow: "Conócelo por dentro", title: "Mira lo que verían tus huéspedes y cómo lo administrarías tú",
+    description: "Explora un sitio web de ejemplo con propiedades pensadas para atraer reservas directas. Si quieres recorrer también el panel de administración, solicítalo y te damos acceso a una demostración.",
+    action: "Ver sitio de ejemplo", request: "Solicitar demo del panel",
+    whatsappMessage: "Hola, quiero acceso a la demo del panel de HostStay.", mailSubject: "Solicitud de demo del panel de HostStay",
+  },
   faq: {
     eyebrow: "Preguntas frecuentes", title: "Lo esencial antes de empezar con HostStay",
     items: [
@@ -106,7 +111,7 @@ const en = {
   hero: {
     eyebrow: "Software for hosts", title: "manage your home, your bookings and your earnings,",
     titleAccent: "all in one place.",
-    description: "The all-in-one solution for vacation rental hosts.", demo: "Try the demo", quote: "Request a proposal",
+    description: "The all-in-one solution for vacation rental hosts.", demo: "See a sample website", quote: "Request a proposal",
     imageAlt: "Country house and apartment managed with HostStay on a laptop",
     caption: "Illustrative image · Example statuses", confirmed: "Booking confirmed", synced: "Calendar synced",
     reassurance: "We get everything set up for you.",
@@ -146,7 +151,12 @@ const en = {
       { title: "You take control", description: "Manage bookings, guests, operations, and your direct channel in one place." },
     ],
   },
-  demo: { eyebrow: "See it from the inside", title: "Explore HostStay at your own pace", description: "Walk through a dashboard demo and see what it feels like to manage your operation from a clear workspace.", action: "Try the demo" },
+  demo: {
+    eyebrow: "See it from the inside", title: "See what your guests would see and how you would manage it",
+    description: "Explore a sample website with properties designed to attract direct bookings. To walk through the admin dashboard too, request it and we will give you access to a demo.",
+    action: "See a sample website", request: "Request the dashboard demo",
+    whatsappMessage: "Hello, I would like access to the HostStay dashboard demo.", mailSubject: "HostStay dashboard demo request",
+  },
   faq: {
     eyebrow: "Frequently asked questions", title: "What to know before getting started with HostStay",
     items: [

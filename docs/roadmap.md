@@ -2055,6 +2055,20 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Hecho**: paquetes Base/Pro sin precios, FAQ ampliada y formulario (zod, honeypot, tiempo mínimo, tope por IP, correo
   vía Resend al dueño). Caso Saywa Lodges **pendiente**: requiere datos y autorización del dueño.
 
+### [x] SD-1114 · feat(marketing): demo by request and sample-website button
+`S` · Depende: SD-1110, SD-1111 · Review: `R`
+- **Alcance**: la web de ventas muestra el botón «Ver sitio de ejemplo» (enlace público a `VENDOR_DEMO_URL`, sin
+  contraseña) y «Solicitar demo del panel» (WhatsApp o correo con mensaje prellenado). El panel demo tiene credenciales
+  públicas, así que **no se enlaza**: el dueño comparte el acceso a quien lo pide.
+
+### [ ] SD-1115 · feat(demo): showcase website that attracts direct bookings
+`M` · Depende: SD-1007, SD-1104 · Review: `R`
+- **Alcance**: que el sitio público de la demo («Casa Demo Valle») luzca como lo que HostStay entrega: fotos
+  ilustrativas, textos de venta, espacios, servicios, distancias, tarifas y formulario de reserva, en es/en, sin datos
+  de clientes reales. Es lo que se enseña a un comprador para que imagine su propio sitio.
+- **Criterios**
+  - [ ] Móvil Lighthouse ≥ 90; ningún dato real de Saywa Lodges ni de huéspedes; el reseteo nocturno lo restaura entero.
+
 ### [ ] SD-1112 · feat(marketing): SEO content
 `S` · Depende: SD-1110 · Review: `R`
 - **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.
