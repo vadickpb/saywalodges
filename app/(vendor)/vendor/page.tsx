@@ -63,9 +63,9 @@ function Wordmark({ inverse = false }: { inverse?: boolean }) {
 function HeroPhoto() {
   return (
     <figure className="relative mx-auto w-full max-w-2xl">
-      {/* TODO(owner): Optional replacement: licensed hero-casa.jpg (1600×1200, <250 KB, WebP/JPG).
+      {/* TODO(owner): Optional replacement: licensed images/hoststay-hero.jpg (1600×1200, <250 KB, WebP/JPG).
           A future apartment variant can use public/vendor/hero-depto.jpg. */}
-      <Image src="/vendor/hero-casa.jpg" width={1600} height={900} priority sizes="(max-width: 1023px) calc(100vw - 40px), (max-width: 1280px) 48vw, 620px"
+      <Image src="/images/hoststay-hero.jpg" width={1600} height={900} priority sizes="(max-width: 1023px) calc(100vw - 40px), (max-width: 1280px) 48vw, 620px"
         alt={copy.hero.imageAlt} className="aspect-[4/3] w-full rounded-[2rem] object-cover shadow-2xl" />
       <div className="relative mx-3 -mt-7 flex flex-wrap gap-3 rounded-2xl border border-white/15 bg-[#132F38] p-4 shadow-xl sm:mx-6">
         <span className="flex items-center gap-2 text-xs font-bold"><CalendarCheck2 aria-hidden="true" className="size-4 text-[#2DD4BF]" />{copy.hero.confirmed}</span>
