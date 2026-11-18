@@ -1,7 +1,7 @@
 # Instalación demo compartida (SD-1007)
 
 Una instalación más, con datos **ficticios**, para que un posible comprador pruebe el sistema. Se reinicia sola cada noche
-(03:30 hora de Lima) y la web de ventas (SD-1006) enlazará a ella con las credenciales a la vista.
+(03:30 hora de Lima) y la web de ventas muestra el **sitio público** de la demo con un botón («Ver sitio de ejemplo») y entrega el **acceso al panel solo por solicitud** (WhatsApp o correo; SD-1114): el dueño comparte el enlace y las credenciales públicas con quien las pide.
 
 ## Qué trae
 - Sitio público «Casa Demo Valle» (publicado), 2 unidades, temporada alta (desde el día del reseteo, 120 días), tarifas,

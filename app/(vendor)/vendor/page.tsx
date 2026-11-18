@@ -86,6 +86,12 @@ export default async function VendorHomePage() {
     ? `mailto:${env.VENDOR_CONTACT_EMAIL}?subject=${encodeURIComponent(copy.contact.mailSubject)}`
     : null;
   const quoteHref = whatsappHref ?? emailHref;
+  // The dashboard demo has public credentials, so it is shared on request instead of linked.
+  const demoRequestHref = env.VENDOR_WHATSAPP_NUMBER
+    ? `https://wa.me/${env.VENDOR_WHATSAPP_NUMBER}?text=${encodeURIComponent(copy.demo.whatsappMessage)}`
+    : env.VENDOR_CONTACT_EMAIL
+      ? `mailto:${env.VENDOR_CONTACT_EMAIL}?subject=${encodeURIComponent(copy.demo.mailSubject)}`
+      : null;
   const organizationId = new URL("/#organization", SITE_URL).toString();
   const softwareId = new URL("/#software", SITE_URL).toString();
   const faqId = new URL("/#faq", SITE_URL).toString();
@@ -234,7 +240,7 @@ export default async function VendorHomePage() {
           </div>
         </section>
 
-        {env.VENDOR_DEMO_URL ? <section className="px-5 py-16 sm:px-8 sm:py-20"><div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-[2rem] border border-[#0C1A22]/10 bg-[#E8F8F6] p-8 sm:p-12 lg:flex-row lg:items-center"><div className="max-w-2xl"><p className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#087D72]">{copy.demo.eyebrow}</p><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[#0C1A22]">{copy.demo.title}</h2><p className="mt-4 leading-7 text-[#415469]">{copy.demo.description}</p></div><a className={`${buttonBase} bg-[#0C1A22] text-white hover:bg-[#163640]`} href={env.VENDOR_DEMO_URL}>{copy.demo.action}<ArrowRight aria-hidden="true" className="size-4" /></a></div></section> : null}
+        {env.VENDOR_DEMO_URL || demoRequestHref ? <section className="px-5 py-16 sm:px-8 sm:py-20" id="demo"><div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-[2rem] border border-[#0C1A22]/10 bg-[#E8F8F6] p-8 sm:p-12 lg:flex-row lg:items-center"><div className="max-w-2xl"><p className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#087D72]">{copy.demo.eyebrow}</p><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[#0C1A22]">{copy.demo.title}</h2><p className="mt-4 leading-7 text-[#415469]">{copy.demo.description}</p></div><div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">{env.VENDOR_DEMO_URL ? <a className={`${buttonBase} bg-[#0C1A22] text-white hover:bg-[#163640]`} href={env.VENDOR_DEMO_URL}>{copy.demo.action}<ArrowRight aria-hidden="true" className="size-4" /></a> : null}{demoRequestHref ? <a className={`${buttonBase} border border-[#0C1A22]/25 text-[#0C1A22] hover:bg-white`} href={demoRequestHref}>{copy.demo.request}</a> : null}</div></div></section> : null}
 
         <section className="scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28" id="preguntas">
           <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[.75fr_1.25fr]">
