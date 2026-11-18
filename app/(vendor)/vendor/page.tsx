@@ -13,6 +13,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import Image from "next/image";
+import { LeadForm } from "@/components/vendor/lead-form";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { SITE_URL } from "@/config/site";
@@ -216,6 +217,23 @@ export default async function VendorHomePage() {
           </div>
         </section>
 
+        <section aria-labelledby="packages-title" className="scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28" id="paquetes">
+          <div className="mx-auto max-w-7xl">
+            <div className="max-w-3xl"><p className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#087D72]">{copy.packages.eyebrow}</p><h2 className="mt-3 text-3xl font-extrabold tracking-[-0.035em] text-[#0C1A22] sm:text-5xl" id="packages-title">{copy.packages.title}</h2><p className="mt-5 text-lg leading-8 text-[#415469]">{copy.packages.description}</p></div>
+            <div className="mt-12 grid gap-6 md:grid-cols-2">
+              {copy.packages.items.map((pkg) => (
+                <article className={`rounded-[2rem] border p-8 ${"featured" in pkg && pkg.featured ? "border-[#2DD4BF] bg-[#0C1A22] text-white shadow-2xl" : "border-[#0C1A22]/10 bg-white text-[#0C1A22]"}`} key={pkg.name}>
+                  <h3 className="text-2xl font-extrabold">{pkg.name}</h3>
+                  <p className={`mt-2 ${"featured" in pkg && pkg.featured ? "text-[#DCE7F2]" : "text-[#415469]"}`}>{pkg.tagline}</p>
+                  <ul className="mt-6 grid gap-3">{pkg.features.map((f) => <li className="flex items-start gap-3 font-semibold" key={f}><Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-[#2DD4BF]" />{f}</li>)}</ul>
+                </article>
+              ))}
+            </div>
+            <p className="mt-6 text-sm text-[#5B6B7D]">{copy.packages.note}</p>
+            {quoteHref ? <a className={`${buttonBase} hoststay-primary-action mt-6`} href="#contacto">{copy.packages.cta}</a> : null}
+          </div>
+        </section>
+
         {env.VENDOR_DEMO_URL ? <section className="px-5 py-16 sm:px-8 sm:py-20"><div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-[2rem] border border-[#0C1A22]/10 bg-[#E8F8F6] p-8 sm:p-12 lg:flex-row lg:items-center"><div className="max-w-2xl"><p className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#087D72]">{copy.demo.eyebrow}</p><h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[#0C1A22]">{copy.demo.title}</h2><p className="mt-4 leading-7 text-[#415469]">{copy.demo.description}</p></div><a className={`${buttonBase} bg-[#0C1A22] text-white hover:bg-[#163640]`} href={env.VENDOR_DEMO_URL}>{copy.demo.action}<ArrowRight aria-hidden="true" className="size-4" /></a></div></section> : null}
 
         <section className="scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28" id="preguntas">
@@ -228,18 +246,21 @@ export default async function VendorHomePage() {
         </section>
 
         <section className="px-5 pb-20 sm:px-8 sm:pb-28" id="contacto">
-          <div className="mx-auto overflow-hidden rounded-[2rem] bg-[#0C1A22] px-7 py-12 text-white sm:px-12 sm:py-16 lg:flex lg:items-end lg:justify-between lg:gap-16">
+          <div className="mx-auto overflow-hidden rounded-[2rem] bg-[#0C1A22] px-7 py-12 text-white sm:px-12 sm:py-16">
+            <div className="lg:flex lg:items-end lg:justify-between lg:gap-16">
             <div className="max-w-2xl"><p className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#5EEAD4]">{copy.contact.eyebrow}</p><h2 className="mt-4 text-3xl font-extrabold tracking-[-0.035em] sm:text-5xl">{copy.contact.title}</h2><p className="mt-5 text-lg leading-8 text-[#DCE7F2]">{copy.contact.description}</p></div>
             <div className="mt-8 flex shrink-0 flex-col gap-3 sm:flex-row lg:mt-0 lg:flex-col">
               {whatsappHref ? <a aria-label={copy.contact.whatsappAria} className={`${buttonBase} hoststay-primary-action`} href={whatsappHref}><MessageCircle aria-hidden="true" className="size-5" />{copy.contact.whatsapp}</a> : null}
               {emailHref ? <a className={`${buttonBase} border border-white/35 text-white hover:bg-white/10`} href={emailHref}><Mail aria-hidden="true" className="size-5" />{copy.contact.email}</a> : null}
             </div>
+            </div>
+            {env.VENDOR_CONTACT_EMAIL ? <div className="mt-12 max-w-2xl border-t border-white/15 pt-10"><LeadForm copy={copy.form} /></div> : null}
           </div>
         </section>
       </main>
 
       <footer className="bg-[#071727] px-5 py-12 text-white sm:px-8">
-        <div className="mx-auto max-w-7xl"><div className="grid gap-10 border-b border-white/15 pb-10 md:grid-cols-[1fr_auto]"><div><Wordmark inverse /><p className="mt-5 max-w-lg text-sm leading-6 text-[#B9C9D9]">{copy.footer.tagline}</p><p className="mt-2 text-sm font-bold text-white">{copy.footer.closing}</p></div><nav aria-label={copy.footer.navigation} className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-bold text-[#DCE7F2]"><a href="#funciones">{copy.nav.features}</a><a href="#como-funciona">{copy.nav.how}</a><a href="#preguntas">{copy.nav.faq}</a></nav></div><p className="pt-7 text-sm text-[#B9C9D9]">© {new Date().getFullYear()} HostStay. {copy.footer.rights}</p></div>
+        <div className="mx-auto max-w-7xl"><div className="grid gap-10 border-b border-white/15 pb-10 md:grid-cols-[1fr_auto]"><div><Wordmark inverse /><p className="mt-5 max-w-lg text-sm leading-6 text-[#B9C9D9]">{copy.footer.tagline}</p><p className="mt-2 text-sm font-bold text-white">{copy.footer.closing}</p></div><nav aria-label={copy.footer.navigation} className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-bold text-[#DCE7F2]"><a href="#funciones">{copy.nav.features}</a><a href="#como-funciona">{copy.nav.how}</a><a href="#paquetes">{copy.packages.eyebrow}</a><a href="#preguntas">{copy.nav.faq}</a></nav></div><p className="pt-7 text-sm text-[#B9C9D9]">© {new Date().getFullYear()} HostStay. {copy.footer.rights}</p></div>
       </footer>
     </>
   );

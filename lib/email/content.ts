@@ -97,6 +97,25 @@ export const templates = {
       };
     },
   ),
+  // SD-1111. Owner-facing notification of a vendor-site lead; props come from leadSchema (already cleaned).
+  vendorLead: defineTemplate(
+    z.object({
+      name: z.string().transform((v) => cleanText(v, 100)), email: z.string().transform((v) => cleanText(v, 254)),
+      phone: z.string().transform((v) => cleanText(v, 30)).optional(), properties: z.enum(["1", "2-3", "4+"]),
+      package: z.enum(["base", "pro", "unsure"]), message: z.string().transform((v) => cleanText(v, 1000)).optional(),
+    }),
+    (lang, props, brand) => {
+      const m = emailMessages[lang].vendorLead;
+      return {
+        subject: format(m.subject, { brand }), preheader: m.preheader, heading: m.heading,
+        paragraphs: [
+          format(m.lines, { name: props.name, email: props.email, phone: props.phone || m.none }),
+          format(m.details, { properties: props.properties, package: props.package }),
+          ...(props.message ? [format(m.messageLabel, { message: props.message })] : []),
+        ],
+      };
+    },
+  ),
 };
 
 export type TemplateName = keyof typeof templates;
