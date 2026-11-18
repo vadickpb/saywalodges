@@ -41,7 +41,7 @@ select throws_ok($$select public.import_finance_rows('bf88f504-051f-4fdc-ab73-4f
   jsonb_build_array(jsonb_build_object('ref','dddddddddddddddd','kind','expense','occurred_on',current_date + 5,'amount_cents',100,'currency','PEN')), null)$$,
   '22023', 'invalid row', 'a future date is rejected');
 select throws_ok($$select public.import_finance_rows('bf88f504-051f-4fdc-ab73-4fa12d715817',
-  jsonb_build_array(jsonb_build_object('ref','dddddddddddddddd','kind','expense','occurred_on',current_date,'amount_cents',100,'currency','PEN',
+  jsonb_build_array(jsonb_build_object('ref','dddddddddddddddd','kind','expense','occurred_on',(now() at time zone 'America/Lima')::date,'amount_cents',100,'currency','PEN',
   'unit_id','ee999999-0000-4000-8000-000000000001')), null)$$,
   '42501', 'not allowed', 'a unit of nobody is rejected');
 
