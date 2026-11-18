@@ -2075,6 +2075,12 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
   invocador (`finance_entries_related_guard`) fallaban con «permission denied for schema private» al escribir con la
   service-role en un proyecto Supabase nuevo; apareció al montar la demo de HostStay.
 
+### [x] SD-1117 · fix(db): service_role can execute private.is_owner
+`S` · Depende: SD-1116 · Review: `R+S`
+- **Alcance**: `grant execute on function private.is_owner(uuid) to service_role`. Continuación de SD-1116: tras darle `usage`
+  al esquema, el trigger de `finance_entries` seguía fallando con «permission denied for function is_owner» al escribir
+  con la service-role (reseteo de la demo). Una sola función, sin abrir el resto de `private`.
+
 ### [ ] SD-1112 · feat(marketing): SEO content
 `S` · Depende: SD-1110 · Review: `R`
 - **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.
