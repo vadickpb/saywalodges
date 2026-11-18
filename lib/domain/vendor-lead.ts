@@ -7,7 +7,7 @@ export const LEAD_MAX_FILL_MS = 6 * 60 * 60 * 1000;
 export const LEAD_WINDOW_MS = 60 * 60 * 1000;
 export const LEAD_MAX_PER_WINDOW = 5;
 
-const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f  ]/g;
+const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 const clean = (max: number) => z.string().transform((v) => v.replace(CONTROL_CHARS, " ").trim()).pipe(z.string().max(max));
 
 export const leadSchema = z.object({
