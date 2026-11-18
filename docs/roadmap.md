@@ -2069,6 +2069,12 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Criterios**
   - [ ] Móvil Lighthouse ≥ 90; ningún dato real de Saywa Lodges ni de huéspedes; el reseteo nocturno lo restaura entero.
 
+### [x] SD-1116 · fix(db): service_role usage on the private schema
+`S` · Depende: — · Review: `R+S`
+- **Alcance**: `grant usage on schema private to service_role` (migración aditiva). Los triggers con derechos del
+  invocador (`finance_entries_related_guard`) fallaban con «permission denied for schema private» al escribir con la
+  service-role en un proyecto Supabase nuevo; apareció al montar la demo de HostStay.
+
 ### [ ] SD-1112 · feat(marketing): SEO content
 `S` · Depende: SD-1110 · Review: `R`
 - **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.

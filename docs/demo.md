@@ -66,6 +66,10 @@ Necesitas un proyecto Supabase nuevo **solo para la demo** y un proyecto Vercel 
    gh secret set DEMO_SERVICE_ROLE_KEY  --env demo-reset --repo vadickpb/saywalodges   # jq -r .serviceRoleKey .install/demo-lodge.state.json
    gh secret set DEMO_ROOT_DOMAIN       --env demo-reset --repo vadickpb/saywalodges   # el mismo rootDomain del paso 2
    ```
+5b. La migración inicial crea una organización vacía «Saywa Lodges» (`bf88f504-…`). Como la demo no corre `seed`, hay que borrarla
+   (solo en el proyecto demo, SQL editor): `delete from public.organizations where id = 'bf88f504-051f-4fdc-ab73-4fa12d715817' and not exists (select 1 from public.properties where org_id = organizations.id);`
+   Si no, el guardia del reseteo se niega. Tras el primer reseteo (con `--init`; si falla a mitad, usa el workflow *Demo reset*, sin `--init`)
+   el workflow nocturno lo mantiene.
 6. **Primer reseteo, a mano y una sola vez** (el workflow nunca usa `--init`):
    ```bash
    export DEMO_SUPABASE_URL=https://<projectRef>.supabase.co
