@@ -32,6 +32,8 @@ export type ShowcaseUnit = {
   bathrooms: number;
   sortOrder: number;
   cover: string;
+  /** Ids of the units this one is made of (a combined unit such as the entire villa); empty otherwise. */
+  partIds: string[];
   fromCents: number | null;
   spaces: ShowcaseSpace[];
 };
@@ -45,7 +47,7 @@ function showcaseType(value: string): ShowcaseType {
 
 export const getShowcaseUnits = cache(async (propertyId: string): Promise<ShowcaseUnit[]> => {
   const supabase = getSupabaseAnon();
-  const [unitsResult, spacesResult, photosResult, ratesResult] = await Promise.all([
+  const [unitsResult, spacesResult, photosResult, ratesResult, componentsResult] = await Promise.all([
     supabase.from("units")
       .select("id, name, showcase_type, description_en, description_es, max_guests, bedrooms, beds, bed_details_en, bed_details_es, bathrooms, sort_order, created_at")
       .eq("property_id", propertyId).eq("active", true).order("sort_order").order("created_at").order("id"),
@@ -56,6 +58,7 @@ export const getShowcaseUnits = cache(async (propertyId: string): Promise<Showca
       .select("space_id, storage_path, sort_order").eq("property_id", propertyId).eq("role", "room").order("sort_order").order("id"),
     supabase.from("unit_rates")
       .select("unit_id, nightly_cents, weekend_nightly_cents").eq("property_id", propertyId).is("season_id", null),
+    supabase.from("unit_components").select("parent_unit_id, child_unit_id").eq("property_id", propertyId),
   ]);
 
   const error = unitsResult.error ?? spacesResult.error ?? photosResult.error ?? ratesResult.error;
@@ -84,6 +87,13 @@ export const getShowcaseUnits = cache(async (propertyId: string): Promise<Showca
     spacesByUnit.set(space.unit_id, spaces);
   }
 
+  // Not fatal: if the combinations cannot be read (e.g. migration not applied yet) the page just shows the unit's own spaces.
+  if (componentsResult.error) console.error("getShowcaseUnits: unit_components failed:", componentsResult.error.code);
+  const partsByUnit = new Map<string, string[]>();
+  for (const component of componentsResult.data ?? []) {
+    partsByUnit.set(component.parent_unit_id, [...(partsByUnit.get(component.parent_unit_id) ?? []), component.child_unit_id]);
+  }
+
   const rateByUnit = new Map<string, number>();
   for (const rate of ratesResult.data ?? []) {
     const candidates = [rate.nightly_cents, rate.weekend_nightly_cents].filter((value): value is number => value !== null);
@@ -98,7 +108,7 @@ export const getShowcaseUnits = cache(async (propertyId: string): Promise<Showca
       id: unit.id, name: unit.name, showcaseType: showcaseType(unit.showcase_type),
       descriptionEn: unit.description_en, descriptionEs: unit.description_es, maxGuests: unit.max_guests,
       bedrooms: unit.bedrooms, beds: unit.beds, bedDetailsEn: unit.bed_details_en, bedDetailsEs: unit.bed_details_es,
-      bathrooms: unit.bathrooms, sortOrder: unit.sort_order, cover: spaces[0]?.photos[0] ?? "",
+      bathrooms: unit.bathrooms, sortOrder: unit.sort_order, cover: spaces[0]?.photos[0] ?? "", partIds: partsByUnit.get(unit.id) ?? [],
       fromCents: rateByUnit.get(unit.id) ?? null, spaces,
     };
   });
