@@ -1,13 +1,16 @@
 name: Scheduled crons
 
-# SD-307: calls the HTTP cron routes every 15 minutes (GitHub Actions is the free scheduler; Vercel Hobby only
-# allows daily crons). Needs two repository secrets: CRON_URL (https://app.<domain>, no trailing slash) and
+# SD-307 / SD-1120: calls the HTTP cron routes (GitHub Actions is the free scheduler; Vercel Hobby only
+# allows daily crons). ical-sync, expire-holds and booking-emails run every 15 minutes (booking emails can
+# therefore arrive up to ~15 min late: GitHub cannot schedule every minute); voucher-purge runs once a day.
+# Needs two repository secrets: CRON_URL (https://app.<domain>, no trailing slash) and
 # CRON_SECRET (same value as the app's CRON_SECRET). Without them the job is skipped, never failed.
 # GitHub may delay a scheduled run by a few minutes; routes are idempotent. See docs/cron.md.
 
 on:
   schedule:
     - cron: "*/15 * * * *"
+    - cron: "41 7 * * *" # daily: voucher-purge only
   workflow_dispatch:
 
 permissions: {}
@@ -19,13 +22,17 @@ concurrency:
 jobs:
   call:
     name: ${{ matrix.route }}
-    if: github.ref == 'refs/heads/main'
+    # The daily schedule only runs voucher-purge; the 15-minute schedule runs the others. Manual runs run all.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event.schedule == '41 7 * * *') == (matrix.route == 'voucher-purge'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
-        route: [ical-sync, expire-holds]
+        route: [ical-sync, expire-holds, booking-emails, voucher-purge]
     steps:
       - name: Call /api/cron/${{ matrix.route }}
         env:
@@ -41,3 +48,8 @@ jobs:
             -H "Authorization: Bearer $CRON_SECRET" "$CRON_URL/api/cron/$ROUTE")
           echo "HTTP $code"
           [ "$code" = "200" ] || exit 1
+          # booking-emails answers 200 even when some events failed definitively: surface that as a red run.
+          if [ "$ROUTE" = "booking-emails" ] && grep -Eq '"failed":[1-9]' /tmp/body; then
+            echo "booking-emails reported failed events (see Vercel logs: cron.booking_emails.*)"
+            exit 1
+          fi

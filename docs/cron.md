@@ -84,8 +84,8 @@ Ruta: `GET` o `POST /api/cron/ical-sync` (dominio de plataforma). Misma autentic
 
 ## Pasos manuales del dueño (no hechos por el agente)
 1. `CRON_SECRET` configurado (ver arriba).
-2. **Programar** la llamada cada 15 min. **Hecho en el repo**: `.github/workflows/scheduled-crons.yml` llama a `ical-sync` y
-   `expire-holds` cada 15 min. Solo falta crear dos *secrets* del repositorio: `CRON_URL` (`https://app.<dominio>`, sin barra
+2. **Programar** la llamada cada 15 min. **Hecho en el repo**: `.github/workflows/scheduled-crons.yml` llama a `ical-sync`,
+   `expire-holds` y `booking-emails` cada 15 min y a `voucher-purge` una vez al día. Solo falta crear dos *secrets* del repositorio: `CRON_URL` (`https://app.<dominio>`, sin barra
    final) y `CRON_SECRET` (el mismo valor que en Vercel). Sin ellos el job se omite. Alternativas previas: el repo **no** define `crons` en Vercel (Hobby solo permite ejecuciones diarias; cada
    15 min exige Pro). Opciones gratuitas: GitHub Actions (`*/15 * * * *` con
    `curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<ROOT_DOMAIN>/api/cron/ical-sync`), cron-job.org, o
@@ -117,7 +117,9 @@ al huésped: lo hará el flujo de reserva (SD-403/405), que deberá devolver `pu
 
 Programar `GET /api/cron/booking-emails` cada minuto (o `POST` desde un scheduler externo),
 con `Authorization: Bearer <CRON_SECRET>`; mismo secreto y autenticación que `expire-holds`.
-No existe programación automática en el repositorio: debe habilitarse en cada instalación.
+Desde SD-1120 lo programa `.github/workflows/scheduled-crons.yml` cada 15 minutos (GitHub no permite cada minuto; un correo
+puede tardar hasta ~15 min). Si necesitas inmediatez, usa además un scheduler externo por minuto (cron-job.org).
+El workflow queda en rojo si `summary.failed > 0`.
 La ruta devuelve `{summary:{sent,failed,skipped}}`; `sent` incluye simulaciones.
 401 = secreto incorrecto/ausente; 500 genérico = configuración/BD, consultar logs.
 `summary.failed > 0` requiere alerta del scheduler aunque HTTP sea 200.
