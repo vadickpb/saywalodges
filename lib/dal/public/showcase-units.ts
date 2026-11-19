@@ -61,7 +61,7 @@ export const getShowcaseUnits = cache(async (propertyId: string): Promise<Showca
     supabase.from("unit_components").select("parent_unit_id, child_unit_id").eq("property_id", propertyId),
   ]);
 
-  const error = unitsResult.error ?? spacesResult.error ?? photosResult.error ?? ratesResult.error ?? componentsResult.error;
+  const error = unitsResult.error ?? spacesResult.error ?? photosResult.error ?? ratesResult.error;
   if (error) {
     console.error("getShowcaseUnits failed:", error.code);
     throw new Error("No se pudieron cargar los alojamientos.");
@@ -87,6 +87,8 @@ export const getShowcaseUnits = cache(async (propertyId: string): Promise<Showca
     spacesByUnit.set(space.unit_id, spaces);
   }
 
+  // Not fatal: if the combinations cannot be read (e.g. migration not applied yet) the page just shows the unit's own spaces.
+  if (componentsResult.error) console.error("getShowcaseUnits: unit_components failed:", componentsResult.error.code);
   const partsByUnit = new Map<string, string[]>();
   for (const component of componentsResult.data ?? []) {
     partsByUnit.set(component.parent_unit_id, [...(partsByUnit.get(component.parent_unit_id) ?? []), component.child_unit_id]);
