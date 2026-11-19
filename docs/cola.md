@@ -38,8 +38,10 @@ Objetivo: la primera reserva real pagada por el sistema. Es lo que valida el pro
 | SD-902 | Ordenar el roadmap: cerrar los `[~]` que ya cumplen, mover sobrantes a tickets nuevos | Codex | hecho (#77) |
 | SD-409 | Anti-abuso: límite por origen, BotID/captcha en cotizar, reservar y subir comprobante | Claude | hecho (#78); BotID/captcha pendiente si hay abuso real |
 | SD-413 | Reserva manual, pago de saldo, *snapshot* del huésped, aprobar/cancelar solo el dueño | Claude | hecho (#80, #81, #82, #83) |
-| SD-701 | CSP y cabeceras de seguridad | Codex (+ revisión de seguridad) | implementado (ADR 0011); falta verificar en preview (ver `docs/produccion.md`) |
+| SD-701 | CSP y cabeceras de seguridad | Codex (+ revisión de seguridad) | implementado (ADR 0011); falta verificar en preview (ver `docs/produccion.md`); no bloquea la prueba, sí la publicidad |
 | SD-702 | Checklist de producción (backups probados, dominios, cron, monitoreo activo) | Claude + dueño | hecho (#79); el dueño ejecuta el checklist por instalación |
+
+**Auditoría de salida (2026-11-19, SD-1121)**: [`lanzamiento-saywa-lodges.md`](lanzamiento-saywa-lodges.md) lista qué está hecho, qué falta y los pasos exactos del dueño. SD-1120 (#138) programó `booking-emails` y `voucher-purge`. Bloquean la primera reserva: Supabase en plan free, host `app.` sin configurar, y pruebas de Resend/pago/reserva de prueba.
 
 Decisiones del dueño que bloquean este lote: ver [`docs/decisiones-pendientes.md`](decisiones-pendientes.md).
 
