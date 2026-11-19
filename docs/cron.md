@@ -119,7 +119,7 @@ Programar `GET /api/cron/booking-emails` cada minuto (o `POST` desde un schedule
 con `Authorization: Bearer <CRON_SECRET>`; mismo secreto y autenticación que `expire-holds`.
 Desde SD-1120 lo programa `.github/workflows/scheduled-crons.yml` cada 15 minutos (GitHub no permite cada minuto; un correo
 puede tardar hasta ~15 min). Si necesitas inmediatez, usa además un scheduler externo por minuto (cron-job.org).
-El workflow queda en rojo si `summary.failed > 0`.
+El workflow queda en rojo si `summary.failed > 0` (incluye reintentos transitorios pendientes).
 La ruta devuelve `{summary:{sent,failed,skipped}}`; `sent` incluye simulaciones.
 401 = secreto incorrecto/ausente; 500 genérico = configuración/BD, consultar logs.
 `summary.failed > 0` requiere alerta del scheduler aunque HTTP sea 200.

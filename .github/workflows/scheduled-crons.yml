@@ -48,7 +48,7 @@ jobs:
             -H "Authorization: Bearer $CRON_SECRET" "$CRON_URL/api/cron/$ROUTE")
           echo "HTTP $code"
           [ "$code" = "200" ] || exit 1
-          # booking-emails answers 200 even when some events failed definitively: surface that as a red run.
+          # booking-emails answers 200 even when some events failed or are pending a retry: surface that as a red run.
           if [ "$ROUTE" = "booking-emails" ] && grep -Eq '"failed":[1-9]' /tmp/body; then
             echo "booking-emails reported failed events (see Vercel logs: cron.booking_emails.*)"
             exit 1
