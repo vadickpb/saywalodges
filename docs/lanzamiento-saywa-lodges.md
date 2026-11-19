@@ -7,7 +7,7 @@ Auditoría de solo lectura del **2026-11-19** contra [`produccion.md`](produccio
 | Casilla de `produccion.md` | Estado | Evidencia / qué falta | Quién |
 |---|---|---|---|
 | Despliegue Production Ready | **Hecho** | Último despliegue de producción = `main` (#137), estado READY | — |
-| Migraciones remotas = repo | **Hecho** | 48 migraciones remotas; la última (`20261118210000`) coincide con el repo; *Deploy database* verde | — |
+| Migraciones remotas = repo | **Hecho** | 51 migraciones remotas, idénticas a las 51 del repo (misma lista de versiones); la última (`20261118210000`) coincide con el repo; *Deploy database* verde | — |
 | Dominio `<dominio>` y `www` | **Parcial** | `saywalodges.com` y `www.saywalodges.com` verificados en Vercel; el sitio responde 200 en `www` (`/es`, `/es/cotizar`). El apex **redirige a `www`** (la guía asume lo contrario: no es un fallo, es una decisión a registrar) | Dueño (decidir) |
 | `app.<dominio>` (panel) | **Falta** | `app.saywalodges.com` **no está** en el proyecto Vercel ni resuelve DNS. Hoy el panel/health/cron responden en `saywalodges.vercel.app` (`/login` 200, `/api/health` 401 sin token) | Dueño |
 | Variables de Vercel | **No verificable** | El MCP no tiene permiso para listar variables (403) y la CLI local no está enlazada. Comprobarlo con `vercel env ls production` (solo nombres) | Dueño |
