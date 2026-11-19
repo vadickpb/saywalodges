@@ -62,13 +62,13 @@ En Vercel → proyecto → Settings → Environment Variables, crear cada variab
 
 ### Cron: programación y prueba por instalación
 
-Fuente: [`cron.md`](cron.md); rutas implementadas en [`app/api/cron`](../app/api/cron). El repo **no programa estos cuatro trabajos automáticamente** ni define `crons` en Vercel. El dueño debe configurarlos en un scheduler externo. Para una operación sencilla: cron-job.org → **Create cronjob** → URL de la tabla → Advanced → método **POST**, cabecera `Authorization` con valor `Bearer <CRON_SECRET>` → intervalo indicado → guardar. Guardar la cabecera en privado, no en la URL. Configurar alertas por fallo HTTP y por ausencia de ejecución; si el scheduler no inspecciona JSON, añadir una revisión/monitor que sí lo haga para los contadores de fallo.
+Fuente: [`cron.md`](cron.md); rutas implementadas en [`app/api/cron`](../app/api/cron). Desde SD-1120 el workflow [`scheduled-crons.yml`](../.github/workflows/scheduled-crons.yml) llama a los cuatro desde GitHub Actions (los tres primeros cada 15 min, `voucher-purge` a diario) si existen los secretos del repositorio `CRON_URL` y `CRON_SECRET`; sin ellos se omite sin fallar. El repo no define `crons` en Vercel. Para ejecuciones por minuto de `booking-emails` (GitHub no lo permite) o como respaldo, configura un scheduler externo. Para una operación sencilla: cron-job.org → **Create cronjob** → URL de la tabla → Advanced → método **POST**, cabecera `Authorization` con valor `Bearer <CRON_SECRET>` → intervalo indicado → guardar. Guardar la cabecera en privado, no en la URL. Configurar alertas por fallo HTTP y por ausencia de ejecución; si el scheduler no inspecciona JSON, añadir una revisión/monitor que sí lo haga para los contadores de fallo.
 
 | URL en modo instalación | Frecuencia | Evidencia de ejecución correcta |
 |---|---|---|
 | `https://app.<dominio>/api/cron/expire-holds` | Cada 15 minutos | HTTP 200, `{"expired":N}`. Los holds vencidos sin comprobante en revisión pasan a `expired`. |
 | `https://app.<dominio>/api/cron/ical-sync` | Cada 15 minutos | HTTP 200 con contadores en la raíz del JSON (sin envoltorio `summary`); revisar `failed`, `deferred` y `alertsFailed`, además del estado de cada feed. |
-| `https://app.<dominio>/api/cron/booking-emails` | Cada minuto | HTTP 200 con `summary.sent`, `failed`, `skipped`. Alertar también si `summary.failed > 0`. `sent` puede contar simulaciones fuera de producción. |
+| `https://app.<dominio>/api/cron/booking-emails` | Cada 15 min (GitHub) o cada minuto (scheduler externo) | HTTP 200 con `summary.sent`, `failed`, `skipped`. Alertar también si `summary.failed > 0`. `sent` puede contar simulaciones fuera de producción. |
 | `https://app.<dominio>/api/cron/voucher-purge` | Diaria | HTTP 200 con `selected`, `deleted` y log `cron.voucher_purge.completed`. Hasta 100 candidatos por pasada; si hay cola, aumentar frecuencia. |
 
 - [ ] Confirmar migraciones aplicadas **antes** de activar los jobs. Usar **Run now** del scheduler y revisar código HTTP, cuerpo y hora de cada ruta; luego comprobar una segunda ejecución programada. Sin cabecera debe responder 401 vacío. No compartir el valor de la cabecera en capturas.
