@@ -7,7 +7,7 @@ import { getDictionary, hasLocale } from "@/dictionaries";
 import { getSiteByHost, getSiteUrl } from "@/lib/dal/public/site";
 import { getProperty, whatsappUrl } from "@/lib/dal/public/property";
 import { getSpaces } from "@/lib/dal/public/spaces";
-import { getShowcaseUnit } from "@/lib/dal/public/showcase-units";
+import { getShowcaseUnit, getShowcaseUnits } from "@/lib/dal/public/showcase-units";
 import { getPublicUnitAvailability } from "@/lib/dal/public/availability";
 import { buildMonthGrid, resolveCalendarMonth } from "@/lib/domain/public-availability";
 import { formatPublicPrice } from "@/lib/domain/public-rates";
@@ -74,7 +74,10 @@ export default async function UnitPage({ params, searchParams }: {
   const dict = await getDictionary(lang);
   const allSpaces = await getSpaces(property.id);
   const commonSpaces = allSpaces.filter((space) => space.unitId === null);
-  const gallery = unit.spaces.flatMap((space) => space.photos);
+  // A combined unit (entire villa) also shows the spaces of its parts, read from them so no photo is uploaded twice.
+  const parts = unit.partIds.length > 0 ? (await getShowcaseUnits(property.id)).filter((candidate) => unit.partIds.includes(candidate.id)) : [];
+  const unitSpaces = [...unit.spaces, ...parts.flatMap((part) => part.spaces)];
+  const gallery = unitSpaces.flatMap((space) => space.photos);
   const description = lang === "es" ? unit.descriptionEs : unit.descriptionEn;
   const bedDetails = lang === "es" ? unit.bedDetailsEs : unit.bedDetailsEn;
   const facts = showcaseFacts({
@@ -96,7 +99,7 @@ export default async function UnitPage({ params, searchParams }: {
   const otherLang = lang === "es" ? "en" : "es";
   const links = [
     gallery.length > 0 && { href: "#gallery", label: dict.nav.gallery },
-    unit.spaces.length > 0 && { href: "#unit-spaces", label: dict.unitsShowcase.unitSpacesTitle },
+    unitSpaces.length > 0 && { href: "#unit-spaces", label: dict.unitsShowcase.unitSpacesTitle },
     commonSpaces.length > 0 && { href: "#common-areas", label: dict.unitsShowcase.commonAreasUsedTitle },
     { href: "#availability-calendar", label: dict.nav.availability },
   ].filter((link) => link !== false);
@@ -145,7 +148,7 @@ export default async function UnitPage({ params, searchParams }: {
         {description && <section className="py-20 sm:py-28"><Container><SectionHeading label={dict.unitsShowcase.descriptionLabel} title={unit.name} /><p className="mt-6 max-w-3xl whitespace-pre-line text-base leading-relaxed text-site-muted sm:text-lg">{description}</p></Container></section>}
         <Spaces
           dict={dict.spaces} lightboxLabels={dict.gallery} intro="" sectionId="unit-spaces"
-          label={dict.unitsShowcase.unitSpacesLabel} title={dict.unitsShowcase.unitSpacesTitle} spaces={unit.spaces.map(localizedSpace)}
+          label={dict.unitsShowcase.unitSpacesLabel} title={dict.unitsShowcase.unitSpacesTitle} spaces={unitSpaces.map(localizedSpace)}
         />
         <Spaces
           dict={dict.spaces} lightboxLabels={dict.gallery} intro="" sectionId="common-areas"

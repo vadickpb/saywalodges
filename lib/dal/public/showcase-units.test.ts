@@ -49,6 +49,7 @@ function rows() {
     { unit_id: "u1", nightly_cents: 12000, weekend_nightly_cents: 9000 },
     { unit_id: "u1", nightly_cents: 10000, weekend_nightly_cents: null },
   ], error: null };
+  mocks.results.unit_components = { data: [{ parent_unit_id: "u2", child_unit_id: "u1" }], error: null };
 }
 
 describe("getShowcaseUnits", () => {
@@ -60,6 +61,8 @@ describe("getShowcaseUnits", () => {
     expect(units[1].spaces[0].photos[0]).toContain("first.jpg");
     expect(units[1].cover).toContain("first.jpg");
     expect(units[1].fromCents).toBe(9000);
+    expect(units[0].partIds).toEqual(["u1"]);
+    expect(units[1].partIds).toEqual([]);
     expect(units.some((unit) => unit.spaces.some((space) => space.id === "common"))).toBe(false);
   });
 
