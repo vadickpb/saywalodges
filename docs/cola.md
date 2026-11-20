@@ -45,6 +45,18 @@ Objetivo: la primera reserva real pagada por el sistema. Es lo que valida el pro
 
 Decisiones del dueño que bloquean este lote: ver [`docs/decisiones-pendientes.md`](decisiones-pendientes.md).
 
+## Lote 2b · Frentes abiertos tras la auditoría (2026-11-19)
+
+El dueño sigue en Supabase **free** (decisión registrada en [`lanzamiento-saywa-lodges.md`](lanzamiento-saywa-lodges.md)), así que se añade respaldo propio. Tres chats en paralelo, sin tocar los mismos archivos; el chat `saywa-datos-casas` sigue con datos y fotos de las villas.
+
+| Chat / worktree | Tickets | Estado |
+|---|---|---|
+| `saywa-backup` | SD-1122 · volcado diario cifrado (`age`) de BD y Storage a Google Drive; el repo es público, nada de artifacts | en curso |
+| `saywa-crm` | SD-601 (huéspedes) → parte pendiente de SD-420 (importar huéspedes y reservas históricas directas) | en curso |
+| `saywa-whatsapp` | SD-1009 → SD-1011 → SD-1010 → SD-1012, todo en modo `simulate` hasta que Meta verifique el negocio (D5) | en curso |
+
+Orden después: SD-416/SD-418 (pulido de comprobantes), SD-701 (CSP en Preview, del dueño), SD-605 (auditoría).
+
 ## Lote 3 · Versiones y operación para vender
 
 | Ticket | Qué | Quién | Estado |
