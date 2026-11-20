@@ -17,7 +17,7 @@ envío programado: ver «Mensajes de la reserva (SD-1009)» más abajo.
   - `POST`: **toda** petición debe traer `X-Hub-Signature-256` válida sobre el cuerpo crudo; si no, `401` vacío y no se procesa nada.
     Registra los estados `sent → delivered → read` / `failed`. El estado **solo avanza**: un evento duplicado o tardío no cambia nada
     (Meta reenvía y desordena). Si la base falla responde `500` a propósito para que Meta reintente (es seguro: es idempotente).
-  - Los mensajes **entrantes** del huésped no se procesan ni se guardan.
+  - Los mensajes **entrantes** del huésped se guardan en la bandeja (SD-1012, más abajo).
 
 ## Variables (por instalación; `.env.example`)
 `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` (todas sensibles salvo el id), y opcionales
@@ -234,6 +234,21 @@ Al dueño le llegan por **WhatsApp** (el correo **sigue enviándose** siempre): 
   Ejemplos que Meta pide: {{1}} = `Casa 1`, {{2}} = `1`
 
 Prueba: con `WHATSAPP_OWNER_PHONE` = tu número (en la lista de destinatarios de prueba de Meta), haz una reserva de prueba y sube un comprobante: debes recibir los dos avisos por WhatsApp **y** los correos de siempre; quita la variable y solo quedan los correos.
+
+## Bandeja de entrada y respuesta automática (SD-1012)
+
+- Los mensajes que el huésped escribe a tu número llegan al mismo webhook (firmado). Se guardan en `whatsapp_inbox` (número, nombre de perfil, texto; de otros tipos solo el tipo) y los ves en el panel: **WhatsApp** (`/app/whatsapp`).
+  Para contestar, el botón abre WhatsApp; no se responde desde el panel. Cualquier miembro del equipo puede leerla y marcarla como leída.
+- **Respuesta automática, sin IA**: texto fijo (español e inglés) con el enlace del cotizador `https://<dominio>/es/cotizar`. **Como máximo una por persona cada 24 horas**:
+  la decisión la toma la base de datos de forma atómica (bloqueo por remitente + `auto_replied_at`), así que ni un reenvío de Meta ni dos mensajes seguidos duplican la respuesta.
+  No se contesta a eventos viejos (más de 30 min), ni si el dominio público no está configurado. Para apagarla: `WHATSAPP_AUTO_REPLY=off`.
+  Es texto libre, permitido por Meta solo dentro de las 24 h de ventana de atención: se envía en el acto, sin plantilla que aprobar.
+- **«STOP» / «BAJA»** (el mensaje completo): retira el consentimiento de WhatsApp de las reservas de ese número (se compara el número internacional completo; un número de reserva de 9 dígitos se entiende peruano) y no se contesta.
+  Desde ese momento el programador no le escribe más.
+- La instalación debe tener **una sola organización** (una instalación por cliente): con cero o varias, el mensaje no se guarda porque no se puede atribuir.
+- **Retención**: igual que el registro de mensajes (365 días, `WHATSAPP_RETENTION_DAYS`, D13); el aviso de privacidad (`privacidad-whatsapp.md`) lo menciona.
+- Límites conocidos: no hay respuesta desde el panel ni hilos; solo se guarda el texto (no imágenes ni audios); los mensajes no se asocian automáticamente a una reserva.
+- Prueba: con el número de prueba de Meta y la app en modo desarrollo, escribe desde un teléfono de la lista de prueba: aparece en la bandeja y recibes **una** respuesta automática; vuelve a escribir y no recibes otra.
 
 ## Probar sin gastar mensajes
 - Local: sin variables, el cliente simula. Para el webhook, exporta `WHATSAPP_APP_SECRET` y `WHATSAPP_VERIFY_TOKEN` y firma tus propias peticiones

@@ -1924,6 +1924,57 @@ isOneToOne: true
           },
         ];
       };
+      whatsapp_inbox: {
+        Row: {
+          auto_replied_at: string | null;
+          body: string;
+          created_at: string;
+          from_phone: string;
+          id: string;
+          msg_type: string;
+          org_id: string;
+          profile_name: string | null;
+          read_at: string | null;
+          received_at: string;
+          wamid: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          auto_replied_at?: string | null;
+          body?: string;
+          created_at?: string;
+          from_phone: string;
+          id?: string;
+          msg_type: string;
+          org_id: string;
+          profile_name?: string | null;
+          read_at?: string | null;
+          received_at: string;
+          wamid: string;
+        };
+        Update: {
+          auto_replied_at?: string | null;
+          body?: string;
+          created_at?: string;
+          from_phone?: string;
+          id?: string;
+          msg_type?: string;
+          org_id?: string;
+          profile_name?: string | null;
+          read_at?: string | null;
+          received_at?: string;
+          wamid?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_inbox_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       whatsapp_optin_texts: {
         Row: { body: string; lang: string; version: string };
         ComputedFields: never;
@@ -2137,6 +2188,18 @@ isOneToOne: true
           p_window_end: number;
           p_window_start: number;
         };
+        Returns: undefined;
+      };
+      record_inbound_whatsapp: {
+        Args: { p_auto_reply: boolean; p_at: string; p_body: string; p_from: string; p_name?: string; p_type: string; p_wamid: string };
+        Returns: Json;
+      };
+      revoke_whatsapp_optins: {
+        Args: { p_from: string };
+        Returns: number;
+      };
+      mark_whatsapp_inbox_read: {
+        Args: { p_org_id: string };
         Returns: undefined;
       };
       cron_claim_whatsapp_message: {

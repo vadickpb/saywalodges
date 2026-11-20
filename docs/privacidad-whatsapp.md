@@ -5,6 +5,7 @@
 
 ## Qué datos se tratan
 - **Teléfono** que el huésped escribe en el formulario de reserva (ya se guardaba con la reserva) y su **consentimiento** para mensajes de WhatsApp.
+- **Mensajes que el huésped nos escribe** por WhatsApp (número, nombre de perfil y texto) y la respuesta automática. «STOP» o «BAJA» retira el consentimiento.
 - **Registro de mensajes** enviados: identificador del mensaje en WhatsApp, plantilla, idioma, reserva, estado de entrega y fecha. **No** se guarda el texto del mensaje ni se copia el teléfono al registro.
 
 ## Para qué
@@ -18,7 +19,7 @@ El número y el contenido de cada mensaje se transfieren a **WhatsApp / Meta** (
 - El huésped puede retirarlo en cualquier momento avisando al alojamiento; el sistema deja de enviarle mensajes de esa reserva en cuanto se registra (`whatsapp_optins.revoked_at`).
 
 ## Cuánto tiempo se conservan
-- Registro de mensajes: **365 días** (propuesta, D13), luego se borra automáticamente.
+- Registro de mensajes y bandeja de entrada: **365 días** (propuesta, D13), luego se borra automáticamente.
 - Constancia del consentimiento: mientras exista la reserva.
 
 ## Derechos (Ley 29733)

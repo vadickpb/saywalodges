@@ -1988,12 +1988,13 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 - **Hecho**: `WHATSAPP_OWNER_PHONE` + plantillas `owner_*` (es); WhatsApp **además** del correo (nunca en su lugar: Meta aceptar no es entregar) para reserva nueva, comprobante y conflicto iCal (sin migración).
   **Pendiente del dueño**: crear las 3 plantillas en Meta y la variable (`docs/whatsapp.md`).
 
-### [ ] SD-1012 · feat(whatsapp): inbound inbox and auto-reply
+### [x] SD-1012 · feat(whatsapp): inbound inbox and auto-reply
 `M` · Depende: SD-1010 · Review: `R+S`
 - **Alcance**: guardar mensajes entrantes del webhook (retención definida, Ley 29733), bandeja simple en el panel y
   respuesta automática dentro de la ventana de 24 h con el enlace del cotizador. Sin IA en esta entrega.
 - **Criterios**
-  - [ ] Un mensaje entrante nunca dispara más de una respuesta automática por ventana.
+  - [x] Un mensaje entrante nunca dispara más de una respuesta automática por ventana (pgTAP `0047`, `whatsapp-inbox.test.ts`).
+- **Hecho**: `whatsapp_inbox`, `record_inbound_whatsapp` (atómico, una respuesta por remitente/24 h), STOP/BAJA retira el opt-in, bandeja `/app/whatsapp`, retención. Sin IA.
 
 ## Fase 11 — Comercialización
 

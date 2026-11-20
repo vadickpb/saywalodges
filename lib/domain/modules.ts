@@ -23,7 +23,7 @@ export function isModuleEnabled(disabled: ReadonlySet<ModuleId>, module: ModuleI
 export const MODULE_NAV_HREFS: Readonly<Record<ModuleId, readonly string[]>> = {
   finance: ["/app/finance"],
   guide: ["/app/site/guide"],
-  whatsapp: [],
+  whatsapp: ["/app/whatsapp"],
   online_payments: [],
   crm: ["/app/guests"],
 };

@@ -102,6 +102,16 @@ export async function sendWhatsappTemplate(input: SendTemplateInput, deps: Whats
     },
   };
 
+  return submit(config, body, base, persist, log, deps);
+}
+
+type Persist = (wamid: string, mode: "simulate" | "live") => Promise<void>;
+type Logger = NonNullable<WhatsappDeps["log"]>;
+
+// Shared transport: one POST to the Cloud API, no retry, the same failure mapping for every message type.
+async function submit(
+  config: Extract<WhatsappConfig, { mode: "live" }>, body: unknown, base: Record<string, string>, persist: Persist, log: Logger, deps: WhatsappDeps,
+): Promise<WhatsappResult> {
   let response: Response;
   try {
     response = await (deps.fetch ?? fetch)(`https://graph.facebook.com/${config.apiVersion}/${config.phoneNumberId}/messages`, {
@@ -149,4 +159,43 @@ export async function sendWhatsappTemplate(input: SendTemplateInput, deps: Whats
   }
   log("warn", "whatsapp.rejected", fields);
   return { ok: false, reason: "rejected" };
+}
+
+// ─── Free-form text, ONLY as a reply inside the 24 h customer-service window (SD-1012) ─────────────────────────────────
+// Outside the window Meta rejects free text, so the only caller is the inbound auto-reply, which answers a message that arrived
+// seconds ago. `inWindow: true` is a literal for the same reason as `optIn: true`: forgetting it is a compile error.
+export type SendTextInput = { orgId: string; to: string; body: string; inWindow: true };
+
+const textSchema = z.string().min(1).max(1024);
+export const AUTO_REPLY_TEMPLATE = "auto_reply_text";
+
+export async function sendWhatsappText(input: SendTextInput, deps: WhatsappDeps = {}): Promise<WhatsappResult> {
+  const log = deps.log ?? defaultLog;
+  const config = deps.config ?? parseWhatsappConfig();
+  const base = { template: AUTO_REPLY_TEMPLATE, language: "es", mode: config.mode };
+  if (config.mode === "disabled") {
+    log("error", "whatsapp.not_configured", { ...base, reason: config.reason });
+    return { ok: false, reason: "not_configured" };
+  }
+  const to = toSchema.safeParse(input.to);
+  const text = textSchema.safeParse(input.body);
+  if (!to.success || !text.success || (input.inWindow as boolean) !== true) {
+    log("warn", "whatsapp.invalid_input", base);
+    return { ok: false, reason: "invalid_input" };
+  }
+  const record = deps.record ?? defaultRecord;
+  const persist: Persist = async (wamid, mode) => {
+    try {
+      await record({ orgId: input.orgId, bookingId: null, template: AUTO_REPLY_TEMPLATE, language: "es", wamid, mode });
+    } catch {
+      log("error", "whatsapp.record_failed", base);
+    }
+  };
+  if (config.mode === "simulate") {
+    const id = `sim_${randomUUID()}`;
+    log("info", "whatsapp.simulated", { ...base, messageId: id });
+    await persist(id, "simulate");
+    return { ok: true, id, simulated: true };
+  }
+  return submit(config, { messaging_product: "whatsapp", to: to.data, type: "text", text: { preview_url: true, body: text.data } }, base, persist, log, deps);
 }

@@ -178,7 +178,7 @@ Dos rutas más con el mismo `CRON_SECRET` y el mismo patrón (401 vacío sin sec
 - `POST /api/cron/whatsapp-dispatch` (cada 15 min, mismo workflow): encola y envía los mensajes de reserva con plantilla a quien dio su opt-in
   (`docs/whatsapp.md`). Idempotente (`unique(booking_id, kind)`), como máximo una vez por mensaje, sin reintentos. En producción sin credenciales de
   WhatsApp responde `200` con `"status":"not_configured"` y **no** reclama nada. Si algún envío falla responde 200 con `"failed":n` y el workflow queda rojo.
-- `POST /api/cron/whatsapp-purge` (diaria, 07:41 UTC): borra de `whatsapp_messages` y `whatsapp_outbox` lo anterior a `WHATSAPP_RETENTION_DAYS` (365 por defecto).
+- `POST /api/cron/whatsapp-purge` (diaria, 07:41 UTC): borra de `whatsapp_messages`, `whatsapp_outbox` y `whatsapp_inbox` (SD-1012) lo anterior a `WHATSAPP_RETENTION_DAYS` (365 por defecto).
 
 No hacen falta secretos nuevos. Requiere la migración `whatsapp_templates_optin`; antes de aprobarla en producción las rutas responden 500 (el resto del
 sistema no depende de ellas).

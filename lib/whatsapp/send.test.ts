@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-import { sendWhatsappTemplate, type SendTemplateInput, type WhatsappDeps } from "./send";
+import { sendWhatsappTemplate, sendWhatsappText, type SendTemplateInput, type WhatsappDeps } from "./send";
 
 const input: SendTemplateInput = { orgId: "org-1", bookingId: "b-1", to: "51999999999", template: "booking_confirmed", language: "es", params: ["Ana", "12 nov"], optIn: true };
 const live = { mode: "live", accessToken: "tok_secret_value", phoneNumberId: "123456789012345", apiVersion: "v21.0" } as const;
@@ -118,5 +118,32 @@ describe("live", () => {
     await sendWhatsappTemplate(input, deps);
     const all = JSON.stringify(log.mock.calls);
     for (const secret of ["51999999999", "tok_secret_value", "Ana", "12 nov"]) expect(all).not.toContain(secret);
+  });
+});
+
+describe("sendWhatsappText (SD-1012 auto-reply, inside the 24 h window only)", () => {
+  const input = { orgId: "22222222-2222-4222-8222-222222222222", to: "51999111222", body: "Gracias por escribirnos", inWindow: true as const };
+  it("posts a text message and records the ledger row without a booking", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ messages: [{ id: "wamid.T" }] }), { status: 200 }));
+    const record = vi.fn(async () => {});
+    const result = await sendWhatsappText(input, { config: live, fetch: fetchMock as unknown as typeof fetch, record, log: () => {} });
+    expect(result).toEqual({ ok: true, id: "wamid.T", simulated: false });
+    expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toMatchObject({ type: "text", to: "51999111222", text: { body: "Gracias por escribirnos" } });
+    expect(record).toHaveBeenCalledWith(expect.objectContaining({ orgId: input.orgId, bookingId: null, template: "auto_reply_text" }));
+  });
+  it("simulates without calling Meta, refuses when not configured, and rejects bad input", async () => {
+    const fetchMock = vi.fn();
+    const record = vi.fn(async () => {});
+    expect(await sendWhatsappText(input, { config: { mode: "simulate" }, fetch: fetchMock as unknown as typeof fetch, record, log: () => {} })).toMatchObject({ ok: true, simulated: true });
+    expect(await sendWhatsappText(input, { config: { mode: "disabled", reason: "missing_credentials" }, fetch: fetchMock as unknown as typeof fetch, log: () => {} })).toEqual({ ok: false, reason: "not_configured" });
+    for (const bad of [{ ...input, to: "abc" }, { ...input, body: "" }, { ...input, body: "x".repeat(1025) }, { ...input, inWindow: false as unknown as true }]) {
+      expect(await sendWhatsappText(bad, { config: live, fetch: fetchMock as unknown as typeof fetch, log: () => {} })).toEqual({ ok: false, reason: "invalid_input" });
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("maps provider failures like templates (no retry)", async () => {
+    const down = vi.fn(async () => new Response("{}", { status: 503 }));
+    expect(await sendWhatsappText(input, { config: live, fetch: down as unknown as typeof fetch, log: () => {} })).toEqual({ ok: false, reason: "unavailable" });
+    expect(down).toHaveBeenCalledTimes(1);
   });
 });
