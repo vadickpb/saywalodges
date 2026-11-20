@@ -48,4 +48,19 @@ describe("handleInboundMessage", () => {
     await expect(handleInboundMessage(msg, { client: failing, send: ok(), source: {} })).rejects.toThrow();
     expect(JSON.stringify(log.mock.calls)).not.toContain("secret");
   });
+
+  it("a redelivered STOP still withdraws the consent, even if the first attempt failed after storing it", async () => {
+    const c = client({ status: "duplicate", reply: false });
+    await handleInboundMessage({ ...msg, body: "BAJA" }, { client: c, send: ok(), source: {} });
+    expect((c as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledWith("revoke_whatsapp_optins", { p_from: "51999111222" });
+    const failing = { rpc: vi.fn(async (name: string) => name === "record_inbound_whatsapp" ? { data: { status: "stored", reply: false, org_id: ORG }, error: null } : { data: null, error: { code: "XX000" } }) } as never;
+    await expect(handleInboundMessage({ ...msg, body: "STOP" }, { client: failing, send: ok(), source: {} })).rejects.toThrow("revoke_whatsapp_optins failed");
+  });
+  it("reactions and system events are stored but never answered; an unattributable message is logged", async () => {
+    const c = client({ status: "stored", reply: false, org_id: ORG });
+    await handleInboundMessage({ ...msg, type: "reaction", body: "" }, { client: c, send: ok(), source: {} });
+    expect((c as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledWith("record_inbound_whatsapp", expect.objectContaining({ p_auto_reply: false }));
+    expect(await handleInboundMessage(msg, { client: client({ status: "no_org", reply: false }), send: ok(), source: {} })).toBe("no_org");
+    expect(log).toHaveBeenCalledWith("warn", "whatsapp.inbound_unattributed");
+  });
 });

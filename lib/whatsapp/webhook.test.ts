@@ -111,8 +111,8 @@ describe("inbound messages (SD-1012)", () => {
     const out = parseInboundMessages(wrap({ messages: [{ id: "", from: "1", timestamp: "x", type: "text" }, { id: "ok", from: "51999111222", timestamp: "1", type: "text", text: { body: "b" } }] }));
     expect(out.map((m) => m.wamid)).toEqual(["ok"]);
   });
-  it.each(["STOP", " stop ", "Baja", "baja.", "NO MÁS", "unsubscribe"])("%j is a stop request", (body) => expect(isStopMessage(body)).toBe(true));
-  it.each(["no pares de mandarme fotos", "stop the car", "hola", "", "cancelar mi reserva por favor"])("%j is not", (body) => expect(isStopMessage(body)).toBe(false));
+  it.each(["STOP", " stop ", "Baja", "baja.", "NO MÁS", "unsubscribe", "Parar"])("%j is a stop request", (body) => expect(isStopMessage(body)).toBe(true));
+  it.each(["no pares de mandarme fotos", "stop the car", "hola", "", "cancelar mi reserva por favor", "Cancelar", "para"])("%j is not", (body) => expect(isStopMessage(body)).toBe(false));
   it("the auto-reply carries the quoter link in both languages, and none without a public domain", () => {
     const text = autoReplyText("saywalodges.com");
     expect(text).toContain("https://saywalodges.com/es/cotizar");

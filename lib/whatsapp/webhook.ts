@@ -128,7 +128,8 @@ export function parseInboundMessages(payload: unknown): InboundMessage[] {
   return out;
 }
 
-const STOP_WORDS = new Set(["stop", "baja", "parar", "para", "cancelar", "no mas", "no más", "unsubscribe", "darme de baja"]);
+// Deliberately NOT "cancelar" or "para": a guest who writes only that usually means their booking, not the messages.
+const STOP_WORDS = new Set(["stop", "baja", "parar", "no mas", "no más", "unsubscribe", "darme de baja"]);
 
 /** A guest asking us to stop writing ("STOP", "BAJA"...): the whole message must be that word. */
 export function isStopMessage(body: string): boolean {

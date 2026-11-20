@@ -24,7 +24,9 @@ export async function handleInboundMessage(message: InboundMessage, deps: Inboun
   const source = deps.source ?? process.env;
   const stop = message.type === "text" && isStopMessage(message.body);
   const replyText = autoReplyText(env.ROOT_DOMAIN);
-  const autoReplyOn = source.WHATSAPP_AUTO_REPLY !== "off";
+  // Reactions, button taps and system events never open the conversation: a thumbs-up to a confirmation is not a question.
+  const answerable = ["text", "image", "audio", "video", "document", "location", "contacts", "sticker", "voice"].includes(message.type);
+  const autoReplyOn = source.WHATSAPP_AUTO_REPLY !== "off" && answerable;
 
   const { data, error } = await client.rpc("record_inbound_whatsapp", {
     p_wamid: message.wamid, p_from: message.from, p_name: message.name ?? undefined, p_body: message.body, p_type: message.type,
@@ -35,8 +37,13 @@ export async function handleInboundMessage(message: InboundMessage, deps: Inboun
     log("error", "whatsapp.inbound_failed", { code: error?.code ?? "INVALID" });
     throw new Error("record_inbound_whatsapp failed");
   }
-  if (parsed.data.status !== "stored") return parsed.data.status;
+  if (parsed.data.status === "no_org") {
+    log("warn", "whatsapp.inbound_unattributed");
+    return "no_org";
+  }
 
+  // Also on a redelivery ("duplicate"): if the first delivery stored the STOP but the revocation failed, Meta's retry must still
+  // withdraw the consent. The RPC is idempotent (it only touches consents that are still active).
   if (stop) {
     const revoked = await client.rpc("revoke_whatsapp_optins", { p_from: message.from });
     if (revoked.error) {
@@ -45,6 +52,8 @@ export async function handleInboundMessage(message: InboundMessage, deps: Inboun
     }
     log("info", "whatsapp.optin_revoked", { count: typeof revoked.data === "number" ? revoked.data : 0 });
   }
+
+  if (parsed.data.status === "duplicate") return "duplicate";
 
   if (parsed.data.reply && parsed.data.org_id && replyText) {
     // The reply was claimed in the database before sending: at most once, never retried.
