@@ -1882,6 +1882,48 @@ isOneToOne: true
           },
         ];
       };
+      whatsapp_rules: {
+        Row: {
+          enabled: boolean;
+          id: string;
+          kind: string;
+          offset_days: number;
+          org_id: string;
+          updated_at: string;
+          window_end: number;
+          window_start: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          enabled?: boolean;
+          id?: string;
+          kind: string;
+          offset_days?: number;
+          org_id: string;
+          updated_at?: string;
+          window_end?: number;
+          window_start?: number;
+        };
+        Update: {
+          enabled?: boolean;
+          id?: string;
+          kind?: string;
+          offset_days?: number;
+          org_id?: string;
+          updated_at?: string;
+          window_end?: number;
+          window_start?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_rules_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       whatsapp_optin_texts: {
         Row: { body: string; lang: string; version: string };
         ComputedFields: never;
@@ -2085,6 +2127,17 @@ isOneToOne: true
       cron_claim_booking_email: {
         Args: { p_arrival_days?: number };
         Returns: Json;
+      };
+      set_whatsapp_rule: {
+        Args: {
+          p_enabled: boolean;
+          p_kind: string;
+          p_offset_days: number;
+          p_org_id: string;
+          p_window_end: number;
+          p_window_start: number;
+        };
+        Returns: undefined;
       };
       cron_claim_whatsapp_message: {
         Args: { p_arrival_days?: number };

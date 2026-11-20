@@ -113,6 +113,18 @@ describe("deliverWhatsappMessages", () => {
   });
 });
 
+describe("idempotent queue (SD-1010)", () => {
+  it("running the scheduler twice over the same queue sends each message once", async () => {
+    // A queue shaped like the database's: a claimed row is never handed out again (unique(booking, kind) + attempted_at).
+    const pending = [claim];
+    const client = { rpc: vi.fn(async (name: string) => name === "cron_claim_whatsapp_message" ? { data: pending.shift() ?? null, error: null } : { data: null, error: null }) } as never;
+    const send = ok(false);
+    await deliverWhatsappMessages(client, send, { ...sim, WHATSAPP_MODE: "simulate" });
+    await deliverWhatsappMessages(client, send, sim);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("purgeWhatsappRecords", () => {
   it("uses the retention setting (365 days by default)", async () => {
     const rpc = vi.fn(async () => ({ data: { messages: 2, outbox: 1 }, error: null }));

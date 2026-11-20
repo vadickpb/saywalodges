@@ -1,5 +1,6 @@
 import { isActiveOrgOwner, listPaymentAccounts } from "@/lib/dal/payment-accounts";
 import { PaymentAccounts } from "@/components/dashboard/payment-accounts";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function SettingsPage() {
@@ -15,5 +16,10 @@ export default async function SettingsPage() {
     );
   }
   const accounts = await listPaymentAccounts();
-  return <PaymentAccounts accounts={accounts} />;
+  return (
+    <div className="space-y-6">
+      <PaymentAccounts accounts={accounts} />
+      <p className="text-sm"><Link className="underline" href="/app/settings/whatsapp">Reglas de los mensajes de WhatsApp</Link></p>
+    </div>
+  );
 }

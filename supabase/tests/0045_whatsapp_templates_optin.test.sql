@@ -17,6 +17,11 @@ select ok(not has_function_privilege('anon', 'public.cron_purge_whatsapp(integer
 select ok(has_function_privilege('service_role', 'public.cron_claim_whatsapp_message(integer)', 'EXECUTE'), 'cron can claim');
 select ok(has_function_privilege('anon', 'public.create_checkout_booking(text,text,text,text,text,boolean,text)', 'EXECUTE'), 'public checkout can convert');
 
+-- SD-1010 added send windows (arrival 9-20 h, post stay 14-20 h by default): pin them to the whole day so this test does not depend on the hour it runs.
+insert into public.whatsapp_rules (org_id, kind, offset_days, window_start, window_end) values
+  ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'arrival_reminder', 1, 0, 24), ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'post_stay', 0, 0, 24),
+  ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'arrival_reminder', 1, 0, 24), ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'post_stay', 0, 0, 24);
+
 insert into public.quotes(org_id, property_id, unit_id, token, check_in, check_out, guests, currency, total_cents, deposit_cents, expires_at)
 values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'ee204001-0000-4000-8000-000000000001', repeat('a', 64), '2039-01-01', '2039-01-03', 2, 'USD', 10000, 5000, now() + interval '1 day'),
        ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'ee204001-0000-4000-8000-000000000001', repeat('b', 64), '2039-02-01', '2039-02-03', 2, 'USD', 10000, 5000, now() + interval '1 day'),
