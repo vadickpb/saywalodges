@@ -73,7 +73,7 @@ export const VENDOR_NO_DATABASE_URL = "https://no-database.invalid";
 const VENDOR_NO_DATABASE_KEY = "vendor-mode-has-no-database";
 
 function withVendorDefaults(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  if (source.DEPLOYMENT_MODE?.trim() !== "vendor") return source;
+  if (source.DEPLOYMENT_MODE !== "vendor") return source; // exact, like the enum below
   const blank = (key: string) => !source[key]?.trim();
   return {
     ...source,

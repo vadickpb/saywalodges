@@ -233,6 +233,16 @@ describe("env", () => {
     await expect(import("./env")).rejects.toThrow(/SUPABASE_URL/);
   });
 
+  it("vendor mode treats blank Supabase variables as absent", async () => {
+    setValidEnv();
+    process.env.SUPABASE_URL = "";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "   ";
+    process.env.DEPLOYMENT_MODE = "vendor";
+    const { env } = await import("./env");
+    expect(env.SUPABASE_URL).toBe("https://no-database.invalid");
+    expect(env.SUPABASE_SERVICE_ROLE_KEY).toBe("vendor-mode-has-no-database");
+  });
+
   it("vendor mode keeps real credentials when they are set", async () => {
     setValidEnv();
     process.env.DEPLOYMENT_MODE = "vendor";

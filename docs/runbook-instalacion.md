@@ -140,7 +140,7 @@ de ejecutar lógica de aplicación.
    valores inertes (`https://no-database.invalid`). Si el proyecto las tiene de antes, puedes **borrarlas**: la web de
    ventas no debe guardar la clave service-role de ningún proyecto.
    **Previews**: marca también **Preview** en `DEPLOYMENT_MODE`, `ROOT_DOMAIN`, `NEXT_PUBLIC_SITE_URL` y
-   `NEXT_PUBLIC_PRODUCT_NAME` (no son secretas). Sin `DEPLOYMENT_MODE=vendor` en Preview, el build cae en modo `platform`,
+   `NEXT_PUBLIC_PRODUCT_NAME` (no son secretas; en el preview las URLs canónicas y el sitemap apuntan al dominio de producción, es lo esperado). Sin `DEPLOYMENT_MODE=vendor` en Preview, el build cae en modo `platform`,
    exige Supabase y falla en cada PR. Alternativa si no quieres previews de la web de ventas: Settings → Git → *Ignored
    Build Step* → «Only build production».
 4. Despliega y verifica:
