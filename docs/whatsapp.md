@@ -168,6 +168,52 @@ compara con este documento).
 - La mención en el aviso de privacidad (transferencia a Meta/WhatsApp, finalidad, retención y cómo retirar el consentimiento) está en un **borrador** marcado:
   [`privacidad-whatsapp.md`](privacidad-whatsapp.md). No es texto legal definitivo.
 
+## Alertas al número del dueño (SD-1011)
+
+Al dueño le llegan por **WhatsApp** (con el correo como **respaldo**): reserva nueva, comprobante subido y conflicto de calendario.
+
+- Se activa con la variable `WHATSAPP_OWNER_PHONE` (tu número con código de país, p. ej. `+51 999 111 222`). Al configurarlo, tú mismo pides recibir los avisos; no hay opt-in de huésped.
+  Sin ella, o con un número no válido, solo se usa el correo, como hasta ahora.
+- **Respaldo**: el correo solo se omite si Meta **aceptó** el mensaje en modo real. Simulación, credenciales ausentes, rechazo o caída → sale el correo.
+  Solo se intenta WhatsApp en el primer intento del evento (un reintento del correo no te escribe dos veces).
+- Los avisos de feed caído siguen yendo solo por correo. El texto de los mensajes lleva alojamiento y fechas, nunca datos del huésped.
+- Plantillas (Utility, **solo Spanish (es)**, sin encabezado, pie ni botones, nombre exacto):
+
+#### `owner_new_booking` — nueva reserva (pendiente de pago)
+
+- Variables: {{1}} = alojamiento; {{2}} = llegada; {{3}} = salida.
+- Texto (copia exacta):
+
+  ```text
+  Nueva reserva pendiente de pago en {{1}}. Llegada: {{2}}. Salida: {{3}}. Revísala en el panel.
+  ```
+
+  Ejemplos que Meta pide: {{1}} = `Casa 1`, {{2}} = `21 dic 2026`, {{3}} = `24 dic 2026`
+
+#### `owner_voucher_uploaded` — comprobante subido
+
+- Variables: {{1}} = alojamiento; {{2}} = llegada.
+- Texto (copia exacta):
+
+  ```text
+  Un huésped subió un comprobante de pago para {{1}} con llegada el {{2}}. Apruébalo o recházalo en el panel.
+  ```
+
+  Ejemplos que Meta pide: {{1}} = `Casa 1`, {{2}} = `21 dic 2026`
+
+#### `owner_calendar_conflict` — conflicto de calendario importado (iCal)
+
+- Variables: {{1}} = alojamiento; {{2}} = cantidad de conflictos.
+- Texto (copia exacta):
+
+  ```text
+  Se detectó un conflicto de calendario en {{1}}: {{2}} reserva(s) importada(s) chocan con fechas ocupadas. Revísalo en el panel.
+  ```
+
+  Ejemplos que Meta pide: {{1}} = `Casa 1`, {{2}} = `1`
+
+Prueba: con `WHATSAPP_OWNER_PHONE` = tu número (en la lista de destinatarios de prueba de Meta), haz una reserva de prueba y sube un comprobante: debes recibir los dos avisos por WhatsApp y **ningún** correo de dueño; quita la variable y vuelven los correos.
+
 ## Probar sin gastar mensajes
 - Local: sin variables, el cliente simula. Para el webhook, exporta `WHATSAPP_APP_SECRET` y `WHATSAPP_VERIFY_TOKEN` y firma tus propias peticiones
   (`printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$WHATSAPP_APP_SECRET"`).

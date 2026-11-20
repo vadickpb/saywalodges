@@ -5,6 +5,8 @@ import { log } from "@/lib/log";
 import { bookingEvents } from "@/lib/email/content";
 import { parseEmailConfig } from "@/lib/email/config";
 import { sendEmail } from "@/lib/email/send";
+import { ownerBookingParams, ownerVoucherParams } from "@/lib/domain/whatsapp-owner-alerts";
+import { ownerWhatsappPhone, sendOwnerWhatsappAlert } from "@/lib/whatsapp/owner-alert";
 
 const claimSchema = z.object({
   id: z.uuid(), attempt: z.number().int().min(1).max(3), event: z.enum(bookingEvents), lang: z.enum(["es", "en"]),
@@ -17,7 +19,7 @@ const configSchema = z.object({
 // Only called by the authenticated cron. Claims commit BEFORE contacting the provider.
 // The database bounds transient retries and abandoned claims to three attempts.
 export async function deliverBookingEmails(
-  client = getSupabaseAdmin(), send = sendEmail, source: Record<string, string | undefined> = process.env,
+  client = getSupabaseAdmin(), send = sendEmail, source: Record<string, string | undefined> = process.env, ownerAlert = sendOwnerWhatsappAlert,
 ) {
   const config = configSchema.safeParse(source);
   if (!config.success || parseEmailConfig(source).mode === "disabled") {
@@ -45,6 +47,22 @@ export async function deliverBookingEmails(
       continue;
     }
     const event = parsed.data;
+    // SD-1011: the owner's WhatsApp is the preferred channel for new bookings and vouchers; the email below is the fallback
+    // for anything but a live delivery. Only on the first attempt: a retried email must not message the owner twice.
+    if ((event.event === "owner_booking" || event.event === "owner_voucher") && event.attempt === 1 && ownerWhatsappPhone(source)) {
+      const context = await client.from("booking_email_events").select("org_id, booking_id").eq("id", event.id).maybeSingle();
+      const ids = z.object({ org_id: z.uuid(), booking_id: z.uuid() }).safeParse(context.data);
+      if (ids.success && await ownerAlert({
+        kind: event.event === "owner_booking" ? "owner_new_booking" : "owner_voucher_uploaded", orgId: ids.data.org_id, bookingId: ids.data.booking_id,
+        params: event.event === "owner_booking" ? ownerBookingParams(event.unit, event.check_in, event.check_out) : ownerVoucherParams(event.unit, event.check_in),
+      }, source)) {
+        const settled = await client.rpc("cron_settle_booking_email", { p_id: event.id, p_attempt: event.attempt, p_outcome: "sent" });
+        if (settled.error) throw new Error("Email settle failed");
+        summary.sent++;
+        log("info", "cron.booking_emails.delivery", { outcome: "whatsapp_sent" });
+        continue;
+      }
+    }
     let instructions: string | undefined;
     if (event.event === "arrival") {
       const parsedInstructions = z.string().trim().min(1).max(4000).safeParse(source[

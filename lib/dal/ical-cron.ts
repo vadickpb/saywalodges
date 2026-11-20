@@ -4,6 +4,8 @@ import { log } from "@/lib/log";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { ICAL_CHANNELS } from "@/lib/domain/ical-feeds";
 import { downloadSnapshot } from "./ical-sync";
+import { ownerConflictParams } from "@/lib/domain/whatsapp-owner-alerts";
+import { ownerWhatsappPhone, sendOwnerWhatsappAlert } from "@/lib/whatsapp/owner-alert";
 
 // Scheduled iCal sync (SD-307). Service-role on purpose: the cron_* RPCs are granted to service_role
 // only and are called from the authenticated cron route, never from a page or a user action. The org
@@ -88,4 +90,16 @@ export async function settleAlert(feedId: string, claimId: string, delivered: bo
     // Let the caller retry: an unsettled claim would expire and the alert would be mailed again.
     throw new Error("settle failed");
   }
+}
+
+/**
+ * SD-1011: tells the owner about a calendar conflict on WhatsApp. True only for a live delivery; anything else (no owner number,
+ * simulation, failure) returns false and the caller falls back to email. The organization comes from the feed row, never from input.
+ */
+export async function whatsappConflictAlert(feedId: string, unitName: string | null, count: number, client: Admin = getSupabaseAdmin()): Promise<boolean> {
+  if (!ownerWhatsappPhone()) return false;
+  const feed = await client.from("ical_feeds").select("org_id").eq("id", feedId).maybeSingle();
+  const org = z.object({ org_id: uuid }).safeParse(feed.data);
+  if (!org.success) return false;
+  return sendOwnerWhatsappAlert({ kind: "owner_calendar_conflict", orgId: org.data.org_id, params: ownerConflictParams(unitName, count) });
 }

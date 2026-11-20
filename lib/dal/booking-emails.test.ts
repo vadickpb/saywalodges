@@ -95,4 +95,37 @@ describe("booking email delivery", () => {
     await expect(deliverBookingEmails(undefined,undefined,source)).rejects.toThrow("settle");
     expect(send).toHaveBeenCalledTimes(1);
   });
+
+  describe("owner WhatsApp alert (SD-1011)", () => {
+    const owner = { ...source, WHATSAPP_OWNER_PHONE: "+51 999 111 222" };
+    const ids = { org_id: "22222222-2222-4222-8222-222222222222", booking_id: "33333333-3333-4333-8333-333333333333" };
+    const client = () => ({ rpc, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: ids, error: null }) }) }) }) }) as never;
+    it("a live WhatsApp delivery replaces the email for the owner", async () => {
+      queued();
+      const alert = vi.fn(async () => true);
+      expect(await deliverBookingEmails(client(), send, owner, alert)).toEqual({ sent: 1, failed: 0, skipped: 0 });
+      expect(alert).toHaveBeenCalledWith(expect.objectContaining({ kind: "owner_voucher_uploaded", orgId: ids.org_id, bookingId: ids.booking_id, params: [expect.any(String), expect.any(String)] }), owner);
+      expect(send).not.toHaveBeenCalled();
+      expect(rpc).toHaveBeenCalledWith("cron_settle_booking_email", { p_id: claim.id, p_attempt: 1, p_outcome: "sent" });
+    });
+    it("falls back to email when WhatsApp did not deliver", async () => {
+      queued();
+      const alert = vi.fn(async () => false);
+      await deliverBookingEmails(client(), send, owner, alert);
+      expect(alert).toHaveBeenCalledTimes(1);
+      expect(send).toHaveBeenCalledTimes(1);
+    });
+    it("never tries WhatsApp without an owner number, on a retry, or for guest emails", async () => {
+      const alert = vi.fn(async () => true);
+      queued();
+      await deliverBookingEmails(client(), send, source, alert);
+      rpc.mockReset(); rpc.mockResolvedValue({ data: null, error: null });
+      rpc.mockResolvedValueOnce({ data: { ...claim, attempt: 2 }, error: null }).mockResolvedValueOnce({ data: null, error: null });
+      await deliverBookingEmails(client(), send, owner, alert);
+      rpc.mockReset(); rpc.mockResolvedValue({ data: null, error: null });
+      rpc.mockResolvedValueOnce({ data: { ...claim, event: "received" }, error: null }).mockResolvedValueOnce({ data: null, error: null });
+      await deliverBookingEmails(client(), send, owner, alert);
+      expect(alert).not.toHaveBeenCalled();
+    });
+  });
 });

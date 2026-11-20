@@ -1,5 +1,5 @@
 import "server-only";
-import { claimAlert, listDueFeedIds, settleAlert, syncDueFeed, type AlertClaim, type AlertKind, type FeedOutcome } from "@/lib/dal/ical-cron";
+import { claimAlert, listDueFeedIds, settleAlert, syncDueFeed, whatsappConflictAlert, type AlertClaim, type AlertKind, type FeedOutcome } from "@/lib/dal/ical-cron";
 import { sendEmail, type EmailResult } from "@/lib/email/send";
 import { log } from "@/lib/log";
 
@@ -21,9 +21,11 @@ export type Deps = {
   claimAlert: (feedId: string, kind: AlertKind) => Promise<AlertClaim | null>;
   settleAlert: (feedId: string, claimId: string, delivered: boolean) => Promise<void>;
   sendEmail: (input: Parameters<typeof sendEmail>[0]) => Promise<EmailResult>;
+  /** SD-1011: preferred channel for a conflict alert; email is the fallback. Optional so existing callers keep working. */
+  whatsappConflict?: (feedId: string, unitName: string | null, count: number) => Promise<boolean>;
   now: () => number;
 };
-export const defaultDeps: Deps = { listDueFeedIds, syncDueFeed, claimAlert, settleAlert, sendEmail, now: Date.now };
+export const defaultDeps: Deps = { listDueFeedIds, syncDueFeed, claimAlert, settleAlert, sendEmail, whatsappConflict: whatsappConflictAlert, now: Date.now };
 
 export type Options = {
   limit: number; // max feeds per execution
@@ -42,8 +44,15 @@ async function alertOwners(feedId: string, kind: AlertKind, options: Options, de
   let delivered = false;
   let simulated = false;
   try {
+    if (kind === "conflict" && deps.whatsappConflict && (await deps.whatsappConflict(feedId, claim.unit_name, claim.count).catch(() => false))) {
+      delivered = true;
+    }
+  } catch {
+    // fall through to email
+  }
+  try {
     const props = { channel: claim.channel, unitName: claim.unit_name ?? undefined, ...(options.dashboardUrl ? { url: options.dashboardUrl } : {}) };
-    for (const [index, to] of claim.recipients.entries()) {
+    for (const [index, to] of delivered ? [] : claim.recipients.entries()) {
       const idempotencyKey = `ical:${claim.claim_id}:${index}`;
       const result =
         kind === "conflict"
