@@ -51,7 +51,7 @@ Cuatro mensajes, todos con **plantilla aprobada**, en el idioma de la reserva (`
 
 Una fila por reserva y tipo (`whatsapp_outbox`, `unique(booking_id, kind)`): ejecutar el programador dos veces no manda nada dos veces.
 **Como máximo una vez**: el envío se reclama antes de hablar con Meta y nunca se reintenta (la API no tiene clave de idempotencia; un duplicado es peor que un
-recordatorio perdido). Un reclamo abandonado más de 30 min se cierra como `failed`. Las reglas configurables por el dueño y el horario permitido llegan en SD-1010.
+recordatorio perdido). Un reclamo abandonado más de 30 min se cierra como `failed`. Las reglas configurables por el dueño y el horario permitido son de SD-1010 (siguiente sección).
 
 ### Consentimiento (opt-in)
 - En el checkout hay una casilla **separada de los términos**, opcional y **nunca marcada por defecto**. Sin ella no se encola ni se envía nada.
@@ -167,6 +167,23 @@ compara con este documento).
 - La evidencia del opt-in se conserva mientras exista la reserva (es la prueba del consentimiento).
 - La mención en el aviso de privacidad (transferencia a Meta/WhatsApp, finalidad, retención y cómo retirar el consentimiento) está en un **borrador** marcado:
   [`privacidad-whatsapp.md`](privacidad-whatsapp.md). No es texto legal definitivo.
+
+## Reglas y horario de envío (SD-1010)
+
+El dueño las edita en el panel: **Ajustes → Reglas de los mensajes de WhatsApp** (`/app/settings/whatsapp`; solo el dueño, la base lo exige también).
+Por cada mensaje (confirmación, recordatorio del adelanto, recordatorio de llegada, post-estadía):
+
+| Campo | Qué hace | Por defecto |
+|---|---|---|
+| Enviar este mensaje | Apagado = no se encola ni sale ninguno de ese tipo (lo ya encolado se cierra como omitido) | Encendido |
+| Días | Llegada: días **antes** de la llegada (0-14). Post-estadía: días **después** de la salida (0-3). Los otros no lo usan | Llegada 1, post-estadía 0 |
+| Desde / hasta (hora de Lima) | Solo se envía dentro de ese tramo, `[desde, hasta)` | Llegada 9-20, post-estadía 14-20, los demás todo el día |
+
+- **Idempotente**: una fila por reserva y tipo (`unique(booking_id, kind)`): ejecutar el programador dos veces no manda dos veces (pgTAP `0046` y Vitest). Lo encolado fuera del horario espera a que se abra.
+- Fuera de horario un mensaje no se pierde mientras siga vigente (p. ej. la confirmación dura 48 h); si la reserva cambia antes de que abra el horario, se omite.
+- Un mensaje omitido (regla apagada) no se reencola al volver a encenderla: es una fila por reserva y tipo (como máximo una vez). Un mensaje encolado que ya no está vigente (p. ej. post-estadía pasados 3 días) caduca como omitido.
+- Un cambio de reglas aplica al siguiente ciclo del cron (≤ 15 min). Sin reglas guardadas rigen los valores por defecto.
+- La plantilla de cada regla es fija (las cuatro de «Plantillas a crear en Meta»): el dueño elige cuándo y si se envía, no el texto, que Meta debe aprobar.
 
 ## Alertas al número del dueño (SD-1011)
 

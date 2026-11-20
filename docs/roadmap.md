@@ -1971,14 +1971,15 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 - **Hecho**: opt-in con evidencia (texto canónico copiado por la BD), outbox idempotente y at-most-once, cron `whatsapp-dispatch`/`whatsapp-purge`,
   retención 365 d (D13), borrador de privacidad (D12). Simulación en no-producción; producción sin credenciales no envía.
 
-### [ ] SD-1010 · feat(whatsapp): automation rules and send queue
+### [x] SD-1010 · feat(whatsapp): automation rules and send queue
 `M` · Depende: SD-1009 · Review: `R+S`
 - **Alcance**: reglas configurables por el dueño («al confirmar la reserva», «N días antes de la llegada», «al salir»)
   que eligen una plantilla aprobada; cola de envíos idempotente (una fila por reserva y regla), horario permitido en
   `America/Lima` y ejecución programada como `docs/cron.md`.
 - **Criterios**
-  - [ ] Ejecutar el programador dos veces no envía dos veces (pgTAP + Vitest).
-  - [ ] Sin opt-in o con la regla apagada no sale ningún mensaje.
+  - [x] Ejecutar el programador dos veces no envía dos veces (pgTAP `0046` + Vitest `whatsapp-dispatch.test.ts`).
+  - [x] Sin opt-in o con la regla apagada no sale ningún mensaje (pgTAP `0045`/`0046`).
+- **Hecho**: `whatsapp_rules` + `set_whatsapp_rule` (solo dueño), ventana horaria en Lima y claim que respeta reglas; pantalla `/app/settings/whatsapp`. Migración aditiva.
 
 ### [x] SD-1011 · feat(whatsapp): owner alerts
 `S` · Depende: SD-1009 · Review: `R+S`
