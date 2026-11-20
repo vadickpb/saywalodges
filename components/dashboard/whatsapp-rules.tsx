@@ -27,19 +27,20 @@ function RuleForm({ rule }: { rule: WhatsappRule }) {
           {text.offset && (
             <div className="space-y-1.5">
               <Label htmlFor={`${id}-offset`}>{text.offset}</Label>
-              <Input id={`${id}-offset`} name="offsetDays" type="number" min={0} max={rule.kind === "post_stay" ? 3 : 14} defaultValue={rule.offsetDays} aria-invalid={Boolean(errors.offsetDays)} />
-              {errors.offsetDays && <p className="text-sm text-destructive">{errors.offsetDays.join(" ")}</p>}
+              <Input id={`${id}-offset`} name="offsetDays" type="number" min={0} max={rule.kind === "post_stay" ? 3 : 14} defaultValue={rule.offsetDays} aria-invalid={Boolean(errors.offsetDays)} aria-describedby={errors.offsetDays ? `${id}-offset-error` : undefined} />
+              {errors.offsetDays && <p id={`${id}-offset-error`} className="text-sm text-destructive">{errors.offsetDays.join(" ")}</p>}
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor={`${id}-start`}>Desde (hora de Lima)</Label>
-              <Input id={`${id}-start`} name="windowStart" type="number" min={0} max={23} defaultValue={rule.windowStart} aria-invalid={Boolean(errors.windowStart)} />
+              <Input id={`${id}-start`} name="windowStart" type="number" min={0} max={23} defaultValue={rule.windowStart} aria-invalid={Boolean(errors.windowStart)} aria-describedby={errors.windowStart ? `${id}-start-error` : undefined} />
+              {errors.windowStart && <p id={`${id}-start-error`} className="text-sm text-destructive">{errors.windowStart.join(" ")}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor={`${id}-end`}>Hasta (hora de Lima)</Label>
-              <Input id={`${id}-end`} name="windowEnd" type="number" min={1} max={24} defaultValue={rule.windowEnd} aria-invalid={Boolean(errors.windowEnd)} />
-              {errors.windowEnd && <p className="text-sm text-destructive">{errors.windowEnd.join(" ")}</p>}
+              <Input id={`${id}-end`} name="windowEnd" type="number" min={1} max={24} defaultValue={rule.windowEnd} aria-invalid={Boolean(errors.windowEnd)} aria-describedby={errors.windowEnd ? `${id}-end-error` : undefined} />
+              {errors.windowEnd && <p id={`${id}-end-error`} className="text-sm text-destructive">{errors.windowEnd.join(" ")}</p>}
             </div>
           </div>
           {state.formError && <p role="alert" className="text-sm text-destructive">{state.formError}</p>}

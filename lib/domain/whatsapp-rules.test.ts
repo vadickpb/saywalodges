@@ -11,7 +11,7 @@ describe("whatsapp rules", () => {
   it.each([
     { kind: "nope" }, { enabled: "yes" }, { offsetDays: "15" }, { offsetDays: "-1" }, { offsetDays: "1.5" },
     { windowStart: "24" }, { windowEnd: "0" }, { windowEnd: "25" }, { windowStart: "20", windowEnd: "9" }, { windowStart: "9", windowEnd: "9" },
-    { kind: "post_stay", offsetDays: "4" },
+    { kind: "post_stay", offsetDays: "4" }, { windowStart: "" }, { windowEnd: "" }, { offsetDays: "" },
   ])("rejects %o", (patch) => expect(whatsappRuleSchema.safeParse({ ...ok, ...patch }).success).toBe(false));
   it("merges saved rows over the defaults, in display order", () => {
     const merged = mergeWhatsappRules([{ kind: "post_stay", enabled: false, offset_days: 2, window_start: 10, window_end: 12 }]);

@@ -19,15 +19,16 @@ export const whatsappRuleLabels: Record<WhatsappKind, { title: string; help: str
   confirmation: { title: "Confirmación de reserva", help: "Al confirmarse el pago." },
   deposit_reminder: { title: "Recordatorio del adelanto", help: "Cuando queda un tercio de la retención sin comprobante." },
   arrival_reminder: { title: "Recordatorio de llegada", help: "Antes de la llegada.", offset: "Días antes de la llegada (0-14)" },
-  post_stay: { title: "Agradecimiento post-estadía", help: "Después de la salida.", offset: "Días después de la salida (0-3)" },
+  post_stay: { title: "Agradecimiento post-estadía", help: "Después de la salida.", offset: "Días después de la salida (0-3); sigue vigente 3 días más" },
 };
 
 export const whatsappRuleSchema = z.object({
   kind: z.enum(whatsappKinds),
   enabled: z.boolean(),
-  offsetDays: z.coerce.number().int().min(0).max(14),
-  windowStart: z.coerce.number().int().min(0).max(23),
-  windowEnd: z.coerce.number().int().min(1).max(24),
+  // An empty field must be an error, not 0 (Number("") is 0).
+  offsetDays: z.preprocess((v) => (v === "" || v === null || v === undefined ? NaN : v), z.coerce.number().int().min(0).max(14)),
+  windowStart: z.preprocess((v) => (v === "" || v === null || v === undefined ? NaN : v), z.coerce.number().int().min(0).max(23)),
+  windowEnd: z.preprocess((v) => (v === "" || v === null || v === undefined ? NaN : v), z.coerce.number().int().min(1).max(24)),
 }).refine((r) => r.windowStart < r.windowEnd, { path: ["windowEnd"], message: "La hora final debe ser posterior a la inicial." })
   .refine((r) => r.kind !== "post_stay" || r.offsetDays <= 3, { path: ["offsetDays"], message: "Máximo 3 días después de la salida." });
 

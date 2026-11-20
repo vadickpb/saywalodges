@@ -147,7 +147,8 @@ begin
       and not exists (select 1 from public.payments p where p.booking_id = b.id and p.org_id = b.org_id
                         and p.status in ('pending_review', 'approved'))
     when 'arrival_reminder' then b.status = 'confirmed' and b.check_in >= v_today
-    else b.status = 'confirmed'
+    -- A post-stay thanks that waited for its window too long expires instead of arriving days late.
+    else b.status = 'confirmed' and v_today <= b.check_out + v_rule.offset_days + 3
   end;
 
   -- Re-checked at claim time: rule switched off, consent withdrawn, no phone or the booking changed → skipped, never sent.

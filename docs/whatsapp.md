@@ -181,6 +181,7 @@ Por cada mensaje (confirmación, recordatorio del adelanto, recordatorio de lleg
 
 - **Idempotente**: una fila por reserva y tipo (`unique(booking_id, kind)`): ejecutar el programador dos veces no manda dos veces (pgTAP `0046` y Vitest). Lo encolado fuera del horario espera a que se abra.
 - Fuera de horario un mensaje no se pierde mientras siga vigente (p. ej. la confirmación dura 48 h); si la reserva cambia antes de que abra el horario, se omite.
+- Un mensaje omitido (regla apagada) no se reencola al volver a encenderla: es una fila por reserva y tipo (como máximo una vez). Un mensaje encolado que ya no está vigente (p. ej. post-estadía pasados 3 días) caduca como omitido.
 - Un cambio de reglas aplica al siguiente ciclo del cron (≤ 15 min). Sin reglas guardadas rigen los valores por defecto.
 - La plantilla de cada regla es fija (las cuatro de «Plantillas a crear en Meta»): el dueño elige cuándo y si se envía, no el texto, que Meta debe aprobar.
 

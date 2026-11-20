@@ -104,7 +104,20 @@ select is(public.cron_claim_whatsapp_message(1), null, 'post stay 3 days after c
 update public.whatsapp_rules set offset_days = 1 where kind = 'post_stay';
 select is(public.cron_claim_whatsapp_message(1) ->> 'kind', 'post_stay', 'post stay 1 day after check-out: due');
 
--- Defaults without any rule: post stay waits for 14:00 on the check-out day only through its window.
+-- A queued post-stay whose validity ran out is skipped, not sent late.
+delete from public.whatsapp_outbox;
+delete from public.whatsapp_rules;
+insert into public.whatsapp_rules (org_id, kind, offset_days, window_start, window_end) values ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'post_stay', 0, 0, 24);
+insert into public.whatsapp_outbox (org_id, booking_id, kind) select org_id, id, 'post_stay' from public.bookings;
+set local session_replication_role = replica;
+update public.bookings set check_in = (now() at time zone 'America/Lima')::date - 12, check_out = (now() at time zone 'America/Lima')::date - 9;
+set local session_replication_role = origin;
+select is(public.cron_claim_whatsapp_message(1) ->> 'skip', 'true', 'post stay past its validity is skipped, never sent late');
+
+-- Another organization's rules never affect this queue: org B (no rule) keeps the defaults.
+select is((select enabled from private.whatsapp_effective_rule('ff24bacc-47d2-40bc-9210-f860e98892fd', 'post_stay', 1)), true, 'org B is unaffected by org A rules');
+
+-- Default rule values (no row saved).
 select is((select enabled and offset_days = 1 and window_start = 9 and window_end = 20 from private.whatsapp_effective_rule('bf88f504-051f-4fdc-ab73-4fa12d715817', 'arrival_reminder', 1)),
   true, 'default arrival rule: on, 9-20 h');
 
