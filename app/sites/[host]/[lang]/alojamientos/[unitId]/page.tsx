@@ -15,6 +15,7 @@ import { showcaseFacts, showcaseTypeLabel } from "@/lib/domain/units-showcase";
 import { pick } from "@/lib/domain/site-content";
 import { format } from "@/lib/domain/format";
 import { toJsonLd } from "@/lib/json-ld";
+import { metaDescription } from "@/lib/domain/seo";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { Gallery } from "@/components/site/gallery";
@@ -45,7 +46,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { property, unit } = resolved;
   const realHost = (await headers()).get("host") ?? host;
   const siteUrl = getSiteUrl(realHost);
-  const description = (lang === "es" ? unit.descriptionEs : unit.descriptionEn) || unit.name;
+  // SD-1125: the full unit text is shown on the page; the meta description is the short form search engines display whole.
+  const description = metaDescription((lang === "es" ? unit.descriptionEs : unit.descriptionEn) || unit.name);
   const url = `${siteUrl}/${lang}/alojamientos/${unit.id}`;
   const otherLang = lang === "es" ? "en" : "es";
   return {
