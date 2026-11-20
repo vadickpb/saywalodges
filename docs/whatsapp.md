@@ -176,6 +176,7 @@ Al dueño le llegan por **WhatsApp** (con el correo como **respaldo**): reserva 
   Sin ella, o con un número no válido, solo se usa el correo, como hasta ahora.
 - **Respaldo**: el correo solo se omite si Meta **aceptó** el mensaje en modo real. Simulación, credenciales ausentes, rechazo o caída → sale el correo.
   Solo se intenta WhatsApp en el primer intento del evento (un reintento del correo no te escribe dos veces).
+- El cron de correos exige el correo configurado (es el respaldo): sin `RESEND_API_KEY`/`EMAIL_FROM` tampoco se envían los avisos de reserva por WhatsApp.
 - Los avisos de feed caído siguen yendo solo por correo. El texto de los mensajes lleva alojamiento y fechas, nunca datos del huésped.
 - Plantillas (Utility, **solo Spanish (es)**, sin encabezado, pie ni botones, nombre exacto):
 

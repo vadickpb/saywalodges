@@ -152,7 +152,7 @@ describe("runScheduledIcalSync", () => {
 
   it("a conflict delivered on the owner's WhatsApp skips the email; any other failure falls back to it (SD-1011)", async () => {
     const delivered = deps({ claimAlert: vi.fn(async () => claim), whatsappConflict: vi.fn(async () => true) });
-    expect(await runScheduledIcalSync({ ...options, limit: 1 }, delivered)).toMatchObject({ alertsSent: expect.any(Number) });
+    expect(await runScheduledIcalSync({ ...options, limit: 1 }, delivered)).toMatchObject({ alertsFailed: 0 });
     expect(delivered.sendEmail).not.toHaveBeenCalledWith(expect.objectContaining({ template: "icalConflict" })); // feed_down stays email-only
     expect(delivered.settleAlert).toHaveBeenCalledWith(expect.any(String), claim.claim_id, true);
     for (const whatsappConflict of [vi.fn(async () => false), vi.fn(async () => { throw new Error("boom"); })]) {
