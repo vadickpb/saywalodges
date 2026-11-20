@@ -1882,6 +1882,13 @@ isOneToOne: true
           },
         ];
       };
+      whatsapp_optin_texts: {
+        Row: { body: string; lang: string; version: string };
+        ComputedFields: never;
+        Insert: { body: string; lang: string; version: string };
+        Update: { body?: string; lang?: string; version?: string };
+        Relationships: [];
+      };
       whatsapp_optins: {
         Row: {
           booking_id: string;
@@ -2099,7 +2106,6 @@ isOneToOne: true
           p_lang: string;
           p_token: string;
           p_whatsapp_opt_in: boolean;
-          p_whatsapp_text: string;
           p_whatsapp_text_version: string;
         };
         Returns: Json;

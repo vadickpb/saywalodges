@@ -10,10 +10,26 @@
 --  * create_checkout_booking: the public checkout conversion with the opt-in recorded in the same transaction.
 --  * cron_purge_whatsapp: retention (Ley 29733). Default 365 days for the ledger and the outbox; opt-in evidence is kept with the booking.
 -- Additive: old clients keep calling create_localized_booking_from_quote and simply never record an opt-in (so never get a WhatsApp).
--- Rollback: drop function public.create_checkout_booking(text,text,text,text,text,boolean,text,text),
+-- Rollback: drop function public.create_checkout_booking(text,text,text,text,text,boolean,text),
 --   public.cron_claim_whatsapp_message(integer), public.cron_settle_whatsapp_message(uuid,text),
---   public.cron_purge_whatsapp(integer); drop table public.whatsapp_outbox, public.whatsapp_optins;
+--   public.cron_purge_whatsapp(integer); drop table public.whatsapp_outbox, public.whatsapp_optins, public.whatsapp_optin_texts;
 begin;
+
+-- Canonical opt-in wording per version and language. The checkout RPC is callable by anon, so the evidence text is copied
+-- from HERE, never taken from the caller. Rows are immutable evidence: a new wording is a new version (and a new migration).
+-- Must equal dictionaries/*.ts checkout.whatsappOptIn (a Vitest test compares them).
+create table public.whatsapp_optin_texts (
+  version text not null check (version ~ '^v[0-9]{1,3}$'),
+  lang text not null check (lang in ('es', 'en')),
+  body text not null check (char_length(body) between 1 and 1000),
+  primary key (version, lang)
+);
+alter table public.whatsapp_optin_texts enable row level security;
+revoke all on public.whatsapp_optin_texts from public, anon, authenticated;
+grant all on public.whatsapp_optin_texts to service_role;
+insert into public.whatsapp_optin_texts (version, lang, body) values
+  ('v1', 'es', 'Quiero recibir por WhatsApp, en el teléfono que indiqué, mensajes sobre esta reserva: confirmación, recordatorio de pago, recordatorio de llegada y un mensaje de agradecimiento. Es opcional y puedo dejar de recibirlos cuando quiera avisando al alojamiento. Mi número se comparte con WhatsApp (Meta) solo para enviarlos.'),
+  ('v1', 'en', 'I want to receive WhatsApp messages about this booking on the phone number I entered: confirmation, payment reminder, arrival reminder and a thank-you message. This is optional and I can stop receiving them at any time by telling the property. My number is shared with WhatsApp (Meta) only to send them.');
 
 create table public.whatsapp_optins (
   id uuid primary key default gen_random_uuid(),
@@ -58,7 +74,7 @@ grant all on public.whatsapp_outbox to service_role;
 -- ─── Checkout conversion with the opt-in recorded in the same transaction ───
 create function public.create_checkout_booking(
   p_token text, p_guest_name text, p_guest_email text, p_guest_phone text, p_lang text,
-  p_whatsapp_opt_in boolean, p_whatsapp_text_version text, p_whatsapp_text text
+  p_whatsapp_opt_in boolean, p_whatsapp_text_version text
 ) returns jsonb
 language plpgsql
 security definer
@@ -72,9 +88,9 @@ begin
   if p_whatsapp_opt_in is null or p_lang is null or p_lang not in ('es', 'en') then
     raise exception 'invalid input' using errcode = '22023';
   end if;
-  -- An opt-in needs a phone to be meaningful, a known text version and the text that was shown.
-  if p_whatsapp_opt_in and (v_phone is null or p_whatsapp_text_version is null or p_whatsapp_text_version !~ '^v[0-9]{1,3}$'
-      or p_whatsapp_text is null or char_length(p_whatsapp_text) not between 1 and 1000) then
+  -- An opt-in needs a phone to be meaningful and a wording version that exists for this language.
+  if p_whatsapp_opt_in and (v_phone is null or not exists (
+      select 1 from public.whatsapp_optin_texts t where t.version = p_whatsapp_text_version and t.lang = p_lang)) then
     raise exception 'invalid input' using errcode = '22023';
   end if;
 
@@ -84,15 +100,17 @@ begin
   if p_whatsapp_opt_in and coalesce((v_result->>'replayed')::boolean, false) = false then
     v_booking := (v_result->>'booking_id')::uuid;
     insert into public.whatsapp_optins (org_id, booking_id, text_version, text_shown, lang)
-    select b.org_id, b.id, p_whatsapp_text_version, p_whatsapp_text, p_lang
-    from public.bookings b where b.id = v_booking
+    select b.org_id, b.id, t.version, t.body, t.lang
+    from public.bookings b
+    join public.whatsapp_optin_texts t on t.version = p_whatsapp_text_version and t.lang = p_lang
+    where b.id = v_booking
     on conflict (booking_id) do nothing;
   end if;
   return v_result;
 end;
 $$;
-revoke all on function public.create_checkout_booking(text, text, text, text, text, boolean, text, text) from public, anon, authenticated;
-grant execute on function public.create_checkout_booking(text, text, text, text, text, boolean, text, text) to anon, authenticated;
+revoke all on function public.create_checkout_booking(text, text, text, text, text, boolean, text) from public, anon, authenticated;
+grant execute on function public.create_checkout_booking(text, text, text, text, text, boolean, text) to anon, authenticated;
 
 -- ─── Scheduler: queue what is due, claim ONE message ─────────────────────────
 -- Only bookings with an active opt-in are ever queued. Windows (America/Lima):

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  WHATSAPP_TEMPLATE_BODIES, WHATSAPP_TEMPLATE_NAMES, WHATSAPP_TEMPLATE_VARIABLES, buildWhatsappMessage, normalizeWhatsappPhone,
+  WHATSAPP_OPTIN_VERSION, WHATSAPP_TEMPLATE_BODIES, WHATSAPP_TEMPLATE_NAMES, WHATSAPP_TEMPLATE_VARIABLES, buildWhatsappMessage, normalizeWhatsappPhone,
   whatsappClaimSchema, whatsappKinds, type WhatsappClaim,
 } from "./whatsapp-templates";
 
@@ -17,7 +17,7 @@ describe("normalizeWhatsappPhone", () => {
     ["999 888 777", "51999888777"], ["+51 999 888 777", "51999888777"], ["0051999888777", "51999888777"], ["51999888777", "51999888777"],
     ["+1 (415) 555-2671", "14155552671"], ["(+34) 612-345-678", "34612345678"],
   ])("accepts %s", (raw, expected) => expect(normalizeWhatsappPhone(raw)).toBe(expected));
-  it.each(["", "   ", "12345", "01 234 5678", "999 88", "+51 1 234 5678", "+0123456789", "abc", "9998887771", "+1234567890123456", "+51 888 888 888"])(
+  it.each(["", "   ", "12345", "01 234 5678", "999 88", "+51 1 234 5678", "+0123456789", "abc", "9998887771", "+1234567890123456", "+51 888 888 888", "987+654321"])(
     "rejects %j instead of guessing", (raw) => expect(normalizeWhatsappPhone(raw)).toBeNull());
 });
 
@@ -41,6 +41,15 @@ describe("templates", () => {
   it("docs/whatsapp.md carries the exact bodies the app sends (the owner copy-pastes them into Meta)", () => {
     const doc = readFileSync("docs/whatsapp.md", "utf8");
     for (const kind of whatsappKinds) for (const lang of ["es", "en"] as const) expect(doc).toContain(WHATSAPP_TEMPLATE_BODIES[kind][lang]);
+  });
+
+  it("the opt-in wording the database copies as evidence is exactly what the checkout shows (v1)", async () => {
+    const migration = readFileSync("supabase/migrations/20261120001049_whatsapp_templates_optin.sql", "utf8");
+    const { default: dictionaries } = await import("@/dictionaries/index").then((m) => ({ default: m }));
+    for (const lang of ["es", "en"] as const) {
+      const shown = (await dictionaries.getDictionary(lang)).checkout.whatsappOptIn;
+      expect(migration).toContain(`('${WHATSAPP_OPTIN_VERSION}', '${lang}', '${shown.replaceAll("'", "''")}')`);
+    }
   });
 
   it.each(whatsappKinds)("builds %s with exactly as many variables as the body has", (kind) => {

@@ -5,6 +5,7 @@ select no_plan();
 select ok((select relrowsecurity from pg_class where oid = 'public.whatsapp_optins'::regclass), 'optins have RLS');
 select ok((select relrowsecurity from pg_class where oid = 'public.whatsapp_outbox'::regclass), 'outbox has RLS');
 select ok(not has_table_privilege('anon', 'public.whatsapp_optins', 'SELECT'), 'anon cannot read opt-ins');
+select ok(not has_table_privilege('anon', 'public.whatsapp_optin_texts', 'INSERT') and not has_table_privilege('authenticated', 'public.whatsapp_optin_texts', 'UPDATE'), 'nobody but the server can change the canonical wording');
 select ok(not has_table_privilege('authenticated', 'public.whatsapp_optins', 'SELECT'), 'members cannot read opt-ins');
 select ok(not has_table_privilege('authenticated', 'public.whatsapp_optins', 'INSERT'), 'members cannot forge opt-ins');
 select ok(not has_table_privilege('authenticated', 'public.whatsapp_outbox', 'SELECT'), 'members cannot read the outbox');
@@ -14,7 +15,7 @@ select ok(not has_function_privilege('authenticated', 'public.cron_claim_whatsap
 select ok(not has_function_privilege('authenticated', 'public.cron_settle_whatsapp_message(uuid,text)', 'EXECUTE'), 'members cannot settle');
 select ok(not has_function_privilege('anon', 'public.cron_purge_whatsapp(integer)', 'EXECUTE'), 'anon cannot purge');
 select ok(has_function_privilege('service_role', 'public.cron_claim_whatsapp_message(integer)', 'EXECUTE'), 'cron can claim');
-select ok(has_function_privilege('anon', 'public.create_checkout_booking(text,text,text,text,text,boolean,text,text)', 'EXECUTE'), 'public checkout can convert');
+select ok(has_function_privilege('anon', 'public.create_checkout_booking(text,text,text,text,text,boolean,text)', 'EXECUTE'), 'public checkout can convert');
 
 insert into public.quotes(org_id, property_id, unit_id, token, check_in, check_out, guests, currency, total_cents, deposit_cents, expires_at)
 values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'ee204001-0000-4000-8000-000000000001', repeat('a', 64), '2039-01-01', '2039-01-03', 2, 'USD', 10000, 5000, now() + interval '1 day'),
@@ -24,22 +25,22 @@ values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163
 
 -- Checkout conversion with opt-in evidence.
 set local role anon;
-select lives_ok($$select public.create_checkout_booking(repeat('a', 64), 'Ana A', 'ana@example.com', '+51 999 888 777', 'es', true, 'v1', 'Acepto recibir mensajes de WhatsApp')$$, 'booking with opt-in');
-select lives_ok($$select public.create_checkout_booking(repeat('b', 64), 'Beto B', 'beto@example.com', '999888666', 'en', false, null, null)$$, 'booking without opt-in');
-select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', null, 'es', true, 'v1', 'text')$$, '22023', null, 'opt-in without a phone is rejected');
-select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', '999888555', 'es', true, 'one', 'text')$$, '22023', null, 'bad text version rejected');
-select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', '999888555', 'es', true, 'v1', '')$$, '22023', null, 'empty shown text rejected');
-select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', '999888555', 'fr', false, null, null)$$, '22023', null, 'bad language rejected');
-select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', '999888555', 'es', null, null, null)$$, '22023', null, 'null opt-in rejected');
-select lives_ok($$select public.create_checkout_booking(repeat('a', 64), 'Ana A', 'ana@example.com', '+51 999 888 777', 'es', true, 'v2', 'Texto distinto')$$, 'replay is accepted');
-select lives_ok($$select public.create_checkout_booking(repeat('d', 64), 'Dora D', 'dora@example.com', '999111222', 'es', true, 'v1', 'Acepto')$$, 'booking in the other tenant');
+select lives_ok($$select public.create_checkout_booking(repeat('a', 64), 'Ana A', 'ana@example.com', '+51 999 888 777', 'es', true, 'v1')$$, 'booking with opt-in');
+select lives_ok($$select public.create_checkout_booking(repeat('b', 64), 'Beto B', 'beto@example.com', '999888666', 'en', false, null)$$, 'booking without opt-in');
+select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', null, 'es', true, 'v1')$$, '22023', null, 'opt-in without a phone is rejected');
+select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', '999888555', 'es', true, 'one')$$, '22023', null, 'bad text version rejected');
+select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', '999888555', 'es', true, 'v9')$$, '22023', null, 'unknown wording version rejected (the evidence text is never caller-supplied)');
+select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', '999888555', 'fr', false, null)$$, '22023', null, 'bad language rejected');
+select throws_ok($$select public.create_checkout_booking(repeat('c', 64), 'Cris C', 'cris@example.com', '999888555', 'es', null, null)$$, '22023', null, 'null opt-in rejected');
+select lives_ok($$select public.create_checkout_booking(repeat('a', 64), 'Ana A', 'ana@example.com', '+51 999 888 777', 'es', true, 'v1')$$, 'replay is accepted');
+select lives_ok($$select public.create_checkout_booking(repeat('d', 64), 'Dora D', 'dora@example.com', '999111222', 'es', true, 'v1')$$, 'booking in the other tenant');
 select throws_ok($$select * from public.whatsapp_optins$$, '42501', null, 'anon cannot read the evidence');
 select throws_ok($$select * from public.whatsapp_outbox$$, '42501', null, 'anon cannot read the outbox');
 reset role;
 
 select is((select count(*) from public.whatsapp_optins), 2::bigint, 'one opt-in per consenting booking (no row without opt-in, none from the replay)');
 select is((select text_version || '|' || lang || '|' || text_shown from public.whatsapp_optins o join public.bookings b on b.id = o.booking_id where b.guest_name = 'Ana A'),
-  'v1|es|Acepto recibir mensajes de WhatsApp', 'the first submission decides; a replay cannot rewrite the evidence');
+  (select version || '|' || lang || '|' || body from public.whatsapp_optin_texts where version = 'v1' and lang = 'es'), 'evidence is the canonical wording copied by the database; a replay cannot rewrite it');
 select ok((select granted_at is not null from public.whatsapp_optins limit 1), 'evidence has a timestamp');
 select throws_ok($$insert into public.whatsapp_optins(org_id, booking_id, text_version, text_shown, lang)
   select 'ff24bacc-47d2-40bc-9210-f860e98892fd', id, 'v1', 'x', 'es' from public.bookings where guest_name = 'Beto B'$$, '23503', null, 'cross-tenant booking FK rejected');

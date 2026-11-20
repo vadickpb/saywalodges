@@ -62,6 +62,7 @@ export const WHATSAPP_TEMPLATE_VARIABLES: Record<WhatsappKind, { es: string[]; e
 export function normalizeWhatsappPhone(raw: string): string | null {
   const value = raw.trim();
   if (value.length === 0 || value.length > 30 || !/^[0-9+() -]+$/.test(value)) return null;
+  if (value.replace(/^\(?\+/, "").includes("+")) return null; // a "+" anywhere but the start is not an international prefix
   const digits = value.replace(/\D/g, "");
   let international: string | null = null;
   if (/^\(?\+/.test(value)) international = digits;

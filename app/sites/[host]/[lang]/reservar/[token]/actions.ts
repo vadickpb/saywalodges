@@ -5,9 +5,7 @@ import { redirect } from "next/navigation";
 import { allowPublicRequest } from "@/lib/dal/public/rate-limit";
 import { bookQuote } from "@/lib/dal/public/quote-checkout";
 import { siteIdentifierFromHost } from "@/lib/dal/public/site";
-import { getDictionary } from "@/dictionaries";
 import { checkoutGuestSchema, type CheckoutState } from "@/lib/domain/quote-checkout";
-import { WHATSAPP_OPTIN_VERSION } from "@/lib/domain/whatsapp-templates";
 
 export async function submitCheckout(lang: string, _previous: CheckoutState, form: FormData): Promise<CheckoutState> {
   if (lang !== "es" && lang !== "en") return { error: "generic" };
@@ -28,11 +26,8 @@ export async function submitCheckout(lang: string, _previous: CheckoutState, for
   let result;
   try {
     const host = siteIdentifierFromHost(((await headers()).get("host") ?? "").toLowerCase());
-    // The evidence text comes from the server's dictionary (what the form showed in this language), never from the form.
-    const whatsappOptIn = parsed.data.whatsapp
-      ? { version: WHATSAPP_OPTIN_VERSION, text: (await getDictionary(lang)).checkout.whatsappOptIn }
-      : null;
-    result = await bookQuote(host, parsed.data, lang, whatsappOptIn);
+    // The evidence wording is copied by the database from its canonical (version, language) table, never from the request.
+    result = await bookQuote(host, parsed.data, lang);
   } catch {
     // DAL logs only closed machine codes. Never log the thrown object or form.
     return { error: "generic" };
