@@ -171,6 +171,9 @@ como indica `docs/workflow.md`, configura las variables en Vercel y programa est
 la migración, el checkout usa la RPC anterior si la nueva aún no existe (sin emails ni idioma
 persistido hasta aprobar SQL); la reserva y el pago siguen funcionando. No se modifica ninguna BD remota desde el agente.
 
+> **Aviso (SD-1124)**: entre SD-1120 y este arreglo el workflow *Scheduled crons* era **inválido** (un `if` de job leía `matrix`, que GitHub no permite ahí) y **ningún cron se ejecutó**
+> (síntoma: ejecuciones fallidas llamadas `.github/workflows/scheduled-crons.yml` en cada push). Dos jobs (`frequent` y `daily`) lo resuelven. Tras aprobar las migraciones, lanza *Run workflow* una vez y comprueba las 6 rutas en verde.
+
 # Cron de WhatsApp (SD-1009)
 
 Dos rutas más con el mismo `CRON_SECRET` y el mismo patrón (401 vacío sin secreto, 500 genérico, `no-store`, logs sin datos personales):
