@@ -170,12 +170,15 @@ compara con este documento).
 
 ## Alertas al número del dueño (SD-1011)
 
-Al dueño le llegan por **WhatsApp** (con el correo como **respaldo**): reserva nueva, comprobante subido y conflicto de calendario.
+Al dueño le llegan por **WhatsApp** (el correo **sigue enviándose** siempre): reserva nueva, comprobante subido y conflicto de calendario.
 
 - Se activa con la variable `WHATSAPP_OWNER_PHONE` (tu número con código de país, p. ej. `+51 999 111 222`). Al configurarlo, tú mismo pides recibir los avisos; no hay opt-in de huésped.
   Sin ella, o con un número no válido, solo se usa el correo, como hasta ahora.
-- **Respaldo**: el correo solo se omite si Meta **aceptó** el mensaje en modo real. Simulación, credenciales ausentes, rechazo o caída → sale el correo.
-  Solo se intenta WhatsApp en el primer intento del evento (un reintento del correo no te escribe dos veces).
+- **El correo siempre se envía también**: WhatsApp es un canal **adicional**, no un sustituto (que Meta acepte un mensaje no garantiza que se entregue: una plantilla pausada
+  perdería el aviso en silencio). WhatsApp solo se intenta en el primer intento del evento, y el aviso de conflicto de calendario solo después de que el correo salió de verdad.
+- **Una sola organización por instalación**: `WHATSAPP_OWNER_PHONE` es de la instalación; si la base tuviera más de una organización no se envía nada por WhatsApp
+  (un aviso de una podría llegar al dueño de otra).
+- Si hay varios dueños, solo el número configurado recibe el WhatsApp; los correos llegan a todos.
 - El cron de correos exige el correo configurado (es el respaldo): sin `RESEND_API_KEY`/`EMAIL_FROM` tampoco se envían los avisos de reserva por WhatsApp.
 - Los avisos de feed caído siguen yendo solo por correo. El texto de los mensajes lleva alojamiento y fechas, nunca datos del huésped.
 - Plantillas (Utility, **solo Spanish (es)**, sin encabezado, pie ni botones, nombre exacto):
@@ -213,7 +216,7 @@ Al dueño le llegan por **WhatsApp** (con el correo como **respaldo**): reserva 
 
   Ejemplos que Meta pide: {{1}} = `Casa 1`, {{2}} = `1`
 
-Prueba: con `WHATSAPP_OWNER_PHONE` = tu número (en la lista de destinatarios de prueba de Meta), haz una reserva de prueba y sube un comprobante: debes recibir los dos avisos por WhatsApp y **ningún** correo de dueño; quita la variable y vuelven los correos.
+Prueba: con `WHATSAPP_OWNER_PHONE` = tu número (en la lista de destinatarios de prueba de Meta), haz una reserva de prueba y sube un comprobante: debes recibir los dos avisos por WhatsApp **y** los correos de siempre; quita la variable y solo quedan los correos.
 
 ## Probar sin gastar mensajes
 - Local: sin variables, el cliente simula. Para el webhook, exporta `WHATSAPP_APP_SECRET` y `WHATSAPP_VERIFY_TOKEN` y firma tus propias peticiones

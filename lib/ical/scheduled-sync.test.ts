@@ -150,15 +150,15 @@ describe("runScheduledIcalSync", () => {
     spy.mockRestore();
   });
 
-  it("a conflict delivered on the owner's WhatsApp skips the email; any other failure falls back to it (SD-1011)", async () => {
-    const delivered = deps({ claimAlert: vi.fn(async () => claim), whatsappConflict: vi.fn(async () => true) });
-    expect(await runScheduledIcalSync({ ...options, limit: 1 }, delivered)).toMatchObject({ alertsFailed: 0 });
-    expect(delivered.sendEmail).not.toHaveBeenCalledWith(expect.objectContaining({ template: "icalConflict" })); // feed_down stays email-only
-    expect(delivered.settleAlert).toHaveBeenCalledWith(expect.any(String), claim.claim_id, true);
-    for (const whatsappConflict of [vi.fn(async () => false), vi.fn(async () => { throw new Error("boom"); })]) {
-      const fallback = deps({ claimAlert: vi.fn(async () => claim), whatsappConflict });
-      await runScheduledIcalSync({ ...options, limit: 1 }, fallback);
-      expect(fallback.sendEmail).toHaveBeenCalledWith(expect.objectContaining({ template: "icalConflict" }));
-    }
+  it("also tells the owner on WhatsApp, but only after the email really went out (SD-1011)", async () => {
+    const sent = deps({ claimAlert: vi.fn(async () => claim), whatsappConflict: vi.fn(async () => true) });
+    await runScheduledIcalSync({ ...options, limit: 1 }, sent);
+    expect(sent.sendEmail).toHaveBeenCalledWith(expect.objectContaining({ template: "icalConflict" }));
+    expect(sent.whatsappConflict).toHaveBeenCalledWith(expect.any(String), claim.unit_name, claim.count);
+    const failedEmail = deps({ claimAlert: vi.fn(async () => claim), sendEmail: vi.fn(async () => ({ ok: false as const, reason: "unavailable" as const })), whatsappConflict: vi.fn(async () => true) });
+    await runScheduledIcalSync({ ...options, limit: 1 }, failedEmail);
+    expect(failedEmail.whatsappConflict).not.toHaveBeenCalled();
+    const throwing = deps({ claimAlert: vi.fn(async () => claim), whatsappConflict: vi.fn(async () => { throw new Error("boom"); }) });
+    await expect(runScheduledIcalSync({ ...options, limit: 1 }, throwing)).resolves.toMatchObject({ alertsFailed: 0 });
   });
 });

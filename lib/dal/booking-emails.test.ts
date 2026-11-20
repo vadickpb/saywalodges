@@ -100,15 +100,14 @@ describe("booking email delivery", () => {
     const owner = { ...source, WHATSAPP_OWNER_PHONE: "+51 999 111 222" };
     const ids = { org_id: "22222222-2222-4222-8222-222222222222", booking_id: "33333333-3333-4333-8333-333333333333" };
     const client = () => ({ rpc, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: ids, error: null }) }) }) }) }) as never;
-    it("a live WhatsApp delivery replaces the email for the owner", async () => {
+    it("WhatsApp is additional: the owner email is still sent", async () => {
       queued();
       const alert = vi.fn(async () => true);
       expect(await deliverBookingEmails(client(), send, owner, alert)).toEqual({ sent: 1, failed: 0, skipped: 0 });
       expect(alert).toHaveBeenCalledWith(expect.objectContaining({ kind: "owner_voucher_uploaded", orgId: ids.org_id, bookingId: ids.booking_id, params: [expect.any(String), expect.any(String)] }), owner);
-      expect(send).not.toHaveBeenCalled();
-      expect(rpc).toHaveBeenCalledWith("cron_settle_booking_email", { p_id: claim.id, p_attempt: 1, p_outcome: "sent" });
+      expect(send).toHaveBeenCalledTimes(1);
     });
-    it("falls back to email when WhatsApp did not deliver", async () => {
+    it("a failed WhatsApp changes nothing for the email", async () => {
       queued();
       const alert = vi.fn(async () => false);
       await deliverBookingEmails(client(), send, owner, alert);

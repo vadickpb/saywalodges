@@ -47,20 +47,16 @@ export async function deliverBookingEmails(
       continue;
     }
     const event = parsed.data;
-    // SD-1011: the owner's WhatsApp is the preferred channel for new bookings and vouchers; the email below is the fallback
-    // for anything but a live delivery. Only on the first attempt: a retried email must not message the owner twice.
+    // SD-1011: the owner also gets a WhatsApp for new bookings and vouchers. It is ADDITIONAL: the email below is always sent (Meta
+    // accepting a message is not delivery). Only on the first attempt, so a retried email never messages the owner twice.
     if ((event.event === "owner_booking" || event.event === "owner_voucher") && event.attempt === 1 && ownerWhatsappPhone(source)) {
       const context = await client.from("booking_email_events").select("org_id, booking_id").eq("id", event.id).maybeSingle();
       const ids = z.object({ org_id: z.uuid(), booking_id: z.uuid() }).safeParse(context.data);
-      if (ids.success && await ownerAlert({
-        kind: event.event === "owner_booking" ? "owner_new_booking" : "owner_voucher_uploaded", orgId: ids.data.org_id, bookingId: ids.data.booking_id,
-        params: event.event === "owner_booking" ? ownerBookingParams(event.unit, event.check_in, event.check_out) : ownerVoucherParams(event.unit, event.check_in),
-      }, source)) {
-        const settled = await client.rpc("cron_settle_booking_email", { p_id: event.id, p_attempt: event.attempt, p_outcome: "sent" });
-        if (settled.error) throw new Error("Email settle failed");
-        summary.sent++;
-        log("info", "cron.booking_emails.delivery", { outcome: "whatsapp_sent" });
-        continue;
+      if (ids.success) {
+        await ownerAlert({
+          kind: event.event === "owner_booking" ? "owner_new_booking" : "owner_voucher_uploaded", orgId: ids.data.org_id, bookingId: ids.data.booking_id,
+          params: event.event === "owner_booking" ? ownerBookingParams(event.unit, event.check_in, event.check_out) : ownerVoucherParams(event.unit, event.check_in),
+        }, source);
       }
     }
     let instructions: string | undefined;

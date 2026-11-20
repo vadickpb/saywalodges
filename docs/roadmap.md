@@ -1984,7 +1984,7 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
 `S` · Depende: SD-1009 · Review: `R+S`
 - **Alcance**: avisos al número del dueño (reserva nueva, comprobante subido, conflicto de calendario), con el correo
   como respaldo si el envío falla.
-- **Hecho**: `WHATSAPP_OWNER_PHONE` + plantillas `owner_*` (es); WhatsApp primero y correo de respaldo para reserva nueva, comprobante y conflicto iCal (sin migración).
+- **Hecho**: `WHATSAPP_OWNER_PHONE` + plantillas `owner_*` (es); WhatsApp **además** del correo (nunca en su lugar: Meta aceptar no es entregar) para reserva nueva, comprobante y conflicto iCal (sin migración).
   **Pendiente del dueño**: crear las 3 plantillas en Meta y la variable (`docs/whatsapp.md`).
 
 ### [ ] SD-1012 · feat(whatsapp): inbound inbox and auto-reply

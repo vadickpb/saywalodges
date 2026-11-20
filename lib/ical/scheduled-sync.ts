@@ -44,15 +44,8 @@ async function alertOwners(feedId: string, kind: AlertKind, options: Options, de
   let delivered = false;
   let simulated = false;
   try {
-    if (kind === "conflict" && deps.whatsappConflict && (await deps.whatsappConflict(feedId, claim.unit_name, claim.count).catch(() => false))) {
-      delivered = true;
-    }
-  } catch {
-    // fall through to email
-  }
-  try {
     const props = { channel: claim.channel, unitName: claim.unit_name ?? undefined, ...(options.dashboardUrl ? { url: options.dashboardUrl } : {}) };
-    for (const [index, to] of delivered ? [] : claim.recipients.entries()) {
+    for (const [index, to] of claim.recipients.entries()) {
       const idempotencyKey = `ical:${claim.claim_id}:${index}`;
       const result =
         kind === "conflict"
@@ -64,6 +57,9 @@ async function alertOwners(feedId: string, kind: AlertKind, options: Options, de
   } catch {
     // sendEmail never throws; this guards the settle step below from an unexpected bug.
   }
+  // SD-1011: WhatsApp is ADDITIONAL to the email, and only sent once the email really went out (the claim is then retired), so a
+  // released claim that is retried can never message the owner twice.
+  if (delivered && kind === "conflict" && deps.whatsappConflict) await deps.whatsappConflict(feedId, claim.unit_name, claim.count).catch(() => false);
   // One real delivery is enough to retire the claim: re-sending would duplicate it to the recipients that got it.
   await settleWithRetry(deps, feedId, claim.claim_id, delivered);
   if (delivered) summary.alertsSent++;
