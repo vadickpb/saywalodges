@@ -55,7 +55,7 @@ Decisiones del dueño que bloquean este lote: ver [`docs/decisiones-pendientes.m
 | SD-1009 | WhatsApp: plantillas de reserva y opt-in del huésped | Claude (+ revisión de seguridad) | hecho (#141); falta el trámite de Meta del dueño |
 | SD-1011 | WhatsApp: alertas al número del dueño (correo se mantiene) | Claude | hecho (#142) |
 | SD-1010 | WhatsApp: reglas y cola idempotente, horario Lima | Claude | hecho (#143) |
-| SD-1012 | WhatsApp: bandeja de entrada y auto-respuesta (sin IA) | Claude | PR abierto |
+| SD-1012 | WhatsApp: bandeja de entrada y auto-respuesta (sin IA) | Claude | hecho (#144) |
 
 ## Lote 4 · Mercado Pago
 
