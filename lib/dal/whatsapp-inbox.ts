@@ -37,11 +37,6 @@ export async function handleInboundMessage(message: InboundMessage, deps: Inboun
     log("error", "whatsapp.inbound_failed", { code: error?.code ?? "INVALID" });
     throw new Error("record_inbound_whatsapp failed");
   }
-  if (parsed.data.status === "no_org") {
-    log("warn", "whatsapp.inbound_unattributed");
-    return "no_org";
-  }
-
   // Also on a redelivery ("duplicate"): if the first delivery stored the STOP but the revocation failed, Meta's retry must still
   // withdraw the consent. The RPC is idempotent (it only touches consents that are still active).
   if (stop) {
@@ -53,6 +48,10 @@ export async function handleInboundMessage(message: InboundMessage, deps: Inboun
     log("info", "whatsapp.optin_revoked", { count: typeof revoked.data === "number" ? revoked.data : 0 });
   }
 
+  if (parsed.data.status === "no_org") {
+    log("warn", "whatsapp.inbound_unattributed");
+    return "no_org";
+  }
   if (parsed.data.status === "duplicate") return "duplicate";
 
   if (parsed.data.reply && parsed.data.org_id && replyText) {

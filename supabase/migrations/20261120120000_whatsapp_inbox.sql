@@ -7,7 +7,7 @@
 --    stale message (Meta redelivers old events) and never when the caller says no (STOP keyword, auto-reply off).
 --    The installation has ONE organization (ADR 0010): with zero or several, nothing is stored (a message cannot be attributed).
 --  * revoke_whatsapp_optins (service_role only): the guest's STOP withdraws the WhatsApp consent of their bookings.
---    Match = last 9 digits (bookings keep the number as the guest typed it).
+--    Match = the full international number (a bare 9-digit booking number is read as Peruvian, like the checkout does).
 --  * mark_whatsapp_inbox_read: any member of the organization.
 --  * cron_purge_whatsapp is replaced (same signature) to also purge the inbox; the result gains an 'inbox' count.
 -- Additive. Rollback: drop function public.record_inbound_whatsapp(text,text,text,text,text,timestamptz,boolean),
@@ -99,7 +99,10 @@ begin
     from public.bookings b
    where o.booking_id = b.id and o.org_id = b.org_id and o.revoked_at is null
      and b.guest_phone is not null
-     and right(regexp_replace(b.guest_phone, '[^0-9]', '', 'g'), 9) = right(p_from, 9);
+     -- Full international comparison: a bare 9-digit number is a Peruvian mobile (as the checkout assumes); "00" is an
+     -- international prefix. A foreign number that merely shares the last digits does not match.
+     and (case when length(regexp_replace(regexp_replace(b.guest_phone, '[^0-9]', '', 'g'), '^00', '')) = 9
+               then '51' else '' end || regexp_replace(regexp_replace(b.guest_phone, '[^0-9]', '', 'g'), '^00', '')) = p_from;
   get diagnostics v_n = row_count;
   return v_n;
 end;

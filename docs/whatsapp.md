@@ -243,7 +243,7 @@ Prueba: con `WHATSAPP_OWNER_PHONE` = tu número (en la lista de destinatarios de
   la decisión la toma la base de datos de forma atómica (bloqueo por remitente + `auto_replied_at`), así que ni un reenvío de Meta ni dos mensajes seguidos duplican la respuesta.
   No se contesta a eventos viejos (más de 30 min), ni si el dominio público no está configurado. Para apagarla: `WHATSAPP_AUTO_REPLY=off`.
   Es texto libre, permitido por Meta solo dentro de las 24 h de ventana de atención: se envía en el acto, sin plantilla que aprobar.
-- **«STOP» / «BAJA»** (el mensaje completo): retira el consentimiento de WhatsApp de las reservas de ese número (se compara por los últimos 9 dígitos) y no se contesta.
+- **«STOP» / «BAJA»** (el mensaje completo): retira el consentimiento de WhatsApp de las reservas de ese número (se compara el número internacional completo; un número de reserva de 9 dígitos se entiende peruano) y no se contesta.
   Desde ese momento el programador no le escribe más.
 - La instalación debe tener **una sola organización** (una instalación por cliente): con cero o varias, el mensaje no se guarda porque no se puede atribuir.
 - **Retención**: igual que el registro de mensajes (365 días, `WHATSAPP_RETENTION_DAYS`, D13); el aviso de privacidad (`privacidad-whatsapp.md`) lo menciona.

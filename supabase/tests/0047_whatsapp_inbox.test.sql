@@ -59,6 +59,7 @@ set local role anon;
 select lives_ok($$select public.create_checkout_booking(repeat('a', 64), 'Ana A', 'ana@example.com', '+51 999 888 777', 'es', true, 'v1')$$, 'booking with opt-in');
 reset role;
 select is(public.revoke_whatsapp_optins('51999000000'), 0, 'another number revokes nothing');
+select is(public.revoke_whatsapp_optins('34999888777'), 0, 'a foreign number sharing the last 9 digits revokes nothing');
 select is((select revoked_at is null from public.whatsapp_optins), true, 'consent untouched');
 select is(public.revoke_whatsapp_optins('51999888777'), 1, 'STOP from the guest''s number revokes the consent');
 select is((select revoked_at is not null from public.whatsapp_optins), true, 'revoked');
