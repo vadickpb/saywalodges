@@ -17,6 +17,7 @@ export function CheckoutForm({ token, lang, t, contactUrl }: { token: string; la
   }, [state]);
   const [values, setValues] = useState({ name: "", email: "", phone: "" });
   const [accepted, setAccepted] = useState(false);
+  const [whatsapp, setWhatsapp] = useState(false);
   const fields = state.fields;
   if (state.error === "linkUnavailable") return (
     <section role="alert" className="space-y-4" ref={errorRef} tabIndex={-1}>
@@ -46,6 +47,15 @@ export function CheckoutForm({ token, lang, t, contactUrl }: { token: string; la
           <span>{t.terms}</span>
         </label>
         {fields?.terms && <p id="terms-error" className="text-sm text-destructive">{t.fieldErrors.terms}</p>}
+      </div>
+      <div>
+        {/* SD-1009: separate from the terms, optional and never pre-ticked. Without it no WhatsApp message is ever sent. */}
+        <label className="flex items-start gap-3" htmlFor="whatsapp">
+          <input className="mt-1 size-5 shrink-0" id="whatsapp" name="whatsapp" type="checkbox" checked={whatsapp} onChange={event => setWhatsapp(event.target.checked)}
+            aria-invalid={!!fields?.whatsapp} aria-describedby={fields?.whatsapp ? "whatsapp-error" : undefined} />
+          <span className="text-sm">{t.whatsappOptIn}</span>
+        </label>
+        {fields?.whatsapp && <p id="whatsapp-error" className="text-sm text-destructive">{t.fieldErrors.whatsapp}</p>}
       </div>
       <Button type="submit" size="lg" disabled={pending}>{pending ? t.pending : t.submit}</Button>
     </form>

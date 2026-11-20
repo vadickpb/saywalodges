@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PUBLIC_TOKEN_PATTERN } from "./booking-status";
+import { normalizeWhatsappPhone } from "./whatsapp-templates";
 
 export const checkoutTokenSchema = z.string().regex(PUBLIC_TOKEN_PATTERN);
 export const quoteCheckoutSchema = z.union([
@@ -23,6 +24,11 @@ export const checkoutGuestSchema = z.object({
   email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
   phone: z.string().trim().max(30).refine(v => v === "" || (v.length >= 5 && /^[0-9+() -]+$/.test(v))),
   terms: z.literal("on"),
+  // SD-1009: separate, optional and never pre-ticked. Not the marketing consent (SD-602).
+  whatsapp: z.literal("on").optional().transform(v => v === "on"),
+}).superRefine((guest, context) => {
+  // An opt-in is only meaningful with a number WhatsApp can actually reach.
+  if (guest.whatsapp && normalizeWhatsappPhone(guest.phone) === null) context.addIssue({ code: "custom", path: ["whatsapp"], message: "invalid whatsapp phone" });
 });
 export type CheckoutGuest = z.infer<typeof checkoutGuestSchema>;
 export type CheckoutError = "validation" | "linkUnavailable" | "unbookable" | "unavailable" | "tryLater" | "generic";

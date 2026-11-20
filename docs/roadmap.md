@@ -1955,7 +1955,7 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   `WHATSAPP_API_VERSION` obligatoria para enviar; `optIn: true` exigido por tipo, evidencia/comprobación real del consentimiento en SD-1009.
 - **Pendiente**: registrar webhook en Meta y probar un envío real con su número de prueba por instalación.
 
-### [ ] SD-1009 · feat(whatsapp): booking templates and guest opt-in
+### [~] SD-1009 · feat(whatsapp): booking templates and guest opt-in
 `M` · Depende: SD-1008, SD-403, SD-405, SD-406 · Review: `R+S`
 - **Alcance**: plantillas aprobadas por Meta (confirmación de reserva, recordatorio del adelanto antes de que venza el hold
   de SD-408, recordatorio de llegada, post-estadía); consentimiento (opt-in) del huésped para mensajes de WhatsApp,
@@ -1963,11 +1963,13 @@ SD-1008 y SD-1009 van después del flujo de reservas (Fase 4).
   programados con GitHub Actions como `docs/cron.md`. Trámite de Meta por cliente (verificación del negocio, número,
   aprobación de plantillas): paso del dueño.
 - **Criterios**
-  - [ ] Sin opt-in no se envía ningún mensaje (tests).
+  - [x] Sin opt-in no se envía ningún mensaje (tests: pgTAP `0045`, `whatsapp-dispatch.test.ts`).
   - [ ] `orgId` y `bookingId` salen siempre del servidor (de la reserva cargada), nunca de un formulario, y el envío no vive en una server action de usuario
         (service-role solo en cron/webhook/RPC). Plazo de retención o purga de `whatsapp_messages` (`wamid` + reserva es dato personal indirecto, Ley 29733),
         mención en el aviso de privacidad de la transferencia a Meta y registro del opt-in con evidencia (fecha, texto mostrado).
-  - [ ] Cada plantilla se prueba con el número de prueba de Meta.
+  - [ ] Cada plantilla se prueba con el número de prueba de Meta. **Pendiente del dueño** (`docs/whatsapp.md`: plantillas a crear y activación).
+- **Hecho**: opt-in con evidencia (texto canónico copiado por la BD), outbox idempotente y at-most-once, cron `whatsapp-dispatch`/`whatsapp-purge`,
+  retención 365 d (D13), borrador de privacidad (D12). Simulación en no-producción; producción sin credenciales no envía.
 
 ### [ ] SD-1010 · feat(whatsapp): automation rules and send queue
 `M` · Depende: SD-1009 · Review: `R+S`

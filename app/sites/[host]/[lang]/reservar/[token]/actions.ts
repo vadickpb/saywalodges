@@ -11,14 +11,14 @@ export async function submitCheckout(lang: string, _previous: CheckoutState, for
   if (lang !== "es" && lang !== "en") return { error: "generic" };
   const parsed = checkoutGuestSchema.safeParse({
     token: form.get("token"), name: form.get("name"), email: form.get("email"),
-    phone: form.get("phone") ?? "", terms: form.get("terms"),
+    phone: form.get("phone") ?? "", terms: form.get("terms"), whatsapp: form.get("whatsapp") ?? undefined,
   });
   if (!parsed.success) {
     if (parsed.error.issues.some(issue => issue.path[0] === "token")) return { error: "linkUnavailable" };
     const fields: CheckoutState["fields"] = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
-      if (key === "name" || key === "email" || key === "phone" || key === "terms" || key === "token") fields[key] = true;
+      if (key === "name" || key === "email" || key === "phone" || key === "terms" || key === "token" || key === "whatsapp") fields[key] = true;
     }
     return { error: "validation", fields };
   }
@@ -26,6 +26,7 @@ export async function submitCheckout(lang: string, _previous: CheckoutState, for
   let result;
   try {
     const host = siteIdentifierFromHost(((await headers()).get("host") ?? "").toLowerCase());
+    // The evidence wording is copied by the database from its canonical (version, language) table, never from the request.
     result = await bookQuote(host, parsed.data, lang);
   } catch {
     // DAL logs only closed machine codes. Never log the thrown object or form.

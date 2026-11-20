@@ -1,5 +1,6 @@
 import "server-only";
 import { getSupabaseAnon } from "@/lib/supabase/anon";
+import { WHATSAPP_OPTIN_VERSION } from "@/lib/domain/whatsapp-templates";
 import { log } from "@/lib/log";
 import { checkoutBookingSchema, checkoutError, checkoutTokenSchema, quoteCheckoutSchema, type CheckoutGuest } from "@/lib/domain/quote-checkout";
 
@@ -26,11 +27,19 @@ export async function bookQuote(host: string, guest: CheckoutGuest, lang: "es" |
   if (!quote) return { error: "linkUnavailable" } as const;
   if ("public_token" in quote) return { publicToken: quote.public_token };
   const client = getSupabaseAnon();
-  let { data, error } = await client.rpc("create_localized_booking_from_quote", {
-    p_lang: lang, p_token: guest.token, p_guest_name: guest.name, p_guest_email: guest.email, p_guest_phone: guest.phone || undefined,
+  // The opt-in (SD-1009) is recorded by the same transaction that creates the booking. A guest who did not tick the box
+  // sends p_whatsapp_opt_in=false and nothing is recorded: no opt-in, no WhatsApp.
+  let { data, error } = await client.rpc("create_checkout_booking", {
+    p_lang: lang, p_token: guest.token, p_guest_name: guest.name, p_guest_email: guest.email, p_guest_phone: guest.phone,
+    p_whatsapp_opt_in: guest.whatsapp, p_whatsapp_text_version: WHATSAPP_OPTIN_VERSION,
   });
   // Expand/contract deployment: Vercel can deploy before the owner approves SQL.
-  // Only a missing RPC permits the legacy path; never retry a business failure.
+  // Only a missing RPC permits the older path (which records no WhatsApp opt-in); never retry a business failure.
+  if (error?.code === "PGRST202") {
+    ({ data, error } = await client.rpc("create_localized_booking_from_quote", {
+      p_lang: lang, p_token: guest.token, p_guest_name: guest.name, p_guest_email: guest.email, p_guest_phone: guest.phone || undefined,
+    }));
+  }
   if (error?.code === "PGRST202") {
     ({ data, error } = await client.rpc("create_booking_from_quote", {
       p_token: guest.token, p_guest_name: guest.name, p_guest_email: guest.email, p_guest_phone: guest.phone || undefined,

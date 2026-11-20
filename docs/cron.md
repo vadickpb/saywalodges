@@ -85,7 +85,7 @@ Ruta: `GET` o `POST /api/cron/ical-sync` (dominio de plataforma). Misma autentic
 ## Pasos manuales del dueño (no hechos por el agente)
 1. `CRON_SECRET` configurado (ver arriba).
 2. **Programar** la llamada cada 15 min. **Hecho en el repo**: `.github/workflows/scheduled-crons.yml` llama a `ical-sync`,
-   `expire-holds` y `booking-emails` cada 15 min y a `voucher-purge` una vez al día. Solo falta crear dos *secrets* del repositorio: `CRON_URL` (`https://app.<dominio>`, sin barra
+   `expire-holds`, `booking-emails` y `whatsapp-dispatch` cada 15 min y a `voucher-purge` y `whatsapp-purge` una vez al día. Solo falta crear dos *secrets* del repositorio: `CRON_URL` (`https://app.<dominio>`, sin barra
    final) y `CRON_SECRET` (el mismo valor que en Vercel). Sin ellos el job se omite. Alternativas previas: el repo **no** define `crons` en Vercel (Hobby solo permite ejecuciones diarias; cada
    15 min exige Pro). Opciones gratuitas: GitHub Actions (`*/15 * * * *` con
    `curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<ROOT_DOMAIN>/api/cron/ical-sync`), cron-job.org, o
@@ -170,6 +170,18 @@ Despliegue: dejar el PR abierto para revisión. Tras el merge, el dueño aprueba
 como indica `docs/workflow.md`, configura las variables en Vercel y programa este cron. Antes de
 la migración, el checkout usa la RPC anterior si la nueva aún no existe (sin emails ni idioma
 persistido hasta aprobar SQL); la reserva y el pago siguen funcionando. No se modifica ninguna BD remota desde el agente.
+
+# Cron de WhatsApp (SD-1009)
+
+Dos rutas más con el mismo `CRON_SECRET` y el mismo patrón (401 vacío sin secreto, 500 genérico, `no-store`, logs sin datos personales):
+
+- `POST /api/cron/whatsapp-dispatch` (cada 15 min, mismo workflow): encola y envía los mensajes de reserva con plantilla a quien dio su opt-in
+  (`docs/whatsapp.md`). Idempotente (`unique(booking_id, kind)`), como máximo una vez por mensaje, sin reintentos. En producción sin credenciales de
+  WhatsApp responde `200` con `"status":"not_configured"` y **no** reclama nada. Si algún envío falla responde 200 con `"failed":n` y el workflow queda rojo.
+- `POST /api/cron/whatsapp-purge` (diaria, 07:41 UTC): borra de `whatsapp_messages` y `whatsapp_outbox` lo anterior a `WHATSAPP_RETENTION_DAYS` (365 por defecto).
+
+No hacen falta secretos nuevos. Requiere la migración `whatsapp_templates_optin`; antes de aprobarla en producción las rutas responden 500 (el resto del
+sistema no depende de ellas).
 
 # Cron de purga de comprobantes (SD-412)
 

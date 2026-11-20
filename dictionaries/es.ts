@@ -173,6 +173,10 @@ const es: Dict = {
     email: "Correo electrónico",
     phone: "Teléfono (opcional)",
     terms: "Acepto los términos indicados arriba",
+    // TODO(owner, D12): borrador funcional del consentimiento de WhatsApp; el texto legal definitivo lo valida el dueño (docs/privacidad-whatsapp.md).
+    // Cambiar el texto exige subir WHATSAPP_OPTIN_VERSION (lib/domain/whatsapp-templates.ts).
+    whatsappOptIn:
+      "Quiero recibir por WhatsApp, en el teléfono que indiqué, mensajes sobre esta reserva: confirmación, recordatorio de pago, recordatorio de llegada y un mensaje de agradecimiento. Es opcional y puedo dejar de recibirlos cuando quiera avisando al alojamiento. Mi número se comparte con WhatsApp (Meta) solo para enviarlos.",
     submit: "Reservar estas fechas",
     pending: "Reservando…",
     total: "Total",
@@ -196,6 +200,7 @@ const es: Dict = {
       email: "Escribe un correo electrónico válido.",
       phone: "Usa entre 5 y 30 caracteres: números, espacios, +, paréntesis o guiones.",
       terms: "Debes aceptar los términos para reservar.",
+      whatsapp: "Para recibir mensajes de WhatsApp escribe un teléfono móvil válido (en Perú, 9 dígitos; si es de otro país, con +código).",
     },
     policyContent: checkoutPolicies.es,
   },

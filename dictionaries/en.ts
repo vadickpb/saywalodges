@@ -175,6 +175,10 @@ const en = {
     email: "Email",
     phone: "Phone (optional)",
     terms: "I accept the terms shown above",
+    // TODO(owner, D12): functional draft of the WhatsApp consent; the owner validates the final legal text (docs/privacidad-whatsapp.md).
+    // Changing the text requires bumping WHATSAPP_OPTIN_VERSION (lib/domain/whatsapp-templates.ts).
+    whatsappOptIn:
+      "I want to receive WhatsApp messages about this booking on the phone number I entered: confirmation, payment reminder, arrival reminder and a thank-you message. This is optional and I can stop receiving them at any time by telling the property. My number is shared with WhatsApp (Meta) only to send them.",
     submit: "Reserve these dates",
     pending: "Reserving…",
     total: "Total",
@@ -198,6 +202,7 @@ const en = {
       email: "Enter a valid email address.",
       phone: "Use 5 to 30 characters: numbers, spaces, +, parentheses or hyphens.",
       terms: "You must accept the terms to book.",
+      whatsapp: "To receive WhatsApp messages enter a valid mobile number (in Peru, 9 digits; from another country, with +code).",
     },
     policyContent: checkoutPolicies.en,
   },

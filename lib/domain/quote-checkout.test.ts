@@ -4,7 +4,7 @@ const guest = { token: "a".repeat(64), name: " Ana ", email: " ANA@example.com "
 describe("checkout validation", () => {
   it("accepts normalized guests and strips forged prices, dates, currency and ids", () => {
     expect(checkoutGuestSchema.parse({ ...guest, total_cents: 1, deposit_cents: 0, currency: "PEN", unit_id: "other", check_in: "2030-01-01" }))
-      .toEqual({ ...guest, name: "Ana", email: "ana@example.com" });
+      .toEqual({ ...guest, name: "Ana", email: "ana@example.com", whatsapp: false });
   });
   it.each([
     { token: "bad" }, { token: "A".repeat(64) }, { name: " " }, { name: "x".repeat(201) },
@@ -48,5 +48,22 @@ describe("checkout validation", () => {
   it("rejects extra keys even on a redirect snapshot", () => {
     expect(quoteCheckoutSchema.safeParse({ public_token: guest.token }).success).toBe(true);
     expect(quoteCheckoutSchema.safeParse({ public_token: guest.token, guest_email: "private" }).success).toBe(false);
+  });
+});
+
+describe("checkout WhatsApp opt-in (SD-1009)", () => {
+  const base = { token: "a".repeat(64), name: "Ana", email: "ana@example.com", phone: "999 888 777", terms: "on" };
+  it("is off unless explicitly ticked, and never inferred from the phone", () => {
+    expect(checkoutGuestSchema.parse(base).whatsapp).toBe(false);
+    expect(checkoutGuestSchema.parse({ ...base, whatsapp: "on" }).whatsapp).toBe(true);
+    expect(checkoutGuestSchema.safeParse({ ...base, whatsapp: "true" }).success).toBe(false);
+  });
+  it.each(["", "12345", "+51 1 234 5678"])("rejects an opt-in whose phone cannot receive WhatsApp (%j)", (phone) => {
+    const result = checkoutGuestSchema.safeParse({ ...base, phone, whatsapp: "on" });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].path).toEqual(["whatsapp"]);
+  });
+  it("a phone that is not valid for WhatsApp is fine when the box is not ticked", () => {
+    expect(checkoutGuestSchema.safeParse({ ...base, phone: "12345" }).success).toBe(true);
   });
 });

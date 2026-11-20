@@ -12,6 +12,8 @@ otro. El dueño responde cuando quiera (basta escribir «D3: sí»). Al decidir,
 | D2 | Permisos del staff: ¿aprobar pagos y cancelar reservas solo el dueño? | Sí, solo el dueño | SD-413 (se asume «sí») |
 | D3 | Plazo de conservación de comprobantes aprobados | 5 años propuestos; validar finalidad y obligaciones contables. La Ley 29733 no fija ese plazo (`docs/cron.md`, SD-412) | Habilitar su borrado en un ticket posterior; el cron SD-412 siempre protege aprobados |
 | D5 | Iniciar la verificación del negocio en Meta (WhatsApp Cloud API) | Empezar ya: tarda semanas y no depende del código (`docs/whatsapp.md`) | SD-1009 |
+| D12 | Texto legal del consentimiento de WhatsApp (casilla del checkout, `dictionaries/*.ts` → `checkout.whatsappOptIn`) y del aviso de privacidad (`docs/privacidad-whatsapp.md`) | **Asumido** el borrador funcional (versión `v1`); lo valida el dueño o un abogado antes de publicidad. Si cambia el texto, se sube la versión | Publicidad; no bloquea la prueba |
+| D13 | Plazo de conservación del registro de mensajes de WhatsApp | **Asumidos 365 días** (`WHATSAPP_RETENTION_DAYS`, reversible por variable); validar finalidad y obligaciones | — |
 | D8 | Dominio de la web de ventas | `hoststay.com` no está disponible (aparcado por un tercero). Recomendado `hoststay.app` (USD 9,99 el primer año, USD 15 de renovación) en proyecto Vercel propio, modo `vendor`. Falta comprarlo | SD-1110 |
 | D9 | Licencia y visibilidad del repositorio | **Asumida** la recomendación en SD-1107 (`LICENSE` propietaria, código visible). Cambia el nombre del titular en `LICENSE` si no es el correcto | — |
 | D10 | Paquetes de venta y módulos de cada uno | Base (web, calendario, reservas) y Pro (+ finanzas, WhatsApp, pago en línea) | SD-1111 |
