@@ -1882,6 +1882,107 @@ isOneToOne: true
           },
         ];
       };
+      whatsapp_optins: {
+        Row: {
+          booking_id: string;
+          granted_at: string;
+          id: string;
+          lang: string;
+          org_id: string;
+          revoked_at: string | null;
+          source: string;
+          text_shown: string;
+          text_version: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id: string;
+          granted_at?: string;
+          id?: string;
+          lang: string;
+          org_id: string;
+          revoked_at?: string | null;
+          source?: string;
+          text_shown: string;
+          text_version: string;
+        };
+        Update: {
+          booking_id?: string;
+          granted_at?: string;
+          id?: string;
+          lang?: string;
+          org_id?: string;
+          revoked_at?: string | null;
+          source?: string;
+          text_shown?: string;
+          text_version?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_optins_booking_fkey";
+            columns: ["booking_id", "org_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "whatsapp_optins_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      whatsapp_outbox: {
+        Row: {
+          attempted_at: string | null;
+          booking_id: string;
+          created_at: string;
+          id: string;
+          kind: string;
+          org_id: string;
+          outcome: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          attempted_at?: string | null;
+          booking_id: string;
+          created_at?: string;
+          id?: string;
+          kind: string;
+          org_id: string;
+          outcome?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          attempted_at?: string | null;
+          booking_id?: string;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          org_id?: string;
+          outcome?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_outbox_booking_fkey";
+            columns: ["booking_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "whatsapp_outbox_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       whatsapp_messages: {
         Row: {
           booking_id: string | null;
@@ -1976,6 +2077,31 @@ isOneToOne: true
       };
       cron_claim_booking_email: {
         Args: { p_arrival_days?: number };
+        Returns: Json;
+      };
+      cron_claim_whatsapp_message: {
+        Args: { p_arrival_days?: number };
+        Returns: Json;
+      };
+      cron_settle_whatsapp_message: {
+        Args: { p_id: string; p_outcome: string };
+        Returns: undefined;
+      };
+      cron_purge_whatsapp: {
+        Args: { p_days?: number };
+        Returns: Json;
+      };
+      create_checkout_booking: {
+        Args: {
+          p_guest_email: string;
+          p_guest_name: string;
+          p_guest_phone: string;
+          p_lang: string;
+          p_token: string;
+          p_whatsapp_opt_in: boolean;
+          p_whatsapp_text: string;
+          p_whatsapp_text_version: string;
+        };
         Returns: Json;
       };
       create_manual_booking: {

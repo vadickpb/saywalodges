@@ -1,8 +1,8 @@
 name: Scheduled crons
 
-# SD-307 / SD-1120: calls the HTTP cron routes (GitHub Actions is the free scheduler; Vercel Hobby only
-# allows daily crons). ical-sync, expire-holds and booking-emails run every 15 minutes (booking emails can
-# therefore arrive up to ~15 min late: GitHub cannot schedule every minute); voucher-purge runs once a day.
+# SD-307 / SD-1120 / SD-1009: calls the HTTP cron routes (GitHub Actions is the free scheduler; Vercel Hobby only
+# allows daily crons). ical-sync, expire-holds, booking-emails and whatsapp-dispatch run every 15 minutes (messages can
+# therefore arrive up to ~15 min late: GitHub cannot schedule every minute); voucher-purge and whatsapp-purge run once a day.
 # Needs two repository secrets: CRON_URL (https://app.<domain>, no trailing slash) and
 # CRON_SECRET (same value as the app's CRON_SECRET). Without them the job is skipped, never failed.
 # GitHub may delay a scheduled run by a few minutes; routes are idempotent. See docs/cron.md.
@@ -22,17 +22,17 @@ concurrency:
 jobs:
   call:
     name: ${{ matrix.route }}
-    # The daily schedule only runs voucher-purge; the 15-minute schedule runs the others. Manual runs run all.
+    # The daily schedule only runs the purge routes; the 15-minute schedule runs the others. Manual runs run all.
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'workflow_dispatch' ||
-      (github.event.schedule == '41 7 * * *') == (matrix.route == 'voucher-purge'))
+      (github.event.schedule == '41 7 * * *') == contains(fromJSON('["voucher-purge","whatsapp-purge"]'), matrix.route))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
-        route: [ical-sync, expire-holds, booking-emails, voucher-purge]
+        route: [ical-sync, expire-holds, booking-emails, whatsapp-dispatch, voucher-purge, whatsapp-purge]
     steps:
       - name: Call /api/cron/${{ matrix.route }}
         env:
@@ -51,5 +51,10 @@ jobs:
           # booking-emails answers 200 even when some events failed or are pending a retry: surface that as a red run.
           if [ "$ROUTE" = "booking-emails" ] && grep -Eq '"failed":[1-9]' /tmp/body; then
             echo "booking-emails reported failed events (see Vercel logs: cron.booking_emails.*)"
+            exit 1
+          fi
+          # whatsapp-dispatch answers 200 even when a message failed (never retried, at-most-once): surface that as a red run.
+          if [ "$ROUTE" = "whatsapp-dispatch" ] && grep -Eq '"failed":[1-9]' /tmp/body; then
+            echo "whatsapp-dispatch reported failed messages (see Vercel logs: cron.whatsapp.*)"
             exit 1
           fi

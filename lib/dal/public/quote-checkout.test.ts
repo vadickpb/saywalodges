@@ -9,7 +9,7 @@ const token = "a".repeat(64), publicToken = "b".repeat(64);
 const quote = { property_name: "Lodge", unit_name: "Room", check_in: "2030-01-01", check_out: "2030-01-02",
   guests: 2, currency: "USD", total_cents: 50000, deposit_cents: 25000, balance_cents: 25000,
   expires_at: "2030-01-01T00:00:00+00:00", hold_minutes: 120 };
-const guest = { token, name: "Ana", email: "ana@example.com", phone: "", terms: "on" as const };
+const guest = { token, name: "Ana", email: "ana@example.com", phone: "", terms: "on" as const, whatsapp: false };
 beforeEach(() => vi.clearAllMocks());
 describe("checkout DAL", () => {
   it("reads a closed snapshot scoped to host", async () => {
@@ -40,11 +40,28 @@ describe("checkout DAL", () => {
     for (const replayed of [false,true]) {
       rpc.mockResolvedValueOnce({data:quote,error:null}).mockResolvedValueOnce({data:{public_token:publicToken,replayed},error:null});
       expect(await bookQuote("demo",guest)).toEqual({publicToken});
-      expect(rpc).toHaveBeenLastCalledWith("create_localized_booking_from_quote",{p_lang:"es",p_token:token,p_guest_name:"Ana",p_guest_email:"ana@example.com",p_guest_phone:undefined});
+      expect(rpc).toHaveBeenLastCalledWith("create_checkout_booking",{p_lang:"es",p_token:token,p_guest_name:"Ana",p_guest_email:"ana@example.com",p_guest_phone:"",
+        p_whatsapp_opt_in:false,p_whatsapp_text_version:"",p_whatsapp_text:""});
     }
+  });
+  it("records the WhatsApp opt-in only when the guest ticked the box AND the server supplied the evidence text",async () => {
+    rpc.mockResolvedValue({data:quote,error:null}).mockResolvedValueOnce({data:quote,error:null}).mockResolvedValueOnce({data:{public_token:publicToken,replayed:false},error:null});
+    await bookQuote("demo",{...guest,phone:"999 888 777",whatsapp:true},"es",{version:"v1",text:"Acepto"});
+    expect(rpc).toHaveBeenLastCalledWith("create_checkout_booking",expect.objectContaining({p_guest_phone:"999 888 777",p_whatsapp_opt_in:true,p_whatsapp_text_version:"v1",p_whatsapp_text:"Acepto"}));
+    rpc.mockReset();
+    rpc.mockResolvedValueOnce({data:quote,error:null}).mockResolvedValueOnce({data:{public_token:publicToken,replayed:false},error:null});
+    await bookQuote("demo",{...guest,whatsapp:true},"es",null);
+    expect(rpc).toHaveBeenLastCalledWith("create_checkout_booking",expect.objectContaining({p_whatsapp_opt_in:false}));
+  });
+  it("without the new RPC it falls back to the older one, which records no opt-in (so no WhatsApp is ever sent)",async () => {
+    rpc.mockResolvedValueOnce({data:quote,error:null}).mockResolvedValueOnce({data:null,error:{code:"PGRST202"}})
+      .mockResolvedValueOnce({data:{public_token:publicToken,replayed:false},error:null});
+    expect(await bookQuote("demo",{...guest,phone:"999888777",whatsapp:true},"es",{version:"v1",text:"x"})).toEqual({publicToken});
+    expect(rpc).toHaveBeenLastCalledWith("create_localized_booking_from_quote",{p_lang:"es",p_token:token,p_guest_name:"Ana",p_guest_email:"ana@example.com",p_guest_phone:"999888777"});
   });
   it("keeps checkout available before the additive migration is deployed", async () => {
     rpc.mockResolvedValueOnce({data:quote,error:null})
+      .mockResolvedValueOnce({data:null,error:{code:"PGRST202"}})
       .mockResolvedValueOnce({data:null,error:{code:"PGRST202"}})
       .mockResolvedValueOnce({data:{public_token:publicToken,replayed:false},error:null});
     expect(await bookQuote("demo",guest,"en")).toEqual({publicToken});

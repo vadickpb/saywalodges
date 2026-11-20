@@ -21,13 +21,33 @@ describe("public checkout action", () => {
     book.mockResolvedValue({publicToken});
     await expect(submitCheckout("es",{},form({total_cents:"1",deposit_cents:"0",currency:"PEN",host:"saywa-lodges",org_id:"other",check_in:"2030-01-01"})))
       .rejects.toThrow(`REDIRECT:/es/reserva/${publicToken}`);
-    expect(book).toHaveBeenCalledWith("demo",{token,name:"Ana",email:"ana@example.com",phone:"",terms:"on"},"es");
+    expect(book).toHaveBeenCalledWith("demo",{token,name:"Ana",email:"ana@example.com",phone:"",terms:"on",whatsapp:false},"es",null);
   });
   it.each([{name:" "},{name:"Ana\n"},{name:"Ana\u202e"},{email:"bad"},{email:""},{phone:"script"},{terms:"false"}])("validates before calling DAL %o",async patch => {
     const state=await submitCheckout("es",{},form(patch));
     expect(state.error).toBe("validation");
     expect(state.fields).toHaveProperty(Object.keys(patch)[0],true);
     expect(book).not.toHaveBeenCalled();
+  });
+  it("passes the WhatsApp opt-in with the server's own text and version, never text from the form",async () => {
+    book.mockResolvedValue({publicToken});
+    await expect(submitCheckout("es",{},form({phone:"999 888 777",whatsapp:"on",whatsapp_text:"forged"}))).rejects.toThrow("REDIRECT");
+    const [, guest, lang, optIn] = book.mock.calls[0];
+    expect(guest).toMatchObject({whatsapp:true,phone:"999 888 777"});
+    expect(lang).toBe("es");
+    expect(optIn).toEqual({version:"v1",text:expect.stringContaining("WhatsApp")});
+    expect(optIn.text).not.toContain("forged");
+  });
+  it.each(["","12345","888 888 888","+51 1 234 5678"])("an opt-in needs a reachable phone (%j)",async phone => {
+    const state=await submitCheckout("es",{},form({phone,whatsapp:"on"}));
+    expect(state).toEqual({error:"validation",fields:expect.objectContaining({whatsapp:true})});
+    expect(book).not.toHaveBeenCalled();
+  });
+  it("not ticking the box never records an opt-in, with or without a phone",async () => {
+    book.mockResolvedValue({publicToken});
+    await expect(submitCheckout("en",{},form({phone:"999 888 777"}))).rejects.toThrow("REDIRECT");
+    expect(book.mock.calls[0][1]).toMatchObject({whatsapp:false});
+    expect(book.mock.calls[0][3]).toBeNull();
   });
   it("treats a malformed token as an unavailable link rather than a field error", async () => {
     expect(await submitCheckout("es", {}, form({token:"bad", email:""}))).toEqual({error:"linkUnavailable"});
