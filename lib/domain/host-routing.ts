@@ -13,7 +13,7 @@ export type DeploymentMode = "platform" | "installation" | "vendor";
 // Dashboard and auth pages are shared, not tenant content: they skip the locale and host rewrites and are
 // never reachable on a tenant's own host (serving them there would let that tenant harvest session cookies
 // scoped to its own domain). Root-level special files (sitemap.xml, robots.txt) are in the list because they
-// read the host themselves and must never be rewritten into /sites/... first.
+// read the host themselves and must never be rewritten into /sites/... first; they are served on every host (SD-1125).
 export const NO_REWRITE_PATHS = ["/app", "/login", "/forgot-password", "/update-password", "/auth", "/sitemap.xml", "/robots.txt"] as const;
 
 // Files that read the Host header themselves and are valid on a public site host in installation mode.

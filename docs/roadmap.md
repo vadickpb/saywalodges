@@ -2091,7 +2091,7 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 `S` · Depende: — · Review: `R`
 - **Alcance**: en modo platform, `robots.txt` y `sitemap.xml` respondían 404 en el dominio propio del cliente (`www.saywalodges.com`):
   `decideRoute` solo los dejaba pasar en los hosts de la plataforma. Ahora pasan en cualquier host (ya resuelven el host ellos mismos).
-  Sitemap con `hreflang` es/en; descripción meta de cada villa recortada a ≤ 158 caracteres; `robots.txt` excluye páginas con token.
+  Sitemap con `hreflang` es/en; descripción meta de cada villa recortada a ≤ 158 caracteres.
 - **Hecho**: tests de enrutado, sitemap y robots. Guía del dueño para el alcance (Search Console, Business Profile, directorios):
   [`alcance-web.md`](alcance-web.md). Pendiente del dueño: enviar el sitemap en Search Console y la redirección 308 del apex.
 

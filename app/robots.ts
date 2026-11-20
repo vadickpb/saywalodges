@@ -26,8 +26,9 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     rules: {
       userAgent: "*",
       allow: "/",
-      // SD-1125: capability pages (booking status, checkout, private guide) carry a token in the URL and are noindex; keep crawlers out.
-      disallow: ["/admin", "/api/", "/*/reserva/", "/*/reservar/", "/*/guia/"],
+      // Pages with a token (booking status, checkout, private guide) are NOT disallowed on purpose: they are noindex, and a crawler
+      // that is kept out never reads that noindex and may still list a shared link as a bare URL (SD-1125 review).
+      disallow: ["/admin", "/api/"],
     },
     sitemap: `${getSiteUrl(host)}/sitemap.xml`,
   };

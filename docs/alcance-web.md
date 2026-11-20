@@ -7,7 +7,7 @@ en orden de impacto, lo que haces tú: casi todo es gratis y no depende de Whats
 - **`robots.txt` y `sitemap.xml` en el dominio propio.** Antes respondían 404 en `www.saywalodges.com` (el enrutado solo los servía en
   los hosts de la plataforma): Google no tenía mapa del sitio. Ahora el sitemap lista la portada y cada villa en es/en con `hreflang`.
 - **Descripción corta por villa** (≤ 158 caracteres) para que Google la muestre entera; el texto completo sigue en la página.
-- `robots.txt` deja fuera las páginas privadas con token (estado de reserva, checkout, guía).
+- Las páginas privadas con token (estado de reserva, checkout, guía) son `noindex`: Google no las muestra.
 - Ya existían: título y descripción por idioma, Open Graph para compartir (foto grande en WhatsApp/Facebook), `canonical`,
   `hreflang` y datos estructurados `LodgingBusiness` (dirección, coordenadas, teléfono, servicios).
 

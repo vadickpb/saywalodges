@@ -11,12 +11,12 @@ import robots from "./robots";
 
 beforeEach(() => vi.clearAllMocks());
 describe("tenant robots.txt (SD-1125)", () => {
-  it("points to the host's own sitemap and keeps crawlers out of token pages", async () => {
+  it("points to the host's own sitemap and lets crawlers read the noindex of token pages", async () => {
     getSiteByHost.mockResolvedValue({ slug: "cliente" });
     const r = await robots();
     expect(r.sitemap).toBe("https://www.cliente.pe/sitemap.xml");
     const rules = Array.isArray(r.rules) ? r.rules[0] : r.rules;
-    expect(rules.disallow).toEqual(expect.arrayContaining(["/api/", "/*/reserva/", "/*/reservar/", "/*/guia/"]));
+    expect(rules.disallow).toEqual(["/admin", "/api/"]);
   });
   it("an unknown host is closed to crawlers", async () => {
     getSiteByHost.mockResolvedValue(null);
