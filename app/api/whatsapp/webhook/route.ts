@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { moduleEnabled } from "@/lib/modules";
 import { recordWhatsappStatus } from "@/lib/dal/whatsapp";
+import { handleInboundMessage } from "@/lib/dal/whatsapp-inbox";
 import { errorName, log, newRequestId } from "@/lib/log";
 import { parseWebhookConfig } from "@/lib/whatsapp/config";
-import { parseStatusEvents, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
+import { parseInboundMessages, parseStatusEvents, verifyHandshake, verifySignature } from "@/lib/whatsapp/webhook";
 
 // WhatsApp Cloud API webhook (SD-1008, ADR 0010). Lives on app.<ROOT_DOMAIN> in installation mode (every /api/* does).
 //  * GET  — the one-off handshake Meta performs when the webhook is registered (verify token, constant-time).
-//  * POST — delivery-status events. EVERY request must carry a valid X-Hub-Signature-256 over the raw body, otherwise a bare
+//  * POST — delivery-status events and (SD-1012) inbound guest messages. EVERY request must carry a valid X-Hub-Signature-256 over the raw body, otherwise a bare
 //           401 and nothing is parsed or stored. Events are idempotent (record_whatsapp_status), so Meta's retries are safe:
 //           an internal failure answers 500 precisely so that Meta retries.
-// Without WHATSAPP_APP_SECRET / WHATSAPP_VERIFY_TOKEN (>= 16 chars) the route refuses everything. Inbound guest messages
-// are not processed or stored.
+// Without WHATSAPP_APP_SECRET / WHATSAPP_VERIFY_TOKEN (>= 16 chars) the route refuses everything. Inbound messages are stored
+// (retention: docs/whatsapp.md), auto-answered at most once per sender per 24 h, and "STOP" withdraws the guest's consent.
 const ROUTE = "/api/whatsapp/webhook";
 const MAX_BODY_BYTES = 256 * 1024;
 // A status event can arrive before the sender has recorded the message it refers to (the ledger row is written right after
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 400, headers });
   }
 
+  const inbound = parseInboundMessages(payload);
   try {
     let updated = 0;
     let retry = false;
@@ -90,11 +92,12 @@ export async function POST(request: Request) {
       if (outcome === "updated") updated += 1;
       if (outcome === "unknown" && event.at && Date.now() - event.at.getTime() < UNKNOWN_RETRY_WINDOW_MS) retry = true;
     }
+    for (const message of inbound) await handleInboundMessage(message);
     if (retry) {
       log("warn", "whatsapp.webhook.retry_unknown", { requestId, route: ROUTE, status: 500, count: events.length });
       return new NextResponse(null, { status: 500, headers });
     }
-    log("info", "whatsapp.webhook.processed", { requestId, route: ROUTE, status: 200, count: events.length, outcome: updated > 0 ? "updated" : "no_change" });
+    log("info", "whatsapp.webhook.processed", { requestId, route: ROUTE, status: 200, count: events.length + inbound.length, outcome: updated > 0 ? "updated" : "no_change" });
     return new NextResponse(null, { status: 200, headers });
   } catch (error) {
     log("error", "whatsapp.webhook.failed", { requestId, route: ROUTE, status: 500, errorName: errorName(error) });

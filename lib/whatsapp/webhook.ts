@@ -81,3 +81,63 @@ export function parseStatusEvents(payload: unknown): StatusEvent[] | null {
   }
   return events;
 }
+
+// ─── Inbound guest messages (SD-1012) ───────────────────────────────────────────────────────────────────────────────
+
+export type InboundMessage = { wamid: string; from: string; name: string | null; type: string; body: string; at: Date };
+
+const inboundSchema = z.object({
+  id: z.string().min(1).max(200),
+  from: z.string().regex(/^[0-9]{8,15}$/),
+  timestamp: z.string().regex(/^[0-9]{1,12}$/),
+  type: z.string().regex(/^[a-z_]{1,30}$/),
+  text: z.object({ body: z.string() }).optional(),
+});
+const inboundValueSchema = z.object({
+  messages: z.array(z.unknown()).optional(),
+  contacts: z.array(z.object({ wa_id: z.string().optional(), profile: z.object({ name: z.string().optional() }).optional() })).optional(),
+});
+
+/**
+ * Guest messages from a signed payload. A malformed message is skipped (never a 400 that would make Meta retry it for days).
+ * Only text bodies are kept; any other type (image, audio...) is recorded as its type with an empty body.
+ */
+export function parseInboundMessages(payload: unknown): InboundMessage[] {
+  const parsed = payloadSchema.safeParse(payload);
+  if (!parsed.success) return [];
+  const out: InboundMessage[] = [];
+  for (const entry of parsed.data.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      const value = inboundValueSchema.safeParse(change.value);
+      if (!value.success) continue;
+      for (const raw of value.data.messages ?? []) {
+        const message = inboundSchema.safeParse(raw);
+        if (!message.success) continue;
+        const contact = value.data.contacts?.find((c) => c.wa_id === message.data.from);
+        out.push({
+          wamid: message.data.id,
+          from: message.data.from,
+          name: contact?.profile?.name?.trim() || null,
+          type: message.data.type,
+          body: message.data.type === "text" ? (message.data.text?.body ?? "") : "",
+          at: new Date(Number(message.data.timestamp) * 1000),
+        });
+      }
+    }
+  }
+  return out;
+}
+
+const STOP_WORDS = new Set(["stop", "baja", "parar", "para", "cancelar", "no mas", "no más", "unsubscribe", "darme de baja"]);
+
+/** A guest asking us to stop writing ("STOP", "BAJA"...): the whole message must be that word. */
+export function isStopMessage(body: string): boolean {
+  return STOP_WORDS.has(body.trim().toLowerCase().replace(/[.!¡]+$/g, ""));
+}
+
+/** The quoter link sent in the auto-reply, or null when the installation has no public https site to point at. */
+export function autoReplyText(rootDomain: string | undefined): string | null {
+  if (!rootDomain || !/^[a-z0-9.-]+$/i.test(rootDomain) || !rootDomain.includes(".")) return null;
+  const url = `https://${rootDomain}/es/cotizar`;
+  return `Gracias por escribirnos. Esta es una respuesta automática: para cotizar tu estadía y reservar entra aquí: ${url} — si necesitas algo más, te responderemos en cuanto podamos.\n\nThanks for your message. This is an automatic reply: to get a quote and book, visit ${url.replace("/es/", "/en/")}. We will get back to you as soon as we can.`;
+}

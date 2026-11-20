@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const recordWhatsappStatus = vi.fn();
 vi.mock("@/lib/dal/whatsapp", () => ({ recordWhatsappStatus: (e: unknown) => recordWhatsappStatus(e) }));
+const handleInboundMessage = vi.fn();
+vi.mock("@/lib/dal/whatsapp-inbox", () => ({ handleInboundMessage: (m: unknown) => handleInboundMessage(m) }));
 import { GET, POST } from "./route";
 
 const APP_SECRET = "a".repeat(32);
@@ -109,5 +111,32 @@ describe("POST", () => {
   it("answers 413 for an oversized declared body without reading it", async () => {
     const req = new Request("http://app.localhost:3000/api/whatsapp/webhook", { method: "POST", body: "{}", headers: { "content-length": String(300 * 1024) } });
     expect((await POST(req)).status).toBe(413);
+  });
+});
+
+describe("POST inbound guest messages (SD-1012)", () => {
+  const inbound = JSON.stringify({ entry: [{ changes: [{ value: {
+    contacts: [{ wa_id: "51999111222", profile: { name: "Ana" } }],
+    messages: [{ id: "wamid.IN1", from: "51999111222", timestamp: "1700000000", type: "text", text: { body: "hola" } }],
+  } }] }] });
+
+  it("hands a signed inbound message to the inbox, with the sender name", async () => {
+    handleInboundMessage.mockResolvedValue("stored");
+    const res = await POST(post(inbound, sign(inbound)));
+    expect(res.status).toBe(200);
+    expect(handleInboundMessage).toHaveBeenCalledWith(expect.objectContaining({ wamid: "wamid.IN1", from: "51999111222", name: "Ana", body: "hola", type: "text" }));
+  });
+  it("never reads an unsigned inbound message", async () => {
+    expect((await POST(post(inbound, "sha256=" + "0".repeat(64)))).status).toBe(401);
+    expect(handleInboundMessage).not.toHaveBeenCalled();
+  });
+  it("answers 500 when storing fails, so Meta redelivers (the wamid makes it idempotent)", async () => {
+    handleInboundMessage.mockRejectedValue(new Error("db"));
+    expect((await POST(post(inbound, sign(inbound)))).status).toBe(500);
+  });
+  it("skips malformed messages instead of failing the batch", async () => {
+    const bad = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ id: "x", from: "abc", timestamp: "1", type: "text" }] } }] }] });
+    expect((await POST(post(bad, sign(bad)))).status).toBe(200);
+    expect(handleInboundMessage).not.toHaveBeenCalled();
   });
 });

@@ -107,7 +107,7 @@ export async function purgeWhatsappRecords(client = getSupabaseAdmin(), source: 
     log("error", "cron.whatsapp_purge.rpc_failed", { code: error.code });
     throw new Error("WhatsApp purge failed");
   }
-  const parsed = z.object({ messages: z.number().int(), outbox: z.number().int() }).safeParse(data);
+  const parsed = z.object({ messages: z.number().int(), outbox: z.number().int(), inbox: z.number().int().optional() }).safeParse(data);
   if (!parsed.success) throw new Error("WhatsApp purge failed");
   return parsed.data;
 }

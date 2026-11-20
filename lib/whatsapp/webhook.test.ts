@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { parseStatusEvents, safeEqual, verifyHandshake, verifySignature } from "./webhook";
+import { autoReplyText, isStopMessage, parseInboundMessages, parseStatusEvents, safeEqual, verifyHandshake, verifySignature } from "./webhook";
 
 const SECRET = "s".repeat(32);
 const sign = (body: string, secret = SECRET) => `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
@@ -87,5 +87,36 @@ describe("safeEqual", () => {
     expect(safeEqual("abc", "abc")).toBe(true);
     expect(safeEqual("abc", "abcd")).toBe(false);
     expect(safeEqual("", "")).toBe(true);
+  });
+});
+
+describe("inbound messages (SD-1012)", () => {
+  const wrap = (value: unknown) => ({ entry: [{ changes: [{ value }] }] });
+  it("parses text and non-text messages and ignores status-only events", () => {
+    const out = parseInboundMessages(wrap({
+      contacts: [{ wa_id: "51999111222", profile: { name: " Ana " } }],
+      messages: [
+        { id: "w1", from: "51999111222", timestamp: "1700000000", type: "text", text: { body: "hola" } },
+        { id: "w2", from: "51999333444", timestamp: "1700000001", type: "image" },
+      ],
+    }));
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ wamid: "w1", name: "Ana", body: "hola", type: "text" });
+    expect(out[0].at.getTime()).toBe(1700000000_000);
+    expect(out[1]).toMatchObject({ name: null, body: "", type: "image" });
+    expect(parseInboundMessages(wrap({ statuses: [{ id: "s", status: "sent" }] }))).toEqual([]);
+    expect(parseInboundMessages("nope")).toEqual([]);
+  });
+  it("skips malformed entries only", () => {
+    const out = parseInboundMessages(wrap({ messages: [{ id: "", from: "1", timestamp: "x", type: "text" }, { id: "ok", from: "51999111222", timestamp: "1", type: "text", text: { body: "b" } }] }));
+    expect(out.map((m) => m.wamid)).toEqual(["ok"]);
+  });
+  it.each(["STOP", " stop ", "Baja", "baja.", "NO MÁS", "unsubscribe"])("%j is a stop request", (body) => expect(isStopMessage(body)).toBe(true));
+  it.each(["no pares de mandarme fotos", "stop the car", "hola", "", "cancelar mi reserva por favor"])("%j is not", (body) => expect(isStopMessage(body)).toBe(false));
+  it("the auto-reply carries the quoter link in both languages, and none without a public domain", () => {
+    const text = autoReplyText("saywalodges.com");
+    expect(text).toContain("https://saywalodges.com/es/cotizar");
+    expect(text).toContain("https://saywalodges.com/en/cotizar");
+    for (const bad of [undefined, "", "localhost", "evil.com/x y", "a b.com"]) expect(autoReplyText(bad)).toBeNull();
   });
 });
