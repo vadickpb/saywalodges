@@ -10,7 +10,7 @@ name: Scheduled crons
 on:
   schedule:
     - cron: "*/15 * * * *"
-    - cron: "41 7 * * *" # daily: voucher-purge only
+    - cron: "41 7 * * *" # daily: the two purge routes
   workflow_dispatch:
 
 permissions: {}
@@ -19,20 +19,55 @@ concurrency:
   group: scheduled-crons
   cancel-in-progress: false
 
+# GitHub rejects the WHOLE file if a job-level `if` reads the `matrix` context (it is only available inside steps), which silently
+# stopped every cron after SD-1120. So the two schedules are two jobs, each with a matrix and an `if` that uses only `github.*`.
 jobs:
-  call:
+  frequent:
     name: ${{ matrix.route }}
-    # The daily schedule only runs the purge routes; the 15-minute schedule runs the others. Manual runs run all.
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event.schedule == '41 7 * * *') == contains(fromJSON('["voucher-purge","whatsapp-purge"]'), matrix.route))
+    # Every 15 minutes (and manual runs).
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '*/15 * * * *')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
-        route: [ical-sync, expire-holds, booking-emails, whatsapp-dispatch, voucher-purge, whatsapp-purge]
+        route: [ical-sync, expire-holds, booking-emails, whatsapp-dispatch]
+    steps:
+      - name: Call /api/cron/${{ matrix.route }}
+        env:
+          CRON_URL: ${{ secrets.CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          ROUTE: ${{ matrix.route }}
+        run: |
+          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "CRON_URL / CRON_SECRET not set: skipping."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/body -w '%{http_code}' --max-time 120 -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" "$CRON_URL/api/cron/$ROUTE")
+          echo "HTTP $code"
+          [ "$code" = "200" ] || exit 1
+          # booking-emails answers 200 even when some events failed or are pending a retry: surface that as a red run.
+          if [ "$ROUTE" = "booking-emails" ] && grep -Eq '"failed":[1-9]' /tmp/body; then
+            echo "booking-emails reported failed events (see Vercel logs: cron.booking_emails.*)"
+            exit 1
+          fi
+          # whatsapp-dispatch answers 200 even when a message failed (never retried, at-most-once): surface that as a red run.
+          if [ "$ROUTE" = "whatsapp-dispatch" ] && grep -Eq '"failed":[1-9]' /tmp/body; then
+            echo "whatsapp-dispatch reported failed messages (see Vercel logs: cron.whatsapp.*)"
+            exit 1
+          fi
+
+  daily:
+    name: ${{ matrix.route }}
+    # Once a day (and manual runs).
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '41 7 * * *')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        route: [voucher-purge, whatsapp-purge]
     steps:
       - name: Call /api/cron/${{ matrix.route }}
         env:
