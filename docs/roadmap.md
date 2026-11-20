@@ -2095,6 +2095,14 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Hecho**: tests de enrutado, sitemap y robots. Guía del dueño para el alcance (Search Console, Business Profile, directorios):
   [`alcance-web.md`](alcance-web.md). Pendiente del dueño: enviar el sitemap en Search Console y la redirección 308 del apex.
 
+### [x] SD-1127 · fix(vendor): the sales site needs no database credentials
+`S` · Depende: — · Review: `R+S`
+- **Alcance**: el preview de Vercel del proyecto `hoststay` fallaba en cada PR: todas sus variables eran solo de Production y el
+  esquema de entorno exigía Supabase. En modo `vendor` las variables de Supabase ausentes toman valores inertes
+  (`https://no-database.invalid`); el resto de modos las sigue exigiendo. Build y arranque verificados sin ninguna credencial.
+- **Pendiente del dueño**: marcar Preview en 4 variables de configuración del proyecto `hoststay` y, opcional, borrar sus
+  variables de Supabase (`docs/runbook-instalacion.md`).
+
 ### [ ] SD-1112 · feat(marketing): SEO content
 `S` · Depende: SD-1110 · Review: `R`
 - **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.

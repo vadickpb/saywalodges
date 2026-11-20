@@ -66,8 +66,26 @@ const envSchema = z.object({
   MODULES_DISABLED: z.string().optional(),
 });
 
+// SD-1127: the vendor sales site never touches a database (its only form sends an email; robots, sitemap and every other
+// route are answered without Supabase). It must not need, nor hold, database credentials: in vendor mode missing Supabase
+// variables get inert values on a reserved, unresolvable domain (RFC 2606 ".invalid"), so any accidental call fails loudly.
+export const VENDOR_NO_DATABASE_URL = "https://no-database.invalid";
+const VENDOR_NO_DATABASE_KEY = "vendor-mode-has-no-database";
+
+function withVendorDefaults(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  if (source.DEPLOYMENT_MODE?.trim() !== "vendor") return source;
+  const blank = (key: string) => !source[key]?.trim();
+  return {
+    ...source,
+    ...(blank("SUPABASE_URL") ? { SUPABASE_URL: VENDOR_NO_DATABASE_URL } : {}),
+    ...(blank("NEXT_PUBLIC_SUPABASE_URL") ? { NEXT_PUBLIC_SUPABASE_URL: VENDOR_NO_DATABASE_URL } : {}),
+    ...(blank("SUPABASE_SERVICE_ROLE_KEY") ? { SUPABASE_SERVICE_ROLE_KEY: VENDOR_NO_DATABASE_KEY } : {}),
+    ...(blank("NEXT_PUBLIC_SUPABASE_ANON_KEY") ? { NEXT_PUBLIC_SUPABASE_ANON_KEY: VENDOR_NO_DATABASE_KEY } : {}),
+  };
+}
+
 function loadEnv() {
-  const parsed = envSchema.safeParse(process.env);
+  const parsed = envSchema.safeParse(withVendorDefaults(process.env));
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
