@@ -54,10 +54,15 @@ describe("platform mode (unchanged behavior)", () => {
       }
     }
   });
-  it("keeps the existing behavior for sitemap.xml and robots.txt on a tenant host", () => {
-    // Characterization test: today these two are in NO_REWRITE_PATHS, so a tenant host answers 404.
-    expect(decide(`casa.${ROOT}`, "/sitemap.xml", "platform")).toEqual({ type: "not-found" });
-    expect(decide(ROOT, "/sitemap.xml", "platform")).toEqual({ type: "pass" });
+  it("serves sitemap.xml and robots.txt on every host, tenant sites included (SD-1125)", () => {
+    // They read the Host themselves; a client's own domain used to answer 404, hiding the site from search engines.
+    for (const host of [`casa.${ROOT}`, "www.cliente.pe", ROOT, `app.${ROOT}`]) {
+      expect(decide(host, "/sitemap.xml", "platform")).toEqual({ type: "pass" });
+      expect(decide(host, "/robots.txt", "platform")).toEqual({ type: "pass" });
+    }
+    // Only those two exact files: nothing else under them, and the dashboard stays off tenant hosts.
+    expect(decide("www.cliente.pe", "/sitemap.xml/x", "platform")).toEqual({ type: "not-found" });
+    expect(decide("www.cliente.pe", "/app", "platform")).toEqual({ type: "not-found" });
   });
 });
 

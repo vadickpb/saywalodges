@@ -5,6 +5,7 @@ import { getProperty } from "@/lib/dal/public/property";
 import { getShowcaseUnits } from "@/lib/dal/public/showcase-units";
 import { SITE_URL } from "@/config/site";
 import { env } from "@/lib/env";
+import { languageAlternates } from "@/lib/domain/seo";
 
 // Reads the request's host (not a param — this file is a root-level
 // special route, outside app/sites/[host]) so it's per-tenant, per ADR-0001.
@@ -22,18 +23,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const baseUrl = getSiteUrl(host);
   const now = new Date();
-  const pages: MetadataRoute.Sitemap = [
-    { url: `${baseUrl}/en`, lastModified: now, changeFrequency: "monthly", priority: 1 },
-    { url: `${baseUrl}/es`, lastModified: now, changeFrequency: "monthly", priority: 1 },
-  ];
+  // SD-1125: every page lists its other-language version (hreflang). /cotizar is not listed: the page is noindex on purpose.
+  const both = (path: string, priority: number, changeFrequency: "weekly" | "monthly", images?: string[]): MetadataRoute.Sitemap =>
+    (["es", "en"] as const).map((lang) => ({
+      url: `${baseUrl}/${lang}${path}`, lastModified: now, changeFrequency, priority,
+      alternates: languageAlternates(baseUrl, path), ...(images ? { images } : {}),
+    }));
+  const pages: MetadataRoute.Sitemap = [...both("", 1, "monthly")];
   try {
     const property = await getProperty(site.slug);
     const units = await getShowcaseUnits(property.id);
     for (const unit of units) {
-      pages.push(
-        { url: `${baseUrl}/en/alojamientos/${unit.id}`, lastModified: now, changeFrequency: "weekly", priority: 0.8, images: unit.cover ? [unit.cover] : undefined },
-        { url: `${baseUrl}/es/alojamientos/${unit.id}`, lastModified: now, changeFrequency: "weekly", priority: 0.8, images: unit.cover ? [unit.cover] : undefined },
-      );
+      pages.push(...both(`/alojamientos/${unit.id}`, 0.8, "weekly", unit.cover ? [unit.cover] : undefined));
     }
   } catch (error) {
     console.error(`sitemap: loading units of ${site.slug} failed:`, error);

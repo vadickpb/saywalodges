@@ -71,6 +71,9 @@ export function decideRoute(input: { host: string; pathname: string; rootDomain:
   // ── platform mode: exactly the behavior before SD-1001 ──────────────────────
   const isPlatformHost = host === rootDomain || host === panelHost;
   if (host === panelHost && pathname === "/") return { type: "rewrite-panel-root" };
+  // SD-1125: sitemap.xml and robots.txt read the Host themselves (an unknown host gets "disallow /" and an empty sitemap), so they
+  // are served on tenant hosts too. Before, a client's own domain answered 404 and search engines never got its sitemap.
+  if (SITE_ROOT_FILES.some((path) => pathname === path)) return { type: "pass" };
   if (isNoRewritePath(pathname)) return isPlatformHost ? { type: "pass" } : { type: "not-found" };
   if (isPlatformHost) return { type: "pass" }; // landing and dashboard use native routes (and native 404s)
   if (host.endsWith(`.${rootDomain}`)) return { type: "site", siteIdentifier: host.slice(0, -(rootDomain.length + 1)) };
