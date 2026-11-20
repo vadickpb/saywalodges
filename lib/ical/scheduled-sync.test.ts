@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/dal/ical-cron", () => ({ claimAlert: vi.fn(), listDueFeedIds: vi.fn(), settleAlert: vi.fn(), syncDueFeed: vi.fn() }));
+vi.mock("@/lib/dal/ical-cron", () => ({ claimAlert: vi.fn(), listDueFeedIds: vi.fn(), settleAlert: vi.fn(), syncDueFeed: vi.fn(), whatsappConflictAlert: vi.fn() }));
 import { runScheduledIcalSync, type Deps, type Options } from "./scheduled-sync";
 import type { AlertClaim } from "@/lib/dal/ical-cron";
 
@@ -148,5 +148,17 @@ describe("runScheduledIcalSync", () => {
     expect(d.claimAlert).toHaveBeenCalledWith(list[1], "conflict");
     expect(summary.synced).toBe(2);
     spy.mockRestore();
+  });
+
+  it("also tells the owner on WhatsApp, but only after the email really went out (SD-1011)", async () => {
+    const sent = deps({ claimAlert: vi.fn(async () => claim), whatsappConflict: vi.fn(async () => true) });
+    await runScheduledIcalSync({ ...options, limit: 1 }, sent);
+    expect(sent.sendEmail).toHaveBeenCalledWith(expect.objectContaining({ template: "icalConflict" }));
+    expect(sent.whatsappConflict).toHaveBeenCalledWith(expect.any(String), claim.unit_name, claim.count);
+    const failedEmail = deps({ claimAlert: vi.fn(async () => claim), sendEmail: vi.fn(async () => ({ ok: false as const, reason: "unavailable" as const })), whatsappConflict: vi.fn(async () => true) });
+    await runScheduledIcalSync({ ...options, limit: 1 }, failedEmail);
+    expect(failedEmail.whatsappConflict).not.toHaveBeenCalled();
+    const throwing = deps({ claimAlert: vi.fn(async () => claim), whatsappConflict: vi.fn(async () => { throw new Error("boom"); }) });
+    await expect(runScheduledIcalSync({ ...options, limit: 1 }, throwing)).resolves.toMatchObject({ alertsFailed: 0 });
   });
 });

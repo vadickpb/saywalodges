@@ -1,5 +1,5 @@
 import "server-only";
-import { claimAlert, listDueFeedIds, settleAlert, syncDueFeed, type AlertClaim, type AlertKind, type FeedOutcome } from "@/lib/dal/ical-cron";
+import { claimAlert, listDueFeedIds, settleAlert, syncDueFeed, whatsappConflictAlert, type AlertClaim, type AlertKind, type FeedOutcome } from "@/lib/dal/ical-cron";
 import { sendEmail, type EmailResult } from "@/lib/email/send";
 import { log } from "@/lib/log";
 
@@ -21,9 +21,11 @@ export type Deps = {
   claimAlert: (feedId: string, kind: AlertKind) => Promise<AlertClaim | null>;
   settleAlert: (feedId: string, claimId: string, delivered: boolean) => Promise<void>;
   sendEmail: (input: Parameters<typeof sendEmail>[0]) => Promise<EmailResult>;
+  /** SD-1011: preferred channel for a conflict alert; email is the fallback. Optional so existing callers keep working. */
+  whatsappConflict?: (feedId: string, unitName: string | null, count: number) => Promise<boolean>;
   now: () => number;
 };
-export const defaultDeps: Deps = { listDueFeedIds, syncDueFeed, claimAlert, settleAlert, sendEmail, now: Date.now };
+export const defaultDeps: Deps = { listDueFeedIds, syncDueFeed, claimAlert, settleAlert, sendEmail, whatsappConflict: whatsappConflictAlert, now: Date.now };
 
 export type Options = {
   limit: number; // max feeds per execution
@@ -55,6 +57,9 @@ async function alertOwners(feedId: string, kind: AlertKind, options: Options, de
   } catch {
     // sendEmail never throws; this guards the settle step below from an unexpected bug.
   }
+  // SD-1011: WhatsApp is ADDITIONAL to the email, and only sent once the email really went out (the claim is then retired), so a
+  // released claim that is retried can never message the owner twice.
+  if (delivered && kind === "conflict" && deps.whatsappConflict) await deps.whatsappConflict(feedId, claim.unit_name, claim.count).catch(() => false);
   // One real delivery is enough to retire the claim: re-sending would duplicate it to the recipients that got it.
   await settleWithRetry(deps, feedId, claim.claim_id, delivered);
   if (delivered) summary.alertsSent++;
