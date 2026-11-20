@@ -216,4 +216,37 @@ describe("env", () => {
     expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("test-anon-key");
     expect(env.ROOT_DOMAIN).toBe("localhost:3000");
   });
+
+  it("vendor mode needs no database credentials (SD-1127), other modes still require them", async () => {
+    setValidEnv();
+    for (const key of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]) delete process.env[key];
+    process.env.DEPLOYMENT_MODE = "vendor";
+    const { env } = await import("./env");
+    expect(env.SUPABASE_URL).toBe("https://no-database.invalid");
+    expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("https://no-database.invalid");
+    expect(env.SUPABASE_SERVICE_ROLE_KEY).toBe("vendor-mode-has-no-database");
+    vi.resetModules();
+    process.env.DEPLOYMENT_MODE = "installation";
+    await expect(import("./env")).rejects.toThrow(/SUPABASE_URL/);
+    vi.resetModules();
+    delete process.env.DEPLOYMENT_MODE;
+    await expect(import("./env")).rejects.toThrow(/SUPABASE_URL/);
+  });
+
+  it("vendor mode treats blank Supabase variables as absent", async () => {
+    setValidEnv();
+    process.env.SUPABASE_URL = "";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "   ";
+    process.env.DEPLOYMENT_MODE = "vendor";
+    const { env } = await import("./env");
+    expect(env.SUPABASE_URL).toBe("https://no-database.invalid");
+    expect(env.SUPABASE_SERVICE_ROLE_KEY).toBe("vendor-mode-has-no-database");
+  });
+
+  it("vendor mode keeps real credentials when they are set", async () => {
+    setValidEnv();
+    process.env.DEPLOYMENT_MODE = "vendor";
+    const { env } = await import("./env");
+    expect(env.SUPABASE_URL).toBe("https://example.supabase.co");
+  });
 });

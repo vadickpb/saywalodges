@@ -136,14 +136,13 @@ de ejecutar lógica de aplicación.
    Las tres variables `VENDOR_*` son opcionales. El botón de demo y el de WhatsApp no aparecen si falta su variable.
    «Solicitar proforma» usa WhatsApp primero, luego `VENDOR_CONTACT_EMAIL`; si no hay ningún canal, lleva al bloque de
    contacto futuro y no muestra una acción final sin destino.
-3. El esquema común de entorno todavía valida las claves Supabase durante el build, aunque el modo `vendor` no las
-   usa. Hasta que se separe ese esquema, añade valores de relleno que no pertenezcan a ningún proyecto real:
-   ```dotenv
-   SUPABASE_URL=https://vendor.invalid
-   SUPABASE_SERVICE_ROLE_KEY=unused-vendor-build
-   NEXT_PUBLIC_SUPABASE_URL=https://vendor.invalid
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=unused-vendor-build
-   ```
+3. **No configures ninguna variable de Supabase** (SD-1127): en modo `vendor` el esquema de entorno ya no las exige y usa
+   valores inertes (`https://no-database.invalid`). Si el proyecto las tiene de antes, puedes **borrarlas**: la web de
+   ventas no debe guardar la clave service-role de ningún proyecto.
+   **Previews**: marca también **Preview** en `DEPLOYMENT_MODE`, `ROOT_DOMAIN`, `NEXT_PUBLIC_SITE_URL` y
+   `NEXT_PUBLIC_PRODUCT_NAME` (no son secretas; en el preview las URLs canónicas y el sitemap apuntan al dominio de producción, es lo esperado). Sin `DEPLOYMENT_MODE=vendor` en Preview, el build cae en modo `platform`,
+   exige Supabase y falla en cada PR. Alternativa si no quieres previews de la web de ventas: Settings → Git → *Ignored
+   Build Step* → «Only build production».
 4. Despliega y verifica:
    ```bash
    curl -I https://<dominio>/
