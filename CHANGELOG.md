@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.1.0](https://github.com/vadickpb/saywalodges/compare/v1.0.0...v1.1.0) (2026-11-20)
+
+
+### Funciones
+
+* **dashboard:** group photo uploads by villa (SD-1118) ([#136](https://github.com/vadickpb/saywalodges/issues/136)) ([e886aa0](https://github.com/vadickpb/saywalodges/commit/e886aa0c8718133e2a1836d8d3e96f2f34187704))
+* **marketing:** add vendor site base ([#129](https://github.com/vadickpb/saywalodges/issues/129)) ([074a05c](https://github.com/vadickpb/saywalodges/commit/074a05cdb618214a3e63684f4666c8c92c5f5dac))
+* **marketing:** demo by request and sample website button (SD-1114) ([#133](https://github.com/vadickpb/saywalodges/issues/133)) ([cc6ccff](https://github.com/vadickpb/saywalodges/commit/cc6ccff21427a57f3389fd6f8bfa9ac520bae6d7))
+* **marketing:** HostStay brand identity and redesign (SD-1113) ([#130](https://github.com/vadickpb/saywalodges/issues/130)) ([51acade](https://github.com/vadickpb/saywalodges/commit/51acadea1f8122d46fb108fbffb468cb2da096f5))
+* **marketing:** packages, FAQ and lead form (SD-1111) ([#132](https://github.com/vadickpb/saywalodges/issues/132)) ([88070d3](https://github.com/vadickpb/saywalodges/commit/88070d3d1c8f2879a34c5386f379801ebbc4c1e3))
+* **site:** show the parts' spaces on a combined unit page (SD-1119) ([#137](https://github.com/vadickpb/saywalodges/issues/137)) ([cc2f5a1](https://github.com/vadickpb/saywalodges/commit/cc2f5a13877831d7da813fba7ffd6daf3d7367b9))
+* **whatsapp:** booking templates, guest opt-in and scheduled sends (SD-1009) ([#141](https://github.com/vadickpb/saywalodges/issues/141)) ([86c83d9](https://github.com/vadickpb/saywalodges/commit/86c83d939dc66692e8d181e033cb98d44cc203f0))
+* **whatsapp:** inbound inbox and one auto-reply per sender per 24 h (SD-1012) ([#144](https://github.com/vadickpb/saywalodges/issues/144)) ([9154a13](https://github.com/vadickpb/saywalodges/commit/9154a134f94889e7c0ae0a376d51782588a22fe2))
+* **whatsapp:** owner alerts on WhatsApp (SD-1011) ([#142](https://github.com/vadickpb/saywalodges/issues/142)) ([3392c6b](https://github.com/vadickpb/saywalodges/commit/3392c6ba0fa1c2c3e98d253ff762920f1d450d83))
+* **whatsapp:** owner rules and Lima send window for the queue (SD-1010) ([#143](https://github.com/vadickpb/saywalodges/issues/143)) ([d93a20e](https://github.com/vadickpb/saywalodges/commit/d93a20e3709d0179fadc6869c9e6e6f64a3e0cd7))
+
+
+### Correcciones
+
+* **ci:** make the scheduled-crons workflow valid again (SD-1124) ([#146](https://github.com/vadickpb/saywalodges/issues/146)) ([256ff77](https://github.com/vadickpb/saywalodges/commit/256ff7705e49ac7403fc684da31c8901b57511f6))
+* **db:** grant service_role execute on private.is_owner (SD-1117) ([#135](https://github.com/vadickpb/saywalodges/issues/135)) ([def97c8](https://github.com/vadickpb/saywalodges/commit/def97c809b25abdbeef8d845e0e9d523dd2cc7e8))
+* **db:** grant service_role usage on the private schema (SD-1116) ([#134](https://github.com/vadickpb/saywalodges/issues/134)) ([62cae25](https://github.com/vadickpb/saywalodges/commit/62cae25c323aeea2b8f301f96d30765348717be0))
+* **marketing:** serve HostStay hero image from /images ([#131](https://github.com/vadickpb/saywalodges/issues/131)) ([1009140](https://github.com/vadickpb/saywalodges/commit/10091408357ef3f6e1ca7f75e4b1576c66ec4888))
+* **seo:** serve robots and sitemap on the client's own domain (SD-1125) ([#147](https://github.com/vadickpb/saywalodges/issues/147)) ([c97a64b](https://github.com/vadickpb/saywalodges/commit/c97a64b35636264a2c53111fbc7817aa5f594b37))
+* **test:** allow generated CHANGELOG in white-label guard ([#126](https://github.com/vadickpb/saywalodges/issues/126)) ([e166251](https://github.com/vadickpb/saywalodges/commit/e16625167cf92bbd1f5440f0a91066057d7ade42))
+* **vendor:** the sales site needs no database credentials (SD-1127) ([#150](https://github.com/vadickpb/saywalodges/issues/150)) ([aa9316c](https://github.com/vadickpb/saywalodges/commit/aa9316c6d9dbff7cd6607590522926bfe750e9ff))
+
 ## [1.0.0](https://github.com/vadickpb/saywalodges/compare/v0.1.0...v1.0.0) (2026-11-17)
 
 
