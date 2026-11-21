@@ -19,7 +19,8 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <PaymentAccounts accounts={accounts} />
-      <p className="text-sm"><Link className="underline" href="/app/settings/whatsapp">Reglas de los mensajes de WhatsApp</Link></p>
+      <p className="text-sm"><Link className="underline" href="/app/settings/messages">Mensajes para tus huéspedes (bienvenida, reglas, salida…)</Link></p>
+      <p className="text-sm"><Link className="underline" href="/app/settings/whatsapp">Reglas de los mensajes automáticos de WhatsApp</Link></p>
     </div>
   );
 }

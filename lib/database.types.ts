@@ -1924,6 +1924,102 @@ isOneToOne: true
           },
         ];
       };
+      message_templates: {
+        Row: {
+          anchor: string | null;
+          body_en: string;
+          body_es: string;
+          id: string;
+          key: string;
+          offset_days: number | null;
+          org_id: string;
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          anchor?: string | null;
+          body_en: string;
+          body_es: string;
+          id?: string;
+          key: string;
+          offset_days?: number | null;
+          org_id: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          anchor?: string | null;
+          body_en?: string;
+          body_es?: string;
+          id?: string;
+          key?: string;
+          offset_days?: number | null;
+          org_id?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      message_house_info: {
+        Row: {
+          checkin_time: string | null;
+          checkout_time: string | null;
+          contact_phone: string | null;
+          door_code: string | null;
+          location_url: string | null;
+          org_id: string;
+          rules_en: string | null;
+          rules_es: string | null;
+          updated_at: string;
+          wifi_name: string | null;
+          wifi_password: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          checkin_time?: string | null;
+          checkout_time?: string | null;
+          contact_phone?: string | null;
+          door_code?: string | null;
+          location_url?: string | null;
+          org_id: string;
+          rules_en?: string | null;
+          rules_es?: string | null;
+          updated_at?: string;
+          wifi_name?: string | null;
+          wifi_password?: string | null;
+        };
+        Update: {
+          checkin_time?: string | null;
+          checkout_time?: string | null;
+          contact_phone?: string | null;
+          door_code?: string | null;
+          location_url?: string | null;
+          org_id?: string;
+          rules_en?: string | null;
+          rules_es?: string | null;
+          updated_at?: string;
+          wifi_name?: string | null;
+          wifi_password?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "message_house_info_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: true;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       stay_details: {
         Row: {
           arrival_time: string | null;
@@ -2276,6 +2372,21 @@ isOneToOne: true
       cron_purge_stay_details: {
         Args: { p_days?: number };
         Returns: number;
+      };
+      save_message_template: {
+        Args: { p_anchor: string | null; p_body_en: string; p_body_es: string; p_key: string; p_offset: number | null; p_org_id: string; p_title: string };
+        Returns: undefined;
+      };
+      delete_message_template: {
+        Args: { p_key: string; p_org_id: string };
+        Returns: undefined;
+      };
+      save_message_house_info: {
+        Args: {
+          p_checkin: string; p_checkout: string; p_contact_phone: string; p_door_code: string; p_location_url: string; p_org_id: string;
+          p_rules_en: string; p_rules_es: string; p_wifi_name: string; p_wifi_password: string;
+        };
+        Returns: undefined;
       };
       save_stay_details: {
         // The function has no defaults: every argument is sent, the ones that do not apply as null.

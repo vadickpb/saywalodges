@@ -5,6 +5,7 @@ import { saveStayDetailsAction } from "@/app/app/stay/actions";
 import { createAutosave } from "@/lib/domain/autosave";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StayMessages, type MessagesData } from "@/components/dashboard/stay-messages";
 import { airbnbReservationUrl, STAY_REQUESTS, stayRequestKeys, type StayDetails, type StayKey, type StayRequest } from "@/lib/domain/stay-details";
 
 // The stay card (SD-1129): the name is the only field that matters; everything else is optional and saves by itself
@@ -18,7 +19,7 @@ const toForm = (s: StayDetails): Form => ({
   requests: s.requests, note: s.note ?? "", remindOn: s.remindOn ?? "",
 });
 
-export function StayDetailsCard({ stayKey, initial }: { stayKey: StayKey; initial: StayDetails }) {
+export function StayDetailsCard({ stayKey, initial, messages }: { stayKey: StayKey; initial: StayDetails; messages?: MessagesData | null }) {
   const [form, setForm] = useState<Form>(() => toForm(initial));
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -57,6 +58,7 @@ export function StayDetailsCard({ stayKey, initial }: { stayKey: StayKey; initia
   const id = stayKey.kind === "booking" ? stayKey.bookingId : stayKey.externalUid.slice(0, 12);
 
   return (
+    <div className="space-y-3">
     <section aria-label="Datos de la estadía" className="space-y-3 rounded-lg border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-semibold">Datos de la estadía</h3>
@@ -137,5 +139,7 @@ export function StayDetailsCard({ stayKey, initial }: { stayKey: StayKey; initia
         <p className="text-xs text-muted-foreground">Ese día aparece en «Recordatorios» del calendario, con el nombre, los pedidos y la nota.</p>
       </div>
     </section>
+    {messages && <StayMessages data={messages} live={{ name: form.name || null, phone: form.phone || null, lang: form.lang, guests: form.party ? Number(form.party) : null, requests: form.requests }} />}
+    </div>
   );
 }
