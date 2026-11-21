@@ -1,4 +1,5 @@
 import "server-only";
+import { finishWithFallback, type SnapshotEvent } from "./ical-finish";
 import { parseCalendarPeriod } from "@/lib/domain/calendar";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -47,11 +48,12 @@ export async function saveImportUrl(
 
 export type SyncErrorCode = "URL" | "NETWORK" | "SIZE" | "FORMAT";
 
+
 // Shared by the owner's manual sync and the scheduled one (SD-307): the same SSRF-guarded fetch
 // (allowlist, DNS/private-address checks, size and time limits) and the same parser. Never throws.
 export async function downloadSnapshot(
   url: string,
-): Promise<{ events: { uid: string; start: string; end: string }[]; code?: SyncErrorCode }> {
+): Promise<{ events: SnapshotEvent[]; code?: SyncErrorCode }> {
   try {
     return { events: parseCalendar(await fetchCalendar(url)) };
   } catch (error) {
@@ -71,13 +73,13 @@ export async function syncFeed(
   const lease = leaseSchema.safeParse(started.data);
   if (started.error || !lease.success) return false;
   const { events, code } = await downloadSnapshot(lease.data.url);
-  const finished = await client.rpc("finish_ical_sync", {
+  const finished = await finishWithFallback((evts) => client.rpc("finish_ical_sync", {
     p_org_id: orgId,
     p_feed_id: id,
     p_token: lease.data.token,
-    p_events: events,
+    p_events: evts,
     ...(code ? { p_error: code } : {}),
-  });
+  }), events);
   if (finished.error) console.error("ical sync persistence failed");
   return !finished.error && finished.data === true && !code;
 }

@@ -178,7 +178,20 @@ export async function fetchCalendar(value: string): Promise<string> {
   }
 }
 
-export type ImportedEvent = { uid: string; start: string; end: string };
+/** `code` / `last4` (SD-1129): Airbnb's reservation code and the last 4 digits of the guest's phone, when the feed carries them. */
+export type ImportedEvent = { uid: string; start: string; end: string; code?: string; last4?: string };
+
+/**
+ * Airbnb puts "Reservation URL: https://www.airbnb.com/reservation/itinerary?code=HM... \nPhone Number (Last 4 Digits): 1234" in
+ * DESCRIPTION. Only those two values are read, only if they match their strict shape; nothing else from the text is kept.
+ */
+export function airbnbStayHints(description: unknown): { code?: string; last4?: string } {
+  const text = typeof description === "string" ? description : typeof (description as { val?: unknown } | null)?.val === "string" ? (description as { val: string }).val : "";
+  if (!text || text.length > 4000) return {};
+  const code = /[?&]code=([A-Z0-9]{6,20})(?![A-Za-z0-9])/.exec(text)?.[1];
+  const last4 = /Last 4 Digits\)?:\s*(\d{4})(?!\d)/i.exec(text)?.[1];
+  return { ...(code ? { code } : {}), ...(last4 ? { last4 } : {}) };
+}
 export function parseCalendar(body: string): ImportedEvent[] {
   try {
     if (Buffer.byteLength(body) > MAX_BYTES) throw new ImportError("SIZE");
@@ -269,6 +282,7 @@ export function parseCalendar(body: string): ImportedEvent[] {
         uid: createHash("sha256").update(event.uid).digest("hex"),
         start,
         end,
+        ...airbnbStayHints(event.description),
       });
     }
     return events.sort((a, b) => a.uid.localeCompare(b.uid));

@@ -4,6 +4,7 @@ import { log } from "@/lib/log";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { ICAL_CHANNELS } from "@/lib/domain/ical-feeds";
 import { downloadSnapshot } from "./ical-sync";
+import { finishWithFallback } from "./ical-finish";
 import { ownerConflictParams } from "@/lib/domain/whatsapp-owner-alerts";
 import { ownerWhatsappPhone, sendOwnerWhatsappAlert } from "@/lib/whatsapp/owner-alert";
 
@@ -50,12 +51,12 @@ export async function syncDueFeed(feedId: string, client: Admin = getSupabaseAdm
     const lease = leaseSchema.safeParse(started.data);
     if (!lease.success) return "failed";
     const { events, code } = await downloadSnapshot(lease.data.url);
-    const finished = await client.rpc("cron_finish_ical_sync", {
+    const finished = await finishWithFallback((evts) => client.rpc("cron_finish_ical_sync", {
       p_feed_id: feedId,
       p_token: lease.data.token,
-      p_events: events,
+      p_events: evts,
       ...(code ? { p_error: code } : {}),
-    });
+    }), events);
     if (finished.error) {
       log("error", "cron.ical_sync.rpc_failed", { outcome: "finish", code: finished.error.code });
       return "failed";
