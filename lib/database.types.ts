@@ -2273,6 +2273,10 @@ isOneToOne: true
         };
         Returns: undefined;
       };
+      cron_purge_stay_details: {
+        Args: { p_days?: number };
+        Returns: number;
+      };
       save_stay_details: {
         // The function has no defaults: every argument is sent, the ones that do not apply as null.
         Args: {

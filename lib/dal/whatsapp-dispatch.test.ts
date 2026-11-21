@@ -127,11 +127,16 @@ describe("idempotent queue (SD-1010)", () => {
 
 describe("purgeWhatsappRecords", () => {
   it("uses the retention setting (365 days by default)", async () => {
-    const rpc = vi.fn(async () => ({ data: { messages: 2, outbox: 1 }, error: null }));
-    expect(await purgeWhatsappRecords({ rpc } as never, {})).toEqual({ messages: 2, outbox: 1 });
+    const rpc = vi.fn(async (name: string) => (name === "cron_purge_stay_details" ? { data: 3, error: null } : { data: { messages: 2, outbox: 1 }, error: null }));
+    expect(await purgeWhatsappRecords({ rpc } as never, {})).toEqual({ messages: 2, outbox: 1, stays: 3 });
     expect(rpc).toHaveBeenCalledWith("cron_purge_whatsapp", { p_days: 365 });
+    expect(rpc).toHaveBeenCalledWith("cron_purge_stay_details", { p_days: 180 });
     await purgeWhatsappRecords({ rpc } as never, { WHATSAPP_RETENTION_DAYS: "90" });
-    expect(rpc).toHaveBeenLastCalledWith("cron_purge_whatsapp", { p_days: 90 });
+    expect(rpc).toHaveBeenCalledWith("cron_purge_whatsapp", { p_days: 90 });
+  });
+  it("a database without the stay purge yet does not fail the WhatsApp purge", async () => {
+    const rpc = vi.fn(async (name: string) => (name === "cron_purge_stay_details" ? { data: null, error: { code: "PGRST202" } } : { data: { messages: 0, outbox: 0 }, error: null }));
+    expect(await purgeWhatsappRecords({ rpc } as never, {})).toEqual({ messages: 0, outbox: 0, stays: 0 });
   });
   it("rejects a retention below 30 days and database errors", async () => {
     await expect(purgeWhatsappRecords({ rpc: vi.fn() } as never, { WHATSAPP_RETENTION_DAYS: "5" })).rejects.toThrow();

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { saveStayDetailsAction } from "@/app/app/stay/actions";
+import { createAutosave } from "@/lib/domain/autosave";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { airbnbReservationUrl, STAY_REQUESTS, stayRequestKeys, type StayDetails, type StayKey, type StayRequest } from "@/lib/domain/stay-details";
@@ -21,36 +22,37 @@ export function StayDetailsCard({ stayKey, initial }: { stayKey: StayKey; initia
   const [form, setForm] = useState<Form>(() => toForm(initial));
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const latest = useRef(form);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const saveSeq = useRef(0);
-  const dirty = useRef(false);
-  useEffect(() => { latest.current = form; }, [form]);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-
-  async function save() {
-    if (!dirty.current) return;
-    const seq = ++saveSeq.current;
-    const f = latest.current;
-    setStatus("saving");
-    const key = stayKey.kind === "booking" ? { bookingId: stayKey.bookingId } : { feedId: stayKey.feedId, externalUid: stayKey.externalUid };
-    try {
-      const result = await saveStayDetailsAction(key, { name: f.name, phone: f.phone, lang: f.lang, party: f.party, arrival: f.arrival, requests: f.requests, note: f.note, remindOn: f.remindOn });
-      if (seq !== saveSeq.current) return; // a newer save is in flight
-      if (result.ok) { setStatus("saved"); dirty.current = false; setMessage(""); }
-      else { setStatus("error"); setMessage(result.error); }
-    } catch {
-      if (seq === saveSeq.current) { setStatus("error"); setMessage("Sin conexión. Se reintentará al volver a editar."); }
-    }
-  }
-  function change(patch: Partial<Form>, saveNow = false) {
-    dirty.current = true;
-    setForm((current) => ({ ...current, ...patch }));
+  // The engine (lib/domain/autosave.ts) owns "latest value / dirty / in flight": see its tests for the guarantees.
+  const [autosave] = useState(() => createAutosave<Form>({
+    initial: toForm(initial),
+    // The card is remounted (key={block.id}) for another stay, so the stay key is fixed for the life of this engine.
+    send: (f) => saveStayDetailsAction(stayKey.kind === "booking" ? { bookingId: stayKey.bookingId } : { feedId: stayKey.feedId, externalUid: stayKey.externalUid }, { name: f.name, phone: f.phone, lang: f.lang, party: f.party, arrival: f.arrival, requests: f.requests, note: f.note, remindOn: f.remindOn }),
+    onStatus: (s) => {
+      setStatus(s.state);
+      setMessage(s.message ?? "");
+      if (s.state === "saved") setFieldErrors({});
+      if (s.state === "error") setFieldErrors(s.fields ?? {});
+    },
+  }));
+  // Leaving the card (another day, another block, closing the panel) must not drop a pending save.
+  useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
-    // State updates are asynchronous: wait one tick so `latest` holds the new value before saving.
-    if (saveNow) timer.current = setTimeout(() => void save(), 50);
+    void autosave.flush();
+  }, [autosave]);
+
+  function change(patch: Partial<Form>, saveNow = false) {
+    const next = { ...autosave.value, ...patch };
+    autosave.set(next);
+    setForm(next);
+    if (timer.current) clearTimeout(timer.current);
+    if (saveNow) timer.current = setTimeout(() => void autosave.flush(), 0);
   }
-  const blur = () => { if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(() => void save(), 50); };
+  const blur = () => { if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(() => void autosave.flush(), 0); };
+  const err = (name: string) => fieldErrors[name]?.join(" ");
+  const aria = (name: string, id: string) => (err(name) ? { "aria-invalid": true, "aria-describedby": `${id}-${name}-error` } : {});
+  const errorText = (name: string, id: string) => err(name) ? <p id={`${id}-${name}-error`} className="text-sm text-destructive">{err(name)}</p> : null;
   const url = airbnbReservationUrl(initial.refCode);
   const id = stayKey.kind === "booking" ? stayKey.bookingId : stayKey.externalUid.slice(0, 12);
 
@@ -72,23 +74,27 @@ export function StayDetailsCard({ stayKey, initial }: { stayKey: StayKey; initia
       <div className="space-y-1.5">
         <Label htmlFor={`stay-name-${id}`}>Nombre del huésped</Label>
         <Input id={`stay-name-${id}`} value={form.name} maxLength={200} autoComplete="off" placeholder="Ana Pérez"
-          onChange={(e) => change({ name: e.target.value })} onBlur={blur} />
+          onChange={(e) => change({ name: e.target.value })} onBlur={blur} {...aria("name", id)} />
+        {errorText("name", id)}
         <p className="text-xs text-muted-foreground">Los mensajes saludan con el primer nombre. Sin nombre dicen solo «Hola».</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor={`stay-phone-${id}`}>WhatsApp</Label>
           <Input id={`stay-phone-${id}`} type="tel" value={form.phone} maxLength={30} autoComplete="off" placeholder="+51 999 888 777"
-            onChange={(e) => change({ phone: e.target.value })} onBlur={blur} />
+            onChange={(e) => change({ phone: e.target.value })} onBlur={blur} {...aria("phone", id)} />
+          {errorText("phone", id)}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`stay-party-${id}`}>Huéspedes</Label>
           <Input id={`stay-party-${id}`} type="number" inputMode="numeric" min={1} max={60} value={form.party}
-            onChange={(e) => change({ party: e.target.value })} onBlur={blur} />
+            onChange={(e) => change({ party: e.target.value })} onBlur={blur} {...aria("party", id)} />
+          {errorText("party", id)}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`stay-arrival-${id}`}>Hora de llegada</Label>
-          <Input id={`stay-arrival-${id}`} type="time" value={form.arrival} onChange={(e) => change({ arrival: e.target.value })} onBlur={blur} />
+          <Input id={`stay-arrival-${id}`} type="time" value={form.arrival} onChange={(e) => change({ arrival: e.target.value })} onBlur={blur} {...aria("arrival", id)} />
+          {errorText("arrival", id)}
         </div>
         <div className="space-y-1.5">
           <span id={`stay-lang-${id}`} className="text-sm font-medium">Idioma de los mensajes</span>
@@ -119,12 +125,15 @@ export function StayDetailsCard({ stayKey, initial }: { stayKey: StayKey; initia
       <div className="space-y-1.5">
         <Label htmlFor={`stay-note-${id}`}>Nota</Label>
         <textarea id={`stay-note-${id}`} value={form.note} maxLength={500} rows={2} placeholder="Llegan de Cusco en taxi"
-          onChange={(e) => change({ note: e.target.value })} onBlur={blur}
+          onChange={(e) => change({ note: e.target.value })} onBlur={blur} {...aria("note", id)}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+        {errorText("note", id)}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor={`stay-remind-${id}`}>Recordarme el</Label>
-        <Input id={`stay-remind-${id}`} type="date" value={form.remindOn} onChange={(e) => change({ remindOn: e.target.value }, true)} />
+        {/* A date typed halfway reads as "" in some browsers: save at once only a complete date; anything else waits for leaving the field. */}
+        <Input id={`stay-remind-${id}`} type="date" value={form.remindOn} onChange={(e) => change({ remindOn: e.target.value }, /^\d{4}-\d{2}-\d{2}$/.test(e.target.value))} onBlur={blur} {...aria("remindOn", id)} />
+        {errorText("remindOn", id)}
         <p className="text-xs text-muted-foreground">Ese día aparece en «Recordatorios» del calendario, con el nombre, los pedidos y la nota.</p>
       </div>
     </section>

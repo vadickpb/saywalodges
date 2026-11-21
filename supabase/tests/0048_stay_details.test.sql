@@ -75,9 +75,39 @@ select lives_ok($$select public.save_stay_details('bf88f504-051f-4fdc-ab73-4fa12
 select is((select count(*) from public.stay_details where booking_id is not null), 1::bigint, 'one row per booking (upsert, not duplicate)');
 reset role;
 
--- A reservation that leaves the feed takes its details with it; a cancelled-and-removed feed too.
-select ok(pg_temp.sync('f1129000-0000-4000-8000-00000000000a', '[]'::jsonb), 'reservation cancelled on Airbnb');
-select is((select count(*) from public.stay_details where feed_id = 'f1129000-0000-4000-8000-00000000000a'), 0::bigint, 'its guest details are gone');
+-- ─── Retention ─────────────────────────────────────────────────────────────────────────────────────────────────────
+-- An EMPTY snapshot (Airbnb can answer an empty calendar once by mistake) deletes no guest details.
+select ok(pg_temp.sync('f1129000-0000-4000-8000-00000000000a', jsonb_build_array(
+  jsonb_build_object('uid', repeat('a', 64), 'start', '2039-05-02', 'end', '2039-05-05'))), 'resync WITHOUT code/last4 (old-style 3-key event)');
+select is((select ref_code from public.stay_details where external_uid = repeat('a', 64)), 'HMABC12345', 'a resync without the hints keeps the code stored before');
+select ok(pg_temp.sync('f1129000-0000-4000-8000-00000000000a', '[]'::jsonb), 'empty snapshot');
+select is((select count(*) from public.stay_details where feed_id = 'f1129000-0000-4000-8000-00000000000a'), 1::bigint, 'an empty snapshot keeps the details');
+-- A reservation that leaves a non-empty feed takes its details with it.
+select ok(pg_temp.sync('f1129000-0000-4000-8000-00000000000a', jsonb_build_array(
+  jsonb_build_object('uid', repeat('d', 64), 'start', '2039-07-01', 'end', '2039-07-03'))), 'another reservation only');
+select is((select count(*) from public.stay_details where feed_id = 'f1129000-0000-4000-8000-00000000000a'), 0::bigint, 'the cancelled reservation took its guest details with it');
+
+-- Disconnecting a feed deletes its details.
+select ok(pg_temp.sync('f1129000-0000-4000-8000-00000000000a', jsonb_build_array(
+  jsonb_build_object('uid', repeat('e', 64), 'start', '2039-08-01', 'end', '2039-08-03', 'code', 'HMEEE11111'))), 'a new reservation');
+select is((select count(*) from public.stay_details where feed_id = 'f1129000-0000-4000-8000-00000000000a'), 1::bigint, 'its row exists');
+update public.ical_feeds set import_url = null where id = 'f1129000-0000-4000-8000-00000000000a';
+select is((select count(*) from public.stay_details where feed_id = 'f1129000-0000-4000-8000-00000000000a'), 0::bigint, 'disconnecting the feed deletes its guest details');
+
+-- The feed and the organization must agree (composite foreign key).
+select throws_ok($$insert into public.stay_details(org_id, feed_id, external_uid) values ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'f1129000-0000-4000-8000-00000000000a', repeat('z', 64))$$, '23503', null, 'a feed of another organization is rejected by the database');
+
+-- Purge of stays that are over.
+select ok(not has_function_privilege('authenticated', 'public.cron_purge_stay_details(integer)', 'EXECUTE') and has_function_privilege('service_role', 'public.cron_purge_stay_details(integer)', 'EXECUTE'), 'purge is service_role only');
+select throws_ok($$select public.cron_purge_stay_details(5)$$, '22023', 'invalid days', 'retention cannot be shorter than 30 days');
+update public.stay_details set updated_at = now() - interval '400 days' where booking_id is not null;
+update public.bookings set check_out = check_out where false;
+-- The web booking of 2039 has not ended: kept. Move its stay far into the past to prove the purge removes it.
+set local session_replication_role = replica;
+update public.bookings set check_in = current_date - 400, check_out = current_date - 397 where guest_name = 'Beto B';
+set local session_replication_role = origin;
+select is(public.cron_purge_stay_details(180), 1, 'details of a booking that ended long ago are purged');
+select is((select count(*) from public.stay_details), 0::bigint, 'and nothing else was touched');
 
 select * from finish();
 rollback;

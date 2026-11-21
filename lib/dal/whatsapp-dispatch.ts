@@ -14,6 +14,8 @@ import { sendWhatsappTemplate } from "@/lib/whatsapp/send";
 const settingsSchema = z.object({
   WHATSAPP_ARRIVAL_DAYS: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().int().min(0).max(14).default(1)),
   WHATSAPP_RETENTION_DAYS: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().int().min(30).max(3650).default(365)),
+  // SD-1129: how long after a stay ends its guest details (WhatsApp number, note, special requests) are kept.
+  STAY_RETENTION_DAYS: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().int().min(30).max(3650).default(180)),
 });
 
 export type WhatsappDispatchSummary = { status: "ok" | "not_configured"; sent: number; simulated: number; failed: number; skipped: number };
@@ -109,5 +111,9 @@ export async function purgeWhatsappRecords(client = getSupabaseAdmin(), source: 
   }
   const parsed = z.object({ messages: z.number().int(), outbox: z.number().int(), inbox: z.number().int().optional() }).safeParse(data);
   if (!parsed.success) throw new Error("WhatsApp purge failed");
-  return parsed.data;
+  // SD-1129: the same daily run also removes the guest details of stays that are over (best effort: a database without that
+  // migration yet must not turn the WhatsApp purge red).
+  const stays = await client.rpc("cron_purge_stay_details", { p_days: settings.data.STAY_RETENTION_DAYS });
+  if (stays.error) log("warn", "cron.whatsapp_purge.stays_failed", { code: stays.error.code });
+  return { ...parsed.data, stays: typeof stays.data === "number" ? stays.data : 0 };
 }

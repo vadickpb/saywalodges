@@ -2113,6 +2113,9 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
   el dueño escribió y la tarjeta ofrece «Abrir en Airbnb». Una reserva que sale del feed (cancelada) se lleva sus datos.
 - **UI**: tarjeta con autoguardado (sin botón Guardar) en el detalle del calendario y en la ficha de la reserva; los datos de una
   reserva web/manual ya vienen rellenados; franja «Recordatorios · hoy y mañana» en el calendario.
+- **Privacidad**: los datos no sobreviven a la estadía: se borran al salir la reserva de un feed no vacío, al desconectar el feed y
+  por la purga diaria (`STAY_RETENTION_DAYS`, 180 días tras la salida; reservas canceladas a los 30). Un calendario vacío puntual
+  de Airbnb no borra nada. El último guardado gana (sin control de versiones entre dos pestañas).
 - **Compatibilidad**: si el código se despliega antes de aprobar la migración, el sync de iCal reintenta sin los dos datos extra
   (`finishWithFallback`) y no se detiene.
 - **Hecho**: pgTAP `0048`, Vitest (dominio, DAL, acción, parser iCal, fallback).

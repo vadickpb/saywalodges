@@ -48,8 +48,9 @@ export async function readCalendar(ctx: Context, month: string, unitId?: string)
     try {
       blocks.push(...data.map((row) => ({ id: row.id, unitId: row.unit_id, ...parseCalendarPeriod(row.period), source: row.source, note: row.source === "manual" ? row.note : null, derived: row.derived_from !== null })));
       for (const row of data) if (row.feed_id) feedOfBlock.set(row.id, row.feed_id);
+      const byId = new Map(blocks.map((b) => [b.id, b]));
       for (const row of data) {
-        const block = blocks.find((b) => b.id === row.id);
+        const block = byId.get(row.id);
         if (!block) continue;
         if (row.source === "booking" && row.booking_id) block.stayKey = { kind: "booking", bookingId: row.booking_id };
         else if (row.source === "ical" && row.feed_id && row.external_uid && /^[a-f0-9]{64}$/.test(row.external_uid)) block.stayKey = { kind: "ical", feedId: row.feed_id, externalUid: row.external_uid };

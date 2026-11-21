@@ -31,12 +31,13 @@ function toStay(row: z.infer<typeof rowSchema>): StayDetails {
 /** Saved details for a set of stays, keyed by `stayMapKey`. Stays with nothing saved are simply absent. */
 export async function readStayDetails(supabase: Supabase, orgId: string, input: { bookingIds: string[]; externalUids: string[] }): Promise<Map<string, StayDetails>> {
   const out = new Map<string, StayDetails>();
+  // `.in()` goes in the URL (a uid is 64 characters): read in batches so a busy month never exceeds its limit.
+  const chunks = (ids: string[]) => Array.from({ length: Math.ceil(ids.length / 50) }, (_, i) => ids.slice(i * 50, i * 50 + 50));
   const queries = [
-    input.bookingIds.length ? supabase.from("stay_details").select(COLUMNS).eq("org_id", orgId).in("booking_id", input.bookingIds) : null,
-    input.externalUids.length ? supabase.from("stay_details").select(COLUMNS).eq("org_id", orgId).in("external_uid", input.externalUids) : null,
+    ...chunks(input.bookingIds).map((ids) => supabase.from("stay_details").select(COLUMNS).eq("org_id", orgId).in("booking_id", ids)),
+    ...chunks(input.externalUids).map((ids) => supabase.from("stay_details").select(COLUMNS).eq("org_id", orgId).in("external_uid", ids)),
   ];
   for (const query of queries) {
-    if (!query) continue;
     const { data, error } = await query;
     const rows = z.array(rowSchema).safeParse(data);
     if (error || !rows.success) {

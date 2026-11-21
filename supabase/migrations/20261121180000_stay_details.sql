@@ -4,7 +4,10 @@
 --    the block id, which is re-created when the dates move). Exactly one of the two keys.
 --  * Airbnb's iCal carries the reservation code (HM...) and the last 4 digits of the guest's phone in DESCRIPTION: finish_ical_sync_core
 --    now accepts them (optional `code` and `last4` per event) and keeps them in the row WITHOUT touching what the owner typed.
---  * Rows of iCal stays disappear when the reservation leaves the feed (cancelled on Airbnb): no personal data outlives the stay.
+--  * No personal data outlives the stay: a reservation that leaves a (non-empty) feed takes its details with it; disconnecting a feed
+--    deletes its details; and cron_purge_stay_details (service_role, daily with the WhatsApp purge) removes the details of stays that
+--    ended more than p_days ago (default 180) and of bookings cancelled/expired more than 30 days ago. An EMPTY feed snapshot deletes
+--    nothing here (Airbnb can answer an empty calendar once by mistake); the purge cleans those later.
 --  * Members read (RLS); writes only through save_stay_details (any member: it is not money; the database checks the stay belongs to
 --    the member's organization).
 -- Additive: the event validator still accepts the old 3-key events. Rollback: drop function public.save_stay_details(...);
@@ -37,7 +40,7 @@ create table public.stay_details (
     (booking_id is not null and feed_id is null and external_uid is null)
     or (booking_id is null and feed_id is not null and external_uid is not null)),
   constraint stay_details_booking_fkey foreign key (booking_id, org_id) references public.bookings(id, org_id) on delete cascade,
-  constraint stay_details_feed_fkey foreign key (feed_id) references public.ical_feeds(id) on delete cascade
+  constraint stay_details_feed_fkey foreign key (feed_id, org_id) references public.ical_feeds(id, org_id) on delete cascade
 );
 create unique index stay_details_booking_key on public.stay_details(booking_id) where booking_id is not null;
 create unique index stay_details_feed_uid_key on public.stay_details(feed_id, external_uid) where feed_id is not null;
@@ -145,9 +148,11 @@ begin
   delete from public.calendar_blocks b where b.feed_id = f.id and not exists (
     select 1 from jsonb_array_elements(p_events) j where j->>'uid' = b.external_uid
       and b.period = daterange((j->>'start')::date, (j->>'end')::date, '[)'));
-  -- A reservation that left the feed (cancelled) takes its guest details with it.
-  delete from public.stay_details sd where sd.feed_id = f.id and not exists (
-    select 1 from jsonb_array_elements(p_events) j where j->>'uid' = sd.external_uid);
+  -- A reservation that left the feed (cancelled) takes its guest details with it. Not on an empty snapshot (see the header).
+  if jsonb_array_length(p_events) > 0 then
+    delete from public.stay_details sd where sd.feed_id = f.id and not exists (
+      select 1 from jsonb_array_elements(p_events) j where j->>'uid' = sd.external_uid);
+  end if;
   delete from public.sync_conflicts where feed_id = f.id;
   for e in select value from jsonb_array_elements(p_events) order by value->>'uid' loop
     s := (e->>'start')::date; d := (e->>'end')::date;
@@ -175,5 +180,45 @@ begin
   return true;
 end;
 $$;
+
+-- ─── Retention ──────────────────────────────────────────────────────────────────────────────────────────────────────
+-- Disconnecting a feed (import_url emptied) deletes the guest details that came from it.
+create function private.ical_feed_disconnect_stays() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  delete from public.stay_details where feed_id = new.id and org_id = new.org_id;
+  return new;
+end;
+$$;
+revoke all on function private.ical_feed_disconnect_stays() from public, anon, authenticated;
+create trigger ical_feed_disconnect_stays after update of import_url on public.ical_feeds
+  for each row when (new.import_url is null and old.import_url is not null)
+  execute function private.ical_feed_disconnect_stays();
+
+-- Details of stays that are over: iCal stays whose block ended (or vanished) more than p_days ago, bookings checked out more than
+-- p_days ago, and bookings cancelled/expired more than 30 days ago. p_days between 30 and 3650.
+create function public.cron_purge_stay_details(p_days integer default 180) returns integer
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_today date := (now() at time zone 'America/Lima')::date;
+  v_n integer;
+begin
+  if p_days is null or p_days not between 30 and 3650 then
+    raise exception 'invalid days' using errcode = '22023';
+  end if;
+  delete from public.stay_details sd where
+    (sd.booking_id is not null and exists (
+      select 1 from public.bookings b where b.id = sd.booking_id and b.org_id = sd.org_id
+        and (b.check_out < v_today - p_days or (b.status in ('cancelled', 'expired') and b.updated_at < now() - interval '30 days'))))
+    or (sd.feed_id is not null and (
+      exists (select 1 from public.calendar_blocks c where c.feed_id = sd.feed_id and c.external_uid = sd.external_uid and upper(c.period) < v_today - p_days)
+      or (not exists (select 1 from public.calendar_blocks c where c.feed_id = sd.feed_id and c.external_uid = sd.external_uid)
+          and sd.updated_at < now() - make_interval(days => p_days))));
+  get diagnostics v_n = row_count;
+  return v_n;
+end;
+$$;
+revoke all on function public.cron_purge_stay_details(integer) from public, anon, authenticated;
+grant execute on function public.cron_purge_stay_details(integer) to service_role;
 
 commit;
