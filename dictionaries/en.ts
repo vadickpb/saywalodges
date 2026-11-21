@@ -5,6 +5,11 @@ import { checkoutPolicies } from "./checkout-policies";
 // format() from lib/domain/format.ts.
 const en = {
   nav: {
+    home: "Home",
+    villas: "Villas",
+    experiences: "Experiences",
+    bookNow: "Book now",
+    whatsappLabel: "Message us on WhatsApp",
     gallery: "Gallery",
     spaces: "Spaces",
     rates: "Rates",
@@ -20,11 +25,22 @@ const en = {
     skipToContent: "Skip to content",
   },
   hero: {
+    explore: "Explore villas",
+    exploreGallery: "View the gallery",
     whatsapp: "Book on WhatsApp",
     viewPhotos: "See photos",
     guests: "Up to {count} guests",
     bedrooms: "{count} bedrooms",
     bedroom: "1 bedroom",
+  },
+  search: {
+    label: "Check your dates",
+    arrival: "Check-in date",
+    departure: "Check-out date",
+    guests: "Guests",
+    oneGuest: "1 guest",
+    manyGuests: "{count} guests",
+    submit: "Check availability",
   },
   intro: {
     label: "The place",
@@ -49,6 +65,13 @@ const en = {
     open: "View photos of {name}",
   },
   unitsShowcase: {
+    chooseTitle: "Choose how to stay",
+    chooseIntro: "Choose the accommodation that best suits your group.",
+    bedroomOne: "1 bedroom",
+    bedroomMany: "{count} bedrooms",
+    details: "View details",
+    upTo: "Up to {count} guests",
+    discover: "Discover the option",
     label: "Stay your way",
     view: "View {name}",
     from: "from {price} per night",

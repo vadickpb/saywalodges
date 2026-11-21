@@ -8,6 +8,7 @@ const PREVIEW_FONTS = {
   editorial: { heading: "Georgia, 'Times New Roman', serif", body: "ui-sans-serif, system-ui, sans-serif" },
   modern: { heading: "ui-sans-serif, system-ui, sans-serif", body: "ui-sans-serif, system-ui, sans-serif" },
   classic: { heading: "Georgia, 'Times New Roman', serif", body: "ui-serif, Georgia, serif" },
+  refined: { heading: "Georgia, 'Times New Roman', serif", body: "ui-serif, Georgia, serif" },
 } as const;
 
 export function SiteAppearancePreview({

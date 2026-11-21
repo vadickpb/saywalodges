@@ -25,6 +25,8 @@ import { format } from "@/lib/domain/format";
 import { pick } from "@/lib/domain/site-content";
 import { SiteHeader } from "@/components/site/site-header";
 import { Hero } from "@/components/site/hero";
+import { HeroSearch } from "@/components/site/hero-search";
+import { Container } from "@/components/site/ui";
 import { Intro } from "@/components/site/intro";
 import { Gallery } from "@/components/site/gallery";
 import { Spaces } from "@/components/site/spaces";
@@ -141,6 +143,18 @@ export default async function SitePage({
     { href: "#contact", label: dict.nav.contact },
   ].filter((link) => link !== false);
 
+  // SD-1134: the bar shows five main sections; the mobile menu and the footer keep the complete list.
+  const primaryLinks = [
+    { href: "#top", label: dict.nav.home },
+    hasUnitShowcase && { href: "#accommodations", label: dict.nav.villas },
+    visibleSpaces.length > 0 && { href: "#spaces", label: dict.nav.experiences },
+    photos.gallery.length > 0 && { href: "#gallery", label: dict.nav.gallery },
+    { href: "#location", label: dict.nav.location },
+  ].filter((link) => link !== false);
+  const maxGuests = Math.max(content.capacity ?? 0, ...units.map((unit) => unit.max_guests), 1);
+  // The framed photo of the hero: the first gallery photo that is not the hero itself.
+  const insetUrl = photos.gallery.find((photo) => photo !== photos.hero) ?? photos.gallery[0];
+
   return (
     <>
       <SiteHeader
@@ -148,12 +162,13 @@ export default async function SitePage({
         lang={lang}
         name={property.name}
         logoUrl={property.logoUrl}
-        links={links}
-        overImage={Boolean(photos.hero)}
+        links={[{ href: "#top", label: dict.nav.home }, ...links]}
+        primaryLinks={primaryLinks}
+        waUrl={waUrl}
+        bookingHref="#reservar"
       />
       <main id="main" tabIndex={-1} className="outline-none">
         <Hero
-          dict={dict.hero}
           name={property.name}
           heroUrl={photos.hero}
           videoUrl={videoUrl}
@@ -162,10 +177,20 @@ export default async function SitePage({
           region={pick(content.region, lang)}
           headline={pick(content.headline, lang)}
           tagline={pick(content.tagline, lang)}
-          capacity={content.capacity}
-          bedrooms={spaces.filter((s) => s.category === "rooms").length}
           locality={address}
-          waUrl={waUrl}
+          exploreHref={hasUnitShowcase ? "#accommodations" : "#gallery"}
+          exploreLabel={hasUnitShowcase ? dict.hero.explore : dict.hero.exploreGallery}
+          insetUrl={insetUrl}
+        />
+        <div className="relative z-10 -mt-14 sm:-mt-12">
+          <Container><HeroSearch dict={dict.search} lang={lang} today={todayInLima()} maxGuests={maxGuests} /></Container>
+        </div>
+        <UnitsShowcase
+          dict={dict.unitsShowcase}
+          lang={lang}
+          units={showcaseUnits}
+          price={(cents) => formatPublicPrice(cents, property.currency, lang)}
+          amenities={amenities.map((row) => resolveAmenity(row, lang))}
         />
         <Intro
           dict={dict.intro}
@@ -175,12 +200,6 @@ export default async function SitePage({
           amenities={amenities.map((row) => resolveAmenity(row, lang))}
         />
         <Gallery dict={dict.gallery} name={property.name} photos={photos.gallery} />
-        <UnitsShowcase
-          dict={dict.unitsShowcase}
-          lang={lang}
-          units={showcaseUnits}
-          price={(cents) => formatPublicPrice(cents, property.currency, lang)}
-        />
         <Spaces
           dict={dict.spaces}
           lightboxLabels={dict.gallery}

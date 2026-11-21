@@ -32,11 +32,13 @@ const PRESET_LABEL: Record<PresetId, string> = {
   selva: "Selva",
   colonial: "Colonial",
   noche: "Noche",
+  valle: "Valle Sagrado",
 };
 const FONT_LABEL: Record<FontPair, string> = {
   editorial: "Editorial (serif elegante)",
   modern: "Moderna (sans-serif)",
   classic: "Clásica (serif de lectura)",
+  refined: "Refinada (serif en todo el sitio)",
 };
 const RADIUS_LABEL: Record<Radius, string> = { sharp: "Recto", soft: "Suave", round: "Redondeado" };
 const COLOR_LABEL = { primary: "Color primario", accent: "Color de acento", background: "Color de fondo" } as const;

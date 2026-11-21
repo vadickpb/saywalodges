@@ -190,3 +190,11 @@ describe("tenant brands", () => {
     expect(themeToCssVars(resolveTheme({ preset: "costa" }))).toEqual(demo);
   });
 });
+
+describe("valle preset (SD-1134)", () => {
+  it("is the green / terracotta / cream look with serif everywhere", () => {
+    expect(PRESETS.valle).toEqual({ primary: "#1F4031", accent: "#A5522D", background: "#F7F2E8", fontPair: "refined", radius: "soft" });
+    expect(themeToCssVars(resolveTheme({ preset: "valle" }))["--site-font-heading"]).toBe("var(--font-playfair)");
+    expect(themeToCssVars(resolveTheme({ preset: "valle" }))["--site-font-body"]).toBe("var(--font-lora)");
+  });
+});

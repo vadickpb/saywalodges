@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
 export default async function PublicQuotePage({ params, searchParams }: {
   params: Promise<{ host: string; lang: string }>;
-  searchParams: Promise<{ unit?: string | string[]; checkIn?: string | string[]; checkOut?: string | string[] }>;
+  searchParams: Promise<{ unit?: string | string[]; checkIn?: string | string[]; checkOut?: string | string[]; guests?: string | string[] }>;
 }) {
   const { host, lang } = await params;
   if (!hasLocale(lang)) notFound();
@@ -33,6 +33,9 @@ export default async function PublicQuotePage({ params, searchParams }: {
   const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
   const requestedCheckIn = first(query.checkIn);
   const requestedCheckOut = first(query.checkOut);
+  // SD-1134: the hero search bar sends the guest count too; a bad value is simply ignored.
+  const requestedGuests = Number(first(query.guests));
+  const initialGuests = Number.isInteger(requestedGuests) && requestedGuests >= 1 && requestedGuests <= 60 ? requestedGuests : undefined;
   const today = todayInLima();
   const validDates = requestedCheckIn !== undefined && requestedCheckOut !== undefined
     && isIsoDate(requestedCheckIn) && isIsoDate(requestedCheckOut)
@@ -44,7 +47,7 @@ export default async function PublicQuotePage({ params, searchParams }: {
       <h1 className="mt-3 font-site-heading text-3xl tracking-tight sm:text-4xl">{t.title}</h1>
       <p className="mt-4 leading-relaxed text-site-muted">{t.intro}</p>
       <section className="mt-8 rounded-site border border-site-line p-5 sm:p-8" aria-label={t.title}>
-        {units?.length ? <QuoteForm lang={lang} t={t} units={units.map(unit => ({ id: unit.id, name: unit.name, maxGuests: unit.max_guests }))} initialUnitId={initialUnitId} initialCheckIn={validDates ? requestedCheckIn : undefined} initialCheckOut={validDates ? requestedCheckOut : undefined} contactUrl={contactUrl} today={today} /> : (
+        {units?.length ? <QuoteForm lang={lang} t={t} units={units.map(unit => ({ id: unit.id, name: unit.name, maxGuests: unit.max_guests }))} initialUnitId={initialUnitId} initialCheckIn={validDates ? requestedCheckIn : undefined} initialCheckOut={validDates ? requestedCheckOut : undefined} initialGuests={initialGuests} contactUrl={contactUrl} today={today} /> : (
           <div className="space-y-5">
             <p role="status">{units === null ? t.generic : t.empty}</p>
             {units === null && <a href={`/${lang}/cotizar`} className={buttonStyles.outline}>{t.retry}</a>}

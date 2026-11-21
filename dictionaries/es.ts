@@ -3,6 +3,11 @@ import type { Dict } from "./en";
 
 const es: Dict = {
   nav: {
+    home: "Inicio",
+    villas: "Villas",
+    experiences: "Experiencias",
+    bookNow: "Reservar ahora",
+    whatsappLabel: "Escribir por WhatsApp",
     gallery: "Galería",
     spaces: "Espacios",
     rates: "Tarifas",
@@ -18,11 +23,22 @@ const es: Dict = {
     skipToContent: "Saltar al contenido",
   },
   hero: {
+    explore: "Explorar villas",
+    exploreGallery: "Ver la galería",
     whatsapp: "Reservar por WhatsApp",
     viewPhotos: "Ver fotos",
     guests: "Hasta {count} huéspedes",
     bedrooms: "{count} habitaciones",
     bedroom: "1 habitación",
+  },
+  search: {
+    label: "Consulta tus fechas",
+    arrival: "Fecha de llegada",
+    departure: "Fecha de salida",
+    guests: "Huéspedes",
+    oneGuest: "1 huésped",
+    manyGuests: "{count} huéspedes",
+    submit: "Consultar disponibilidad",
   },
   intro: {
     label: "El lugar",
@@ -47,6 +63,13 @@ const es: Dict = {
     open: "Ver fotos de {name}",
   },
   unitsShowcase: {
+    chooseTitle: "Elige tu manera de hospedarte",
+    chooseIntro: "Elige el alojamiento que mejor se adapte a tu grupo.",
+    bedroomOne: "1 habitación",
+    bedroomMany: "{count} habitaciones",
+    details: "Ver detalles",
+    upTo: "Hasta {count} huéspedes",
+    discover: "Conoce la opción",
     label: "Elige tu estadía",
     view: "Ver {name}",
     from: "desde {price} por noche",

@@ -129,7 +129,7 @@ export default async function UnitPage({ params, searchParams }: {
   return (
     <>
       <SiteHeader
-        dict={dict.nav} lang={lang} name={property.name} logoUrl={property.logoUrl} links={links} overImage={false}
+        dict={dict.nav} lang={lang} name={property.name} logoUrl={property.logoUrl} links={links}
         languageHref={`/${otherLang}/alojamientos/${unit.id}`} bookingHref={quoteHref}
       />
       <main id="main" tabIndex={-1} className="outline-none">
