@@ -46,13 +46,13 @@ export type Template = { key: MessageKey; title: string; bodyEs: string; bodyEn:
 export const DEFAULT_TEMPLATES: Template[] = [
   {
     key: "confirmation", title: "Confirmación de reserva", anchor: null, offsetDays: null, custom: false,
-    bodyEs: "{saludo} 👋 Tu reserva en {villa} está confirmada.\nLlegada: {llegada} · Salida: {salida} ({noches} noches) · {huespedes} huéspedes.\nCualquier duda, escríbeme por aquí.",
-    bodyEn: "{saludo} 👋 Your booking at {villa} is confirmed.\nCheck-in: {llegada} · Check-out: {salida} ({noches} nights) · {huespedes} guests.\nIf you have any questions, message me here.",
+    bodyEs: "{saludo} 👋 Tu reserva en {villa} está confirmada.\nLlegada: {llegada} · Salida: {salida} ({noches} noches)\n{huespedes} huéspedes.\nCualquier duda, escríbeme por aquí.",
+    bodyEn: "{saludo} 👋 Your booking at {villa} is confirmed.\nCheck-in: {llegada} · Check-out: {salida} ({noches} nights)\n{huespedes} guests.\nIf you have any questions, message me here.",
   },
   {
     key: "before_arrival", title: "Antes de tu llegada", anchor: "check_in", offsetDays: -3, custom: false,
-    bodyEs: "{saludo}, ¡falta poco para tu llegada a {villa}!\nCheck-in desde las {hora_checkin}. Ubicación: {ubicacion}\nPedidos que tenemos anotados: {pedidos}\n¿A qué hora calculas llegar?",
-    bodyEn: "{saludo}, your arrival at {villa} is coming up!\nCheck-in from {hora_checkin}. Location: {ubicacion}\nRequests we have noted: {pedidos}\nWhat time do you expect to arrive?",
+    bodyEs: "{saludo}, ¡falta poco para tu llegada a {villa}!\nCheck-in desde las {hora_checkin}.\nUbicación: {ubicacion}\nPedidos que tenemos anotados: {pedidos}\n¿A qué hora calculas llegar?",
+    bodyEn: "{saludo}, your arrival at {villa} is coming up!\nCheck-in from {hora_checkin}.\nLocation: {ubicacion}\nRequests we have noted: {pedidos}\nWhat time do you expect to arrive?",
   },
   {
     key: "arrival_day", title: "Día de llegada", anchor: "check_in", offsetDays: 0, custom: false,
@@ -84,7 +84,8 @@ export const DEFAULT_TEMPLATES: Template[] = [
 // ─── Editing ────────────────────────────────────────────────────────────────
 
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff]/;
-const VARIABLE_TOKEN = /\{([a-z_0-9]+)\}/g;
+// Any {word}: a typo or a different case ({Nombre}) is reported as unknown instead of being sent as it is.
+const VARIABLE_TOKEN = /\{([^{}\s]{1,40})\}/g;
 
 /** Variables used in a text that are not in the list (a typo like {nombrre} would otherwise be sent as is). */
 export function unknownVariables(text: string): string[] {
@@ -141,7 +142,27 @@ export type StayContext = {
   house: HouseInfo;
   /** Today in Lima (ISO date): sensitive values are filled in only close to the stay. */
   today: string;
+  /** Sensitive values the server did not send (outside the window) but that exist: they read as "withheld", not as "missing". */
+  secretsConfigured?: { wifi_clave: boolean; codigo_puerta: boolean };
 };
+/** True when `today` is inside [check-in − SENSITIVE_DAYS_BEFORE, check-out]: the only time the Wi-Fi password and door code are used. */
+export function inSensitiveWindow(stay: { checkIn: string; checkOut: string }, today: string): boolean {
+  return today >= addIsoDays(stay.checkIn, -SENSITIVE_DAYS_BEFORE) && today <= stay.checkOut;
+}
+
+/**
+ * The house data as it may travel to the browser (SD-1130 review): the Wi-Fi password and the door code are NOT included. The server
+ * sends them only together with a stay that is inside its window (see `inSensitiveWindow`), so "close to the arrival" is enforced by
+ * what leaves the server, not just by the screen. `configured` tells the screen they exist, to say "se envía cerca de la llegada".
+ */
+export function splitSecrets(house: HouseInfo): { publicHouse: HouseInfo; secrets: Pick<HouseInfo, "wifiPassword" | "doorCode">; configured: { wifi_clave: boolean; codigo_puerta: boolean } } {
+  return {
+    publicHouse: { ...house, wifiPassword: null, doorCode: null },
+    secrets: { wifiPassword: house.wifiPassword, doorCode: house.doorCode },
+    configured: { wifi_clave: house.wifiPassword !== null, codigo_puerta: house.doorCode !== null },
+  };
+}
+
 export type Rendered = { text: string; missing: VariableName[]; withheld: VariableName[] };
 
 const REQUEST_LABELS_EN: Record<StayRequest, string> = {
@@ -156,7 +177,8 @@ const WITHHELD_TEXT: Record<Lang, string> = { es: "(te la envío cerca de tu lle
 
 function values(ctx: StayContext): Record<VariableName, string | null> {
   const { lang, house } = ctx;
-  const first = firstName(ctx.name);
+  // The name comes from guests (checkout, Airbnb): no control or text-direction characters in a message.
+  const first = firstName(ctx.name)?.replace(new RegExp(CONTROL.source, "g"), "") || null;
   const hello = lang === "es" ? "Hola" : "Hi";
   return {
     saludo: first ? `${hello} ${first}` : hello,
@@ -180,12 +202,13 @@ function values(ctx: StayContext): Record<VariableName, string | null> {
 
 /**
  * Fills a message for one stay. A line that needs a value that does not exist (no Wi-Fi saved, no special requests) is dropped
- * whole, so the message never says "Clave: ". Sensitive values outside [check-in − 2 days, check-out] become a polite placeholder.
+ * whole, so the message never says "Clave: ". Keep optional data on its own line (the built-in messages do) so a missing guest
+ * count never takes the dates with it. Sensitive values outside [check-in − 2 days, check-out] become a polite placeholder.
  * `missing` and `withheld` tell the owner what happened.
  */
 export function renderMessage(body: string, ctx: StayContext): Rendered {
   const vals = values(ctx);
-  const sensitiveOpen = ctx.today >= addIsoDays(ctx.checkIn, -SENSITIVE_DAYS_BEFORE) && ctx.today <= ctx.checkOut;
+  const sensitiveOpen = inSensitiveWindow(ctx, ctx.today);
   const missing = new Set<VariableName>();
   const withheld = new Set<VariableName>();
   const lines: string[] = [];
@@ -194,7 +217,8 @@ export function renderMessage(body: string, ctx: StayContext): Rendered {
     const filled = line.replace(VARIABLE_TOKEN, (token, name: string) => {
       if (!(name in VARIABLES)) return token; // validated on save; never invent a value
       const key = name as VariableName;
-      if (SENSITIVE.includes(key) && vals[key] && !sensitiveOpen) { withheld.add(key); return WITHHELD_TEXT[ctx.lang]; }
+      const exists = Boolean(vals[key]) || Boolean(ctx.secretsConfigured?.[key as "wifi_clave" | "codigo_puerta"]);
+      if (SENSITIVE.includes(key) && exists && !sensitiveOpen) { withheld.add(key); return WITHHELD_TEXT[ctx.lang]; }
       const value = vals[key];
       if (value === null || value === "") { missing.add(key); drop = true; return ""; }
       return value;

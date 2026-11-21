@@ -19,11 +19,13 @@ import type { HouseInfo, Template } from "@/lib/domain/message-templates";
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-export function AirbnbCalendar({ month, unit, blocks, prices = {}, currency = "PEN", library = null, today = "" }: {
+export function AirbnbCalendar({ month, unit, blocks, prices = {}, currency = "PEN", library = null, today = "", secrets = null }: {
   month: string; unit: { id: string; name: string; active: boolean }; blocks: CalendarBlock[];
   prices?: Record<string, number | null>; currency?: "PEN" | "USD";
   /** SD-1130: the message library, so a stay can show its messages ready to send. Null hides that section. */
   library?: { templates: Template[]; house: HouseInfo } | null; today?: string;
+  /** Wi-Fi password and door code, sent ONLY for the blocks inside their window; `configured` says whether they exist at all. */
+  secrets?: { byBlock: Record<string, Pick<HouseInfo, "wifiPassword" | "doorCode">>; configured: { wifi_clave: boolean; codigo_puerta: boolean } } | null;
 }) {
   const router = useRouter();
   const [navigating, navigate] = useTransition();
@@ -182,7 +184,7 @@ export function AirbnbCalendar({ month, unit, blocks, prices = {}, currency = "P
           className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:max-h-dvh sm:w-96 sm:rounded-none sm:p-6">
           <Dialog.Title ref={dialogTitle} tabIndex={-1} className="text-lg font-semibold outline-none">{detail ? "Ver detalle" : rangeAction === "block" ? "Bloquear fechas" : rangeAction === "price" ? "Cambiar precio" : "Acciones para las fechas"}</Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">{unit.name} · {detail ? blockStyle(detail).label : rangeAction === "price" ? "Precio por rango" : rangeAction === "block" ? "Bloqueo manual" : "Rango seleccionado"}</Dialog.Description>
-          {detail ? <BlockDetail block={detail} unitName={unit.name} library={library} today={today} onDeleted={() => { setMessage("Bloqueo eliminado."); close(); }} /> : selection?.end ? rangeAction === "block" ? <RangeForm key={`${selection.start}-${selection.end}`} unitId={unit.id} start={selection.start} end={selection.end} onBack={() => setRangeAction(null)} onSaved={() => { setMessage("Bloqueo creado."); close(); }} /> : rangeAction === "price" ? <PriceRangeForm key={`${selection.start}-${selection.end}`} unitId={unit.id} start={selection.start} end={selection.end} currency={currency} onBack={() => setRangeAction(null)} onSaved={(cleared) => { setMessage(cleared ? "Se restauró la tarifa normal para el rango." : "Precio actualizado."); close(); }} /> : <RangeActions start={selection.start} end={selection.end} onChoose={setRangeAction} /> : null}
+          {detail ? <BlockDetail block={detail} unitName={unit.name} library={library} today={today} secrets={secrets} onDeleted={() => { setMessage("Bloqueo eliminado."); close(); }} /> : selection?.end ? rangeAction === "block" ? <RangeForm key={`${selection.start}-${selection.end}`} unitId={unit.id} start={selection.start} end={selection.end} onBack={() => setRangeAction(null)} onSaved={() => { setMessage("Bloqueo creado."); close(); }} /> : rangeAction === "price" ? <PriceRangeForm key={`${selection.start}-${selection.end}`} unitId={unit.id} start={selection.start} end={selection.end} currency={currency} onBack={() => setRangeAction(null)} onSaved={(cleared) => { setMessage(cleared ? "Se restauró la tarifa normal para el rango." : "Precio actualizado."); close(); }} /> : <RangeActions start={selection.start} end={selection.end} onChoose={setRangeAction} /> : null}
           <Dialog.Close asChild><Button type="button" variant="outline" className="mt-4 min-h-11 w-full">Cerrar</Button></Dialog.Close>
         </Dialog.Content>
       </Dialog.Portal>
@@ -286,7 +288,10 @@ function PriceRangeForm({ unitId, start, end, currency, onBack, onSaved }: {
   </div>;
 }
 
-function BlockDetail({ block, unitName, library, today, onDeleted }: { block: CalendarBlock; unitName: string; library: { templates: Template[]; house: HouseInfo } | null; today: string; onDeleted: () => void }) {
+function BlockDetail({ block, unitName, library, today, secrets, onDeleted }: {
+  block: CalendarBlock; unitName: string; library: { templates: Template[]; house: HouseInfo } | null; today: string;
+  secrets: { byBlock: Record<string, Pick<HouseInfo, "wifiPassword" | "doorCode">>; configured: { wifi_clave: boolean; codigo_puerta: boolean } } | null; onDeleted: () => void;
+}) {
   const [confirm, setConfirm] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -294,7 +299,7 @@ function BlockDetail({ block, unitName, library, today, onDeleted }: { block: Ca
     <p>{block.start} → {block.end}</p>
     <p className="font-semibold">{daysBetween(block.start, block.end)} noches · salida libre</p>
     <p className="whitespace-pre-wrap break-words text-sm">{block.note || "Sin nota."}</p>
-    {block.stayKey && block.stay && <StayDetailsCard key={block.id} stayKey={block.stayKey} initial={block.stay} messages={library && today ? { ...library, unit: unitName, checkIn: block.start, checkOut: block.end, today } : null} />}
+    {block.stayKey && block.stay && <StayDetailsCard key={block.id} stayKey={block.stayKey} initial={block.stay} messages={library && today ? { templates: library.templates, house: { ...library.house, ...(secrets?.byBlock[block.id] ?? {}) }, unit: unitName, checkIn: block.start, checkOut: block.end, today, secretsConfigured: secrets?.configured } : null} />}
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {block.derived ? <p className="text-sm text-muted-foreground">Se libera sola al cancelar la reserva que la originó.</p> : block.source === "manual" ? <>
       <Button variant="destructive" className="min-h-11 w-full" disabled={pending} onClick={() => setConfirm(true)}>{pending ? "Eliminando…" : "Eliminar bloqueo"}</Button>

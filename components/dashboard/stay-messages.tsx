@@ -4,13 +4,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/app/app/quotes/copy-button";
 import { dueLabel, dueState, renderMessage, whatsappLink, type HouseInfo, type Template } from "@/lib/domain/message-templates";
-import type { StayRequest } from "@/lib/domain/stay-details";
+import { firstName, type StayRequest } from "@/lib/domain/stay-details";
 
 // The messages of one stay (SD-1130): every library message already filled with this guest's data, one tap to open WhatsApp with the
 // text ready or to copy it (Airbnb: paste it in its chat). It follows what is typed in the stay card, so a name entered a second
 // ago is already in the greeting. Nothing is sent from here; the owner presses Enviar in WhatsApp.
 
-export type MessagesData = { templates: Template[]; house: HouseInfo; unit: string; checkIn: string; checkOut: string; today: string };
+export type MessagesData = {
+  templates: Template[]; house: HouseInfo; unit: string; checkIn: string; checkOut: string; today: string;
+  /** The Wi-Fi password / door code exist but were not sent (the stay is outside its window). */
+  secretsConfigured?: { wifi_clave: boolean; codigo_puerta: boolean };
+};
 export type StayLive = { name: string | null; phone: string | null; lang: "es" | "en"; guests: number | null; requests: StayRequest[] };
 
 export function StayMessages({ data, live }: { data: MessagesData; live: StayLive }) {
@@ -21,7 +25,7 @@ export function StayMessages({ data, live }: { data: MessagesData; live: StayLiv
   return (
     <section aria-label="Mensajes para este huésped" className="space-y-2 rounded-lg border p-3">
       <h3 className="font-semibold">Mensajes</h3>
-      <p className="text-xs text-muted-foreground">Ya vienen con {live.name ? `el nombre de ${live.name.split(" ")[0]} y ` : ""}las fechas de esta estadía. Idioma: {live.lang === "es" ? "español" : "English"}.</p>
+      <p className="text-xs text-muted-foreground">Ya vienen con {firstName(live.name) ? `el nombre de ${firstName(live.name)} y ` : ""}las fechas de esta estadía. Idioma: {live.lang === "es" ? "español" : "English"}.</p>
       <ul className="space-y-2">
         {due.map(({ t, due: d, r }) => {
           const link = whatsappLink(live.phone, r.text);

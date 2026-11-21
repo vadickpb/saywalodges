@@ -16,6 +16,7 @@ import { RowAction } from "@/components/dashboard/row-action";
 import { deleteManualBlockAction } from "./actions";
 import { listReminders } from "@/lib/dal/stay-details";
 import { getMessageLibrary } from "@/lib/dal/message-templates";
+import { inSensitiveWindow, splitSecrets } from "@/lib/domain/message-templates";
 import { firstName, reminderSummary } from "@/lib/domain/stay-details";
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -49,7 +50,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   // SD-1129: reminders the owner set on a stay, for today and tomorrow. A failure here never hides the calendar.
   const today = todayInLima();
   const reminders = await listReminders(today, addDays(today, 1)).catch(() => []);
-  const library = await getMessageLibrary().catch(() => null); // SD-1130: messages ready to send, per stay
+  // SD-1130: messages ready to send, per stay. The Wi-Fi password and the door code leave the server only for stays inside their window.
+  const fullLibrary = await getMessageLibrary().catch(() => null);
+  const split = fullLibrary ? splitSecrets(fullLibrary.house) : null;
+  const library = fullLibrary && split ? { templates: fullLibrary.templates, house: split.publicHouse } : null;
+  const secrets = split ? {
+    byBlock: Object.fromEntries(blocks.filter((b) => b.stayKey && inSensitiveWindow({ checkIn: b.start, checkOut: b.end }, today)).map((b) => [b.id, split.secrets])),
+    configured: split.configured,
+  } : null;
   const href = (target: string) => `/app/calendar?${new URLSearchParams({ month: target, unit: selected?.id ?? "all" })}`;
   return <div className="min-w-0 space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -77,7 +85,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       </nav>}
       <ul aria-label="Leyenda de fuentes" className="flex flex-wrap gap-2 text-xs">{Object.entries(CALENDAR_SOURCES).map(([key, source]) => <li key={key} className={`rounded border px-2 py-1 ${source.className}`}>{source.short} · {source.label}</li>)}</ul>
       <p className="text-xs text-muted-foreground">Los bloques importados por iCal toman el canal del calendario conectado (Airbnb, Booking, Vrbo). · = libre.</p>
-      {units.length === 0 ? <p>Aún no hay unidades. <Link href="/app/site/units" className="underline">Configurar unidades</Link></p> : selected ? <AirbnbCalendar key={selected.id} month={month} unit={selected} blocks={blocks} prices={prices} currency={currency} library={library} today={today} /> : <div className="space-y-4">{units.map((unit) => {
+      {units.length === 0 ? <p>Aún no hay unidades. <Link href="/app/site/units" className="underline">Configurar unidades</Link></p> : selected ? <AirbnbCalendar key={selected.id} month={month} unit={selected} blocks={blocks} prices={prices} currency={currency} library={library} today={today} secrets={secrets} /> : <div className="space-y-4">{units.map((unit) => {
         const unitBlocks = blocks.filter((block) => block.unitId === unit.id);
         const occupied = blockedDatesInMonth(unitBlocks, month).length;
         return <section key={unit.id} className="rounded-lg border p-3"><Link href={`/app/calendar?${new URLSearchParams({ month, unit: unit.id })}`} className="font-semibold underline">{unit.name}{unit.active ? "" : " (inactiva)"}</Link><p className="mb-2 text-xs text-muted-foreground">{occupied} de {bounds.days} noches ocupadas</p><div className="flex flex-wrap gap-1" aria-label={`Días de ${unit.name}`}>{bounds.dates.map((date) => {

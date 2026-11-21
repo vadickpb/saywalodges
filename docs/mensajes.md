@@ -24,10 +24,16 @@ Una variable mal escrita (`{nombrre}`) no se puede guardar.
 - **Sin dato, sin línea**: si una línea necesita un dato que no existe (no hay WiFi guardado, la estadía no tiene pedidos) se omite
   entera, para que nunca salga «Clave: » vacío. Debajo del mensaje te avisa qué falta.
 - **Datos sensibles**: la clave del WiFi y el código de la puerta solo se completan **desde 2 días antes de la llegada** hasta la salida;
-  antes dicen «(te la envío cerca de tu llegada)». Es una protección de uso, no un secreto: los miembros del equipo ven estos datos
-  en Ajustes → Mensajes si el dueño los guarda (solo el dueño los edita).
+  antes dicen «(te la envío cerca de tu llegada)». Además, **el servidor ni siquiera los envía al navegador** para las estadías fuera de
+  esa ventana. Lo que sí pueden hacer los miembros del equipo es leer esos datos con su propia sesión (se guardan en la tabla de la
+  casa, legible por el equipo para poder enviar mensajes): no es un secreto frente al personal, es para que no viajen antes de tiempo
+  ni queden en pantallas de reservas lejanas. Solo el dueño los edita.
 - **Fechas** en el idioma del huésped y sin desfase de zona horaria.
 - El mensaje sigue lo que escribes en la tarjeta: si acabas de poner el nombre, el saludo ya lo usa.
+
+## Escribir buenos mensajes
+Pon cada dato opcional **en su propia línea** (`{huespedes} huéspedes.`, `Ubicación: {ubicacion}`): si falta, se omite esa línea y el
+resto del mensaje sale completo. Una línea con varios datos se omite entera si falta uno.
 
 ## Qué NO hace todavía
 - No marca qué mensajes ya enviaste ni guarda un historial (SD-1131: línea de tiempo por estadía).

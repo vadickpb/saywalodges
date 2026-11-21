@@ -6,7 +6,10 @@
 --    of days before (negative) or after (positive) it.
 --  * message_house_info: one row per organization with what the messages mention: check-in / check-out time, Wi-Fi, door code,
 --    location link, a contact number and the house rules (es/en). Sensitive values (Wi-Fi password, door code) are only filled in
---    a message close to the arrival (the app enforces it when rendering).
+--    a message close to the arrival: the app renders them only inside [check-in - 2 days, check-out] AND the server sends them to
+--    the browser only for stays inside that window. Members can still read the table with their own session (they send the
+--    messages); this is "do not travel early", not a secret from the team.
+--  * No insert/update/delete policies on purpose: every write goes through the owner-only RPCs and the tables have no write grants.
 --  * Members read (RLS); only the OWNER writes, through the RPCs below.
 -- Additive. Rollback: drop function public.save_message_template(...), public.delete_message_template(uuid,text),
 --   public.save_message_house_info(...); drop table public.message_templates, public.message_house_info;

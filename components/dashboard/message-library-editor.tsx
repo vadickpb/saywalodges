@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CUSTOM_KEYS, DEFAULT_TEMPLATES, VARIABLES, dueLabel, renderMessage, variableNames, type HouseInfo, type Template, type VariableName } from "@/lib/domain/message-templates";
 
 // Settings → Mensajes (SD-1130), owner only: the house data the messages mention and the library of messages with tap-to-insert
@@ -79,6 +80,7 @@ function TemplateForm({ template, house, isNew = false, onSaved }: { template: T
   const focused = useRef<"bodyEs" | "bodyEn">("bodyEs");
   const areas = { bodyEs: useRef<HTMLTextAreaElement>(null), bodyEn: useRef<HTMLTextAreaElement>(null) };
   const { pending, result, run } = useAction();
+  const [confirmReset, setConfirmReset] = useState(false);
   const id = `tpl-${template.key}`;
 
   function insert(name: VariableName) {
@@ -101,11 +103,11 @@ function TemplateForm({ template, house, isNew = false, onSaved }: { template: T
       <CardContent>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); run(async () => { const r = await saveTemplateAction({ key: template.key, ...f }); if (r.ok) onSaved?.(); return r; }); }}>
           <div className="space-y-1.5"><Label htmlFor={`${id}-title`}>Título</Label>
-            <Input id={`${id}-title`} value={f.title} maxLength={80} onChange={(e) => setF({ ...f, title: e.target.value })} aria-invalid={Boolean(err("title"))} />
-            {err("title") && <p className="text-sm text-destructive">{err("title")}</p>}</div>
+            <Input id={`${id}-title`} value={f.title} maxLength={80} onChange={(e) => setF({ ...f, title: e.target.value })} aria-invalid={Boolean(err("title"))} aria-describedby={err("title") ? `${id}-title-error` : undefined} />
+            {err("title") && <p id={`${id}-title-error`} className="text-sm text-destructive">{err("title")}</p>}</div>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Insertar variable">
             {variableNames.map((v) => (
-              <button key={v} type="button" title={VARIABLES[v]} onClick={() => insert(v)} className="min-h-9 rounded-full border bg-background px-2.5 text-xs hover:bg-muted">{`{${v}}`}</button>
+              <button key={v} type="button" title={VARIABLES[v]} aria-label={`Insertar {${v}}: ${VARIABLES[v]}`} onClick={() => insert(v)} className="min-h-9 rounded-full border bg-background px-2.5 text-xs hover:bg-muted">{`{${v}}`}</button>
             ))}
           </div>
           {(["bodyEs", "bodyEn"] as const).map((k) => (
@@ -114,7 +116,7 @@ function TemplateForm({ template, house, isNew = false, onSaved }: { template: T
               <textarea id={`${id}-${k}`} ref={areas[k]} rows={5} maxLength={2000} className={areaClass} value={f[k]} onFocus={() => { focused.current = k; }}
                 onChange={(e) => setF({ ...f, [k]: e.target.value })} aria-invalid={Boolean(err(k))} aria-describedby={err(k) ? `${id}-${k}-error` : undefined} />
               {err(k) && <p id={`${id}-${k}-error`} className="text-sm text-destructive">{err(k)}</p>}
-              <button type="button" className="text-sm underline" onClick={() => setPreview(preview === (k === "bodyEs" ? "es" : "en") ? null : k === "bodyEs" ? "es" : "en")}>
+              <button type="button" className="text-sm underline" aria-expanded={preview === (k === "bodyEs" ? "es" : "en")} onClick={() => setPreview(preview === (k === "bodyEs" ? "es" : "en") ? null : k === "bodyEs" ? "es" : "en")}>
                 {preview === (k === "bodyEs" ? "es" : "en") ? "Ocultar vista previa" : "Ver vista previa"}
               </button>
             </div>
@@ -139,12 +141,18 @@ function TemplateForm({ template, house, isNew = false, onSaved }: { template: T
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" disabled={pending}>{pending ? "Guardando…" : "Guardar mensaje"}</Button>
             {(builtIn || template.custom) && (
-              <Button type="button" variant="outline" disabled={pending} onClick={() => run(async () => {
-                const r = await resetTemplateAction(template.key);
-                // Back to the built-in text, right here: the form keeps its identity, so nothing the owner is typing is ever lost to a refresh.
-                if (r.ok && builtIn) setF({ title: builtIn.title, bodyEs: builtIn.bodyEs, bodyEn: builtIn.bodyEn, anchor: builtIn.anchor ?? "", offsetDays: builtIn.offsetDays === null ? "" : String(builtIn.offsetDays) });
-                return r;
-              })}>{template.custom ? "Eliminar mensaje" : "Restaurar el texto original"}</Button>
+              <>
+                <Button type="button" variant="outline" disabled={pending} onClick={() => setConfirmReset(true)}>{template.custom ? "Eliminar mensaje" : "Restaurar el texto original"}</Button>
+                <ConfirmDialog open={confirmReset} onOpenChange={setConfirmReset} destructive confirmLabel={template.custom ? "Eliminar mensaje" : "Restaurar texto"} cancelLabel="Cancelar"
+                  title={template.custom ? "¿Eliminar este mensaje?" : "¿Volver al texto original?"}
+                  description={template.custom ? "Se borra para siempre." : "Se pierden tus cambios de este mensaje, incluso los no guardados."}
+                  onConfirm={() => run(async () => {
+                    const r = await resetTemplateAction(template.key);
+                    // Back to the built-in text, right here: the form keeps its identity, so nothing the owner is typing is lost to a refresh.
+                    if (r.ok && builtIn) setF({ title: builtIn.title, bodyEs: builtIn.bodyEs, bodyEn: builtIn.bodyEn, anchor: builtIn.anchor ?? "", offsetDays: builtIn.offsetDays === null ? "" : String(builtIn.offsetDays) });
+                    return r;
+                  })} />
+              </>
             )}
             <Status r={result} />
           </div>

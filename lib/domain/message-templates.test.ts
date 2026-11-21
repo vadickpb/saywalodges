@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_TEMPLATES, EMPTY_HOUSE, SENSITIVE, VARIABLES, dueLabel, dueState, effectiveTemplates, houseInfoSchema, renderMessage,
+  DEFAULT_TEMPLATES, EMPTY_HOUSE, SENSITIVE, inSensitiveWindow, splitSecrets, VARIABLES, dueLabel, dueState, effectiveTemplates, houseInfoSchema, renderMessage,
   templateInputSchema, unknownVariables, variableNames, whatsappLink, type StayContext,
 } from "./message-templates";
 
@@ -55,6 +55,21 @@ describe("renderMessage", () => {
   it("leaves an unknown {token} untouched and never collapses real paragraphs", () => {
     expect(renderMessage("a {desconocida} b", ctx()).text).toBe("a {desconocida} b");
     expect(renderMessage("uno\n\ndos", ctx()).text).toBe("uno\n\ndos");
+  });
+  it("the confirmation keeps the dates when the guest count is unknown (Airbnb stays have none)", () => {
+    const body = DEFAULT_TEMPLATES.find((t) => t.key === "confirmation")!;
+    for (const [lang, text] of [["es", body.bodyEs], ["en", body.bodyEn]] as const) {
+      const r = renderMessage(text, ctx({ guests: null, lang }));
+      expect(r.text).toMatch(/21/);
+      expect(r.text).toMatch(/24/);
+      expect(r.missing).toEqual(["huespedes"]);
+      expect(r.text).not.toMatch(/huéspedes|guests/);
+    }
+    const arrival = renderMessage(DEFAULT_TEMPLATES.find((t) => t.key === "before_arrival")!.bodyEs, ctx({ house: { ...house, checkinTime: null } }));
+    expect(arrival.text).toContain("Ubicación:"); // the location survives a missing check-in time
+  });
+  it("a different case or a stray token is reported as unknown", () => {
+    expect(unknownVariables("{Nombre} {hora-checkin} {saludo}")).toEqual(["Nombre", "hora-checkin"]);
   });
   it("every built-in message renders for both languages with a complete house, using only known variables", () => {
     for (const t of DEFAULT_TEMPLATES) for (const lang of ["es", "en"] as const) {
@@ -126,5 +141,44 @@ describe("timing, links and the effective library", () => {
     expect(merged.find((t) => t.key === "welcome")).toMatchObject({ title: "Mi bienvenida", bodyEs: "Hola {nombre}", custom: false });
     expect(merged.find((t) => t.key === "farewell")).toEqual(DEFAULT_TEMPLATES.find((d) => d.key === "farewell"));
     expect(merged.at(-1)).toMatchObject({ key: "custom_2", custom: true });
+  });
+});
+
+describe("secrets never travel outside their window (SD-1130 security review)", () => {
+  it("splitSecrets removes the Wi-Fi password and door code from what goes to the browser", () => {
+    const { publicHouse, secrets, configured } = splitSecrets(house);
+    expect(JSON.stringify(publicHouse)).not.toContain("clave123");
+    expect(JSON.stringify(publicHouse)).not.toContain("4821");
+    expect(publicHouse.wifiName).toBe("Saywa");
+    expect(secrets).toEqual({ wifiPassword: "clave123", doorCode: "4821" });
+    expect(configured).toEqual({ wifi_clave: true, codigo_puerta: true });
+    expect(splitSecrets(EMPTY_HOUSE).configured).toEqual({ wifi_clave: false, codigo_puerta: false });
+  });
+  it("the window is [check-in − 2 days, check-out], inclusive", () => {
+    const stay = { checkIn: "2030-12-21", checkOut: "2030-12-24" };
+    expect(inSensitiveWindow(stay, "2030-12-18")).toBe(false);
+    expect(inSensitiveWindow(stay, "2030-12-19")).toBe(true);
+    expect(inSensitiveWindow(stay, "2030-12-24")).toBe(true);
+    expect(inSensitiveWindow(stay, "2030-12-25")).toBe(false);
+  });
+  it("a secret that exists but was not sent reads as 'withheld' (not as missing), so the line stays", () => {
+    const { publicHouse, configured } = splitSecrets(house);
+    const r = renderMessage("Clave: {wifi_clave}\nPuerta: {codigo_puerta}", ctx({ house: publicHouse, secretsConfigured: configured, today: "2030-11-01" }));
+    expect(r.text).toContain("te la envío cerca de tu llegada");
+    expect(r.text.split("\n")).toHaveLength(2);
+    expect(r.missing).toEqual([]);
+    expect(r.withheld.sort()).toEqual(["codigo_puerta", "wifi_clave"]);
+  });
+  it("with no secret configured at all the line is dropped and reported as missing", () => {
+    const { publicHouse, configured } = splitSecrets(EMPTY_HOUSE);
+    const r = renderMessage("Clave: {wifi_clave}", ctx({ house: publicHouse, secretsConfigured: configured, today: "2030-11-01" }));
+    expect(r.missing).toEqual(["wifi_clave"]);
+  });
+});
+
+describe("guest names are untrusted text", () => {
+  it("control and text-direction characters never reach the message", () => {
+    expect(renderMessage("{saludo}", ctx({ name: "\u202eAna\u200b Pérez" })).text).toBe("Hola Ana");
+    expect(renderMessage("{saludo}", ctx({ name: "\u202e\u200b" })).text).toBe("Hola");
   });
 });
