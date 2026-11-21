@@ -17,7 +17,7 @@ export function HeroSearch({ dict, lang, today, maxGuests }: { dict: Dict["searc
   const input = "w-full min-w-0 bg-transparent text-[15px] text-site-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent";
 
   return (
-    <form id="reservar" method="get" action={`/${lang}/cotizar`} aria-label={dict.label}
+    <form id="reservar" role="search" method="get" action={`/${lang}/cotizar`} aria-label={dict.label}
       className="scroll-mt-28 flex flex-col divide-y divide-site-line overflow-hidden rounded-2xl border border-site-line bg-site-bg shadow-xl lg:flex-row lg:items-center lg:divide-x lg:divide-y-0 lg:pr-3">
       <label className={field}>
         <CalendarDays className="size-5 shrink-0 text-site-primary" strokeWidth={1.5} aria-hidden="true" />

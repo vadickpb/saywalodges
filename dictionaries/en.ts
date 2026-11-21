@@ -66,7 +66,9 @@ const en = {
   },
   unitsShowcase: {
     chooseTitle: "Choose how to stay",
-    chooseIntro: "Private accommodations, full comforts and the calm of the Sacred Valley.",
+    chooseIntro: "Choose the accommodation that best suits your group.",
+    bedroomOne: "1 bedroom",
+    bedroomMany: "{count} bedrooms",
     details: "View details",
     upTo: "Up to {count} guests",
     discover: "Discover the option",

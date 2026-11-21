@@ -16,16 +16,15 @@ type Props = {
   /** Where "Explorar villas" goes: the villas section when there is one, the gallery otherwise. */
   exploreHref: string;
   exploreLabel: string;
-  /** A second photo shown as a framed card on the right (large screens), with an optional one-line caption written by the owner. */
+  /** A second photo shown as a framed card on the right (large screens). No caption: the owner's texts are not tied to a particular photo. */
   insetUrl?: string;
-  insetCaption?: string;
 };
 
 // SD-1134: left-aligned serif headline over the photo, mountain divider, italic tagline, one clear call to action, and a framed
 // second photo. Everything shown comes from the owner's content: nothing is invented here.
-export function Hero({ name, heroUrl, videoUrl, videoLabel, videoFallback, region, headline, tagline, locality, exploreHref, exploreLabel, insetUrl, insetCaption }: Props) {
+export function Hero({ name, heroUrl, videoUrl, videoLabel, videoFallback, region, headline, tagline, locality, exploreHref, exploreLabel, insetUrl }: Props) {
   const onPhoto = Boolean(heroUrl);
-  const place = locality || region;
+  const place = region || locality;
   return (
     <section
       id="top"
@@ -65,9 +64,6 @@ export function Hero({ name, heroUrl, videoUrl, videoLabel, videoFallback, regio
         {insetUrl && (
           <figure className="relative hidden aspect-[4/3] overflow-hidden rounded-site border-4 border-white shadow-2xl lg:block">
             <Photo src={insetUrl} alt="" sizes="(min-width: 1024px) 40vw, 0px" />
-            {insetCaption && (
-              <figcaption className="absolute bottom-0 right-0 max-w-[75%] rounded-tl-site bg-black/60 px-4 py-3 text-sm leading-snug text-white backdrop-blur-sm">{insetCaption}</figcaption>
-            )}
           </figure>
         )}
       </div>

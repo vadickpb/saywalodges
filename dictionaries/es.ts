@@ -64,7 +64,9 @@ const es: Dict = {
   },
   unitsShowcase: {
     chooseTitle: "Elige tu manera de hospedarte",
-    chooseIntro: "Alojamientos privados, comodidades completas y la tranquilidad del Valle Sagrado.",
+    chooseIntro: "Elige el alojamiento que mejor se adapte a tu grupo.",
+    bedroomOne: "1 habitación",
+    bedroomMany: "{count} habitaciones",
     details: "Ver detalles",
     upTo: "Hasta {count} huéspedes",
     discover: "Conoce la opción",

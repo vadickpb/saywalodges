@@ -13,8 +13,7 @@ La estructura nueva (cabecera, héroe, barra de fechas, tarjetas) ya funciona co
 | Titular grande y lema en cursiva | Sitio → Apariencia → textos: «Titular» y «Lema» |
 | Foto de fondo del héroe | Sitio → Fotos → foto principal |
 | Foto enmarcada de la derecha | La primera foto de la galería distinta de la principal |
-| Leyenda de esa foto («Piscina temperada · Hidromasaje») | El primer «destacado» del sitio (si no hay, no se muestra leyenda) |
-| Ubicación bajo el botón | Dirección de la propiedad |
+| Línea de ubicación bajo el botón | La «Región» del sitio (si no hay, la dirección de la propiedad) |
 | Tarjetas de las villas, «hasta N huéspedes», habitaciones, precio «desde» | Sitio → Unidades (capacidad, habitaciones, tarifas) |
 | Tarjeta «Complejo completo» | Una unidad compuesta de otras (Sitio → Unidades → «Combinada») |
 | Franja de 5 servicios con icono | Sitio → Servicios (los 5 primeros) |

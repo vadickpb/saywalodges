@@ -152,9 +152,8 @@ export default async function SitePage({
     { href: "#location", label: dict.nav.location },
   ].filter((link) => link !== false);
   const maxGuests = Math.max(content.capacity ?? 0, ...units.map((unit) => unit.max_guests), 1);
-  // The framed photo of the hero: the first gallery photo that is not the hero itself; its caption is the owner's first highlight.
+  // The framed photo of the hero: the first gallery photo that is not the hero itself.
   const insetUrl = photos.gallery.find((photo) => photo !== photos.hero) ?? photos.gallery[0];
-  const insetCaption = (content.highlights ?? []).map((h) => pick(h, lang)).find(Boolean);
 
   return (
     <>
@@ -167,7 +166,6 @@ export default async function SitePage({
         primaryLinks={primaryLinks}
         waUrl={waUrl}
         bookingHref="#reservar"
-        overImage={Boolean(photos.hero)}
       />
       <main id="main" tabIndex={-1} className="outline-none">
         <Hero
@@ -183,7 +181,6 @@ export default async function SitePage({
           exploreHref={hasUnitShowcase ? "#accommodations" : "#gallery"}
           exploreLabel={hasUnitShowcase ? dict.hero.explore : dict.hero.exploreGallery}
           insetUrl={insetUrl}
-          insetCaption={insetCaption}
         />
         <div className="relative z-10 -mt-14 sm:-mt-12">
           <Container><HeroSearch dict={dict.search} lang={lang} today={todayInLima()} maxGuests={maxGuests} /></Container>

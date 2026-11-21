@@ -14,8 +14,6 @@ type Props = {
   name: string;
   logoUrl: string;
   links: Link[];
-  // Whether the header starts transparent on top of a hero photo.
-  overImage: boolean;
   languageHref?: string;
   bookingHref?: string;
   /** SD-1134: the five main sections shown in the bar (Inicio, Villas…); `links` stay in the mobile menu. Defaults to `links`. */
@@ -46,8 +44,10 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, languageHref, boo
     };
   }, [open]);
 
-  // SD-1134: the bar is a solid strip above the hero photo (the new design), so `overImage` no longer changes it.
+  // SD-1134: the bar is a solid strip above the page (the new design).
   const barLinks = primaryLinks ?? links;
+  // The "current section" mark only makes sense on the home page, the only caller that passes the five main links.
+  const onHome = Boolean(primaryLinks);
   const otherLang = lang === "es" ? "en" : "es";
 
   return (
@@ -71,8 +71,8 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, languageHref, boo
 
         <nav aria-label={name} className="hidden items-center gap-7 lg:flex">
           {barLinks.map((link, index) => (
-            <a key={link.href} href={link.href} aria-current={index === 0 && !scrolled ? "page" : undefined}
-              className={`border-b-2 py-1.5 text-[15px] font-medium transition hover:border-site-accent hover:opacity-100 ${index === 0 && !scrolled ? "border-site-accent opacity-100" : "border-transparent opacity-85"}`}>
+            <a key={link.href} href={link.href} aria-current={onHome && index === 0 && !scrolled ? "location" : undefined}
+              className={`border-b-2 py-1.5 text-[15px] font-medium transition hover:border-site-accent hover:opacity-100 ${onHome && index === 0 && !scrolled ? "border-site-accent opacity-100" : "border-transparent opacity-85"}`}>
               {link.label}
             </a>
           ))}
@@ -93,6 +93,10 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, languageHref, boo
               <MessageCircle className="size-6" strokeWidth={1.5} aria-hidden="true" />
             </a>
           )}
+          <a href={bookingHref} aria-label={dict.bookNow}
+            className="rounded-full bg-site-accent p-2.5 text-site-accent-fg sm:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent">
+            <CalendarDays className="size-5" aria-hidden="true" />
+          </a>
           <a
             href={bookingHref}
             className={`${buttonStyles.accent} px-5! py-2.5! max-sm:hidden`}

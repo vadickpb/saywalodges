@@ -26,7 +26,7 @@ export function UnitsShowcase({ dict, lang, units, price, amenities = [] }: Prop
   const wholes = units.filter((unit) => unit.partIds.length > 0);
   const factsOf = (unit: ShowcaseUnit) => [
     format(dict.upTo, { count: unit.maxGuests }),
-    unit.bedrooms > 0 ? (lang === "es" ? `${unit.bedrooms} habitaciones` : `${unit.bedrooms} bedrooms`) : null,
+    unit.bedrooms > 0 ? (unit.bedrooms === 1 ? dict.bedroomOne : format(dict.bedroomMany, { count: unit.bedrooms })) : null,
   ].filter(Boolean).join(" · ");
 
   return (
@@ -38,7 +38,8 @@ export function UnitsShowcase({ dict, lang, units, price, amenities = [] }: Prop
           <p className="mt-3 text-base leading-relaxed text-site-muted sm:text-lg">{dict.chooseIntro}</p>
         </div>
 
-        <ul className={`mt-10 grid gap-5 ${wholes.length > 0 ? "lg:grid-cols-[1fr_1fr_0.75fr]" : "lg:grid-cols-2"}`}>
+        {/* Two separate units and one whole complex is the layout of the design; any other mix flows in an even grid. */}
+        <ul className={`mt-10 grid gap-5 sm:grid-cols-2 ${parts.length === 2 && wholes.length === 1 ? "lg:grid-cols-[1fr_1fr_0.75fr]" : parts.length + wholes.length >= 3 ? "lg:grid-cols-3" : ""}`}>
           {parts.map((unit) => (
             <li key={unit.id} className="group relative isolate flex min-h-[320px] overflow-hidden rounded-site shadow-md sm:min-h-[380px]">
               <Photo src={unit.cover} alt="" sizes="(min-width: 1024px) 38vw, 100vw" className="-z-20 transition duration-500 group-hover:scale-105" placeholderLabel={lang === "es" ? "Fotos próximamente" : "Photos coming soon"} />
