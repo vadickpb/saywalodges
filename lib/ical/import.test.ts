@@ -8,6 +8,7 @@ import type { LookupAddress } from "node:dns";
 import { lookup } from "node:dns/promises";
 import { request } from "node:https";
 import {
+  airbnbStayHints,
   fetchCalendar,
   parseCalendar,
   validateImportUrl,
@@ -67,9 +68,14 @@ describe("OTA parser", () => {
       const rows = parseCalendar(fixture(name));
       expect(rows).toHaveLength(3);
       expect(rows.every((r) => /^[a-f0-9]{64}$/.test(r.uid))).toBe(true);
+      // SD-1129: besides the UID digest and the dates, ONLY the reservation code and the phone last-4 survive.
       expect(JSON.stringify(rows)).not.toMatch(
-        /Anonymous|Phone|Reservation|SUMMARY|DESCRIPTION|ANONYMIZED|@/,
+        /Anonymous|Phone|Reservation|SUMMARY|DESCRIPTION|@/,
       );
+      // Only Airbnb's feed carries the reservation code and phone last-4; Booking.com's carries neither.
+      const expectedKeys = name === "airbnb" ? ["code,end,last4,start,uid", "end,start,uid", "end,start,uid"] : rows.map(() => "end,start,uid");
+      expect(rows.map((r) => Object.keys(r).sort().join(","))).toEqual(expectedKeys);
+      if (name === "airbnb") expect(rows[0]).toMatchObject({ code: "ANONYMIZED", last4: "0000" });
       expect(parseCalendar(fixture(name))).toEqual(rows);
     },
   );
@@ -253,5 +259,19 @@ describe("SSRF boundary", () => {
     await result;
     expect(timeout).toHaveBeenCalledWith(TIMEOUT_MS);
     timeout.mockRestore();
+  });
+});
+
+describe("airbnbStayHints (SD-1129)", () => {
+  it("reads the reservation code and phone last-4, nothing else", () => {
+    expect(airbnbStayHints("Reservation URL: https://www.airbnb.com/reservation/itinerary?code=HMABC12345\nPhone Number (Last 4 Digits): 7788")).toEqual({ code: "HMABC12345", last4: "7788" });
+    expect(airbnbStayHints({ val: "Phone Number (Last 4 Digits): 1234", params: {} })).toEqual({ last4: "1234" });
+  });
+  it.each([undefined, null, "", "no data", "code=abc", "?code=HM12", "Last 4 Digits: 12345", "Last 4 Digits: 12", 42, "x".repeat(5000)])("ignores %j", (value) => {
+    expect(airbnbStayHints(value)).toEqual({});
+  });
+  it("a code with trailing junk or lowercase is not taken", () => {
+    expect(airbnbStayHints("?code=HMABC12345xyz")).toEqual({});
+    expect(airbnbStayHints("?code=hmabc12345")).toEqual({});
   });
 });

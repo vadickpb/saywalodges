@@ -3,7 +3,7 @@ import { requireActiveOrg } from "@/lib/dal/organizations";
 import { z } from "zod";
 import { getCalendarContext, readCalendar, CALENDAR_ERROR } from "@/lib/dal/calendar";
 import { calendarMonth, blockStyle, CALENDAR_SOURCES } from "@/lib/domain/calendar";
-import { addDays, currentMonthInLima, isIsoMonth } from "@/lib/domain/dates";
+import { addDays, currentMonthInLima, isIsoMonth, todayInLima } from "@/lib/domain/dates";
 import { blockedDatesInMonth, rangeContains } from "@/lib/domain/availability";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { AirbnbCalendar } from "@/components/dashboard/airbnb-calendar";
 import { CalendarBlockForm } from "@/components/dashboard/calendar-block-form";
 import { RowAction } from "@/components/dashboard/row-action";
 import { deleteManualBlockAction } from "./actions";
+import { listReminders } from "@/lib/dal/stay-details";
+import { reminderSummary } from "@/lib/domain/stay-details";
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await getCalendarContext();
@@ -43,6 +45,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       if (pricing) { currency = pricing.currency; prices = nightlyPrices(selected.id, bounds.dates, pricing.rates, pricing.seasons, pricing.currency, pricing.priceRanges); }
     } catch { prices = {}; }
   }
+  // SD-1129: reminders the owner set on a stay, for today and tomorrow. A failure here never hides the calendar.
+  const today = todayInLima();
+  const reminders = await listReminders(today, addDays(today, 1)).catch(() => []);
   const href = (target: string) => `/app/calendar?${new URLSearchParams({ month: target, unit: selected?.id ?? "all" })}`;
   return <div className="min-w-0 space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -51,6 +56,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         <Link href="/app/calendar/feeds" className="rounded border px-3 py-2 text-sm font-medium">Calendarios para Airbnb y Booking</Link>
       )}
     </div>
+    {reminders.length > 0 && <Card aria-label="Recordatorios"><CardHeader><CardTitle>Recordatorios · hoy y mañana</CardTitle></CardHeader><CardContent>
+      <ul className="space-y-2 text-sm">{reminders.map((r, i) => <li key={`${r.remindOn}-${i}`} className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg border p-3">
+        <span className="min-w-0 break-words"><strong>{r.remindOn === today ? "Hoy" : "Mañana"}</strong> · {reminderSummary(r)}</span>
+        {r.unitId && r.start && <Link className="underline" href={`/app/calendar?${new URLSearchParams({ month: r.start.slice(0, 7), unit: r.unitId })}`}>Ver estadía ({units.find((u) => u.id === r.unitId)?.name ?? "calendario"}, llega {r.start})</Link>}
+      </li>)}</ul>
+    </CardContent></Card>}
     <Card><CardHeader><CardTitle>Ocupación mensual</CardTitle></CardHeader><CardContent className="space-y-4">
       <form key={`${month}-${selected?.id ?? "all"}`} className="flex flex-col gap-3 sm:flex-row sm:items-end" method="get">
         <div className="space-y-2"><Label htmlFor="calendar-month">Mes</Label><input id="calendar-month" name="month" type="month" defaultValue={month} required className="h-11 w-full rounded-md border bg-background px-3" /></div>

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseDateRange, type DateRange } from "./availability";
 import { addDays, dayOfWeek, daysBetween, monthBounds, monthOf, type IsoMonth } from "./dates";
+import type { StayDetails, StayKey } from "./stay-details";
 
 export const MAX_MANUAL_NIGHTS = 366;
 export const manualBlockSchema = z.object({
@@ -16,7 +17,11 @@ export const manualBlockSchema = z.object({
 export type ManualBlockInput = z.infer<typeof manualBlockSchema>;
 export type CalendarSource = "booking" | "ical" | "manual";
 export type CalendarChannel = "airbnb" | "booking" | "vrbo" | "other";
-export type CalendarBlock = DateRange & { id: string; unitId: string; source: CalendarSource; note: string | null; derived: boolean; channel?: CalendarChannel | null };
+export type CalendarBlock = DateRange & {
+  id: string; unitId: string; source: CalendarSource; note: string | null; derived: boolean; channel?: CalendarChannel | null;
+  /** SD-1129: identifies the stay (a web/manual booking, or an iCal reservation) and carries what the owner already saved. */
+  stayKey?: StayKey | null; stay?: StayDetails | null;
+};
 
 // SD-301 has no channel metadata yet. Never infer channels from notes, UUIDs or external UIDs.
 export const CALENDAR_SOURCES = {

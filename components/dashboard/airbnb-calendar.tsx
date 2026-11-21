@@ -12,6 +12,7 @@ import { rangeContains } from "@/lib/domain/availability";
 import { daysBetween, monthOf } from "@/lib/domain/dates";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { StayDetailsCard } from "@/components/dashboard/stay-details-card";
 
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
@@ -288,6 +289,7 @@ function BlockDetail({ block, onDeleted }: { block: CalendarBlock; onDeleted: ()
     <p>{block.start} → {block.end}</p>
     <p className="font-semibold">{daysBetween(block.start, block.end)} noches · salida libre</p>
     <p className="whitespace-pre-wrap break-words text-sm">{block.note || "Sin nota."}</p>
+    {block.stayKey && block.stay && <StayDetailsCard key={block.id} stayKey={block.stayKey} initial={block.stay} />}
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {block.derived ? <p className="text-sm text-muted-foreground">Se libera sola al cancelar la reserva que la originó.</p> : block.source === "manual" ? <>
       <Button variant="destructive" className="min-h-11 w-full" disabled={pending} onClick={() => setConfirm(true)}>{pending ? "Eliminando…" : "Eliminar bloqueo"}</Button>

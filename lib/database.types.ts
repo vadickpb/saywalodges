@@ -1924,6 +1924,89 @@ isOneToOne: true
           },
         ];
       };
+      stay_details: {
+        Row: {
+          arrival_time: string | null;
+          booking_id: string | null;
+          created_at: string;
+          external_uid: string | null;
+          feed_id: string | null;
+          guest_name: string | null;
+          guest_phone: string | null;
+          id: string;
+          lang: string;
+          note: string | null;
+          org_id: string;
+          party_size: number | null;
+          phone_last4: string | null;
+          ref_code: string | null;
+          remind_on: string | null;
+          requests: string[];
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          arrival_time?: string | null;
+          booking_id?: string | null;
+          created_at?: string;
+          external_uid?: string | null;
+          feed_id?: string | null;
+          guest_name?: string | null;
+          guest_phone?: string | null;
+          id?: string;
+          lang?: string;
+          note?: string | null;
+          org_id: string;
+          party_size?: number | null;
+          phone_last4?: string | null;
+          ref_code?: string | null;
+          remind_on?: string | null;
+          requests?: string[];
+          updated_at?: string;
+        };
+        Update: {
+          arrival_time?: string | null;
+          booking_id?: string | null;
+          created_at?: string;
+          external_uid?: string | null;
+          feed_id?: string | null;
+          guest_name?: string | null;
+          guest_phone?: string | null;
+          id?: string;
+          lang?: string;
+          note?: string | null;
+          org_id?: string;
+          party_size?: number | null;
+          phone_last4?: string | null;
+          ref_code?: string | null;
+          remind_on?: string | null;
+          requests?: string[];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stay_details_booking_fkey";
+            columns: ["booking_id", "org_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "stay_details_feed_fkey";
+            columns: ["feed_id"];
+            isOneToOne: false;
+            referencedRelation: "ical_feeds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stay_details_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       whatsapp_inbox: {
         Row: {
           auto_replied_at: string | null;
@@ -2187,6 +2270,28 @@ isOneToOne: true
           p_org_id: string;
           p_window_end: number;
           p_window_start: number;
+        };
+        Returns: undefined;
+      };
+      cron_purge_stay_details: {
+        Args: { p_days?: number };
+        Returns: number;
+      };
+      save_stay_details: {
+        // The function has no defaults: every argument is sent, the ones that do not apply as null.
+        Args: {
+          p_arrival: string;
+          p_booking_id: string | null;
+          p_external_uid: string | null;
+          p_feed_id: string | null;
+          p_lang: string;
+          p_name: string;
+          p_note: string;
+          p_org_id: string;
+          p_party: number | null;
+          p_phone: string;
+          p_remind_on: string | null;
+          p_requests: string[];
         };
         Returns: undefined;
       };

@@ -2103,6 +2103,26 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Pendiente del dueño**: marcar Preview en 4 variables de configuración del proyecto `hoststay` y, opcional, borrar sus
   variables de Supabase (`docs/runbook-instalacion.md`).
 
+### [x] SD-1129 · feat(stays): quick stay details (name first), also for Airbnb
+`M` · Depende: — · Review: `R+S`
+- **Alcance**: tabla `stay_details` (una fila por estadía: reserva web/manual o reserva iCal por `feed_id` + uid, que no cambia si
+  se mueven las fechas) con nombre, WhatsApp, idioma, huéspedes, hora de llegada, pedidos especiales (chips cerrados), nota y
+  fecha de recordatorio. El **nombre** es lo único que importa: los mensajes saludan con el primer nombre y sin él dicen «Hola».
+  Escritura solo con `save_stay_details` (cualquier miembro; la base comprueba que la estadía es de su organización).
+- **Airbnb**: el iCal trae el código de reserva (HM…) y los últimos 4 dígitos del teléfono; el importador los guarda sin pisar lo que
+  el dueño escribió y la tarjeta ofrece «Abrir en Airbnb». Una reserva que sale del feed (cancelada) se lleva sus datos.
+- **UI**: tarjeta con autoguardado (sin botón Guardar) en el detalle del calendario y en la ficha de la reserva; los datos de una
+  reserva web/manual ya vienen rellenados; franja «Recordatorios · hoy y mañana» en el calendario.
+- **Privacidad**: los datos no sobreviven a la estadía: se borran al salir la reserva de un feed no vacío, al desconectar el feed y
+  por la purga diaria (`STAY_RETENTION_DAYS`, 180 días tras la salida; reservas canceladas a los 30). Un calendario vacío puntual
+  de Airbnb no borra nada. El último guardado gana (sin control de versiones entre dos pestañas).
+- **Compatibilidad**: si el código se despliega antes de aprobar la migración, el sync de iCal reintenta sin los dos datos extra
+  (`finishWithFallback`) y no se detiene.
+- **Hecho**: pgTAP `0048`, Vitest (dominio, DAL, acción, parser iCal, fallback).
+- **Siguientes**: SD-1130 biblioteca de mensajes con variables; SD-1131 línea de tiempo de mensajes de la estadía (WhatsApp,
+  copiar, correo, registro de envíos); SD-1132 «Hoy» (llegadas, salidas, pendientes); SD-1133 completar nombres desde el CSV de
+  reservas de Airbnb por código HM; sugerencia de huésped que repite (con SD-601).
+
 ### [ ] SD-1112 · feat(marketing): SEO content
 `S` · Depende: SD-1110 · Review: `R`
 - **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.

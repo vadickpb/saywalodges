@@ -16,7 +16,7 @@ async function handle(request: Request) {
   }
   try {
     const result = await purgeWhatsappRecords();
-    log("info", "cron.whatsapp_purge.completed", { requestId, route: ROUTE, status: 200, count: result.messages + result.outbox, durationMs: Date.now() - startedAt });
+    log("info", "cron.whatsapp_purge.completed", { requestId, route: ROUTE, status: 200, count: result.messages + result.outbox + result.stays, durationMs: Date.now() - startedAt });
     return NextResponse.json(result, { headers });
   } catch (error) {
     log("error", "cron.whatsapp_purge.failed", { requestId, route: ROUTE, status: 500, errorName: errorName(error), durationMs: Date.now() - startedAt });

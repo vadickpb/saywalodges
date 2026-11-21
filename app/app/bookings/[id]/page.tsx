@@ -10,6 +10,9 @@ import { CancelBooking, ReviewPayment } from "@/components/dashboard/booking-act
 import { ManualPaymentForm } from "@/components/dashboard/manual-payment-form";
 import { remainingBalance } from "../_lib/payment-balance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StayDetailsCard } from "@/components/dashboard/stay-details-card";
+import { readStayDetails, stayMapKey } from "@/lib/dal/stay-details";
+import { EMPTY_STAY } from "@/lib/domain/stay-details";
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,6 +27,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   // The ledger is kept in soles: a payment in another currency needs an exchange rate (ADR 0007).
   const foreign = b.currency === "PEN" ? null : b.currency;
   const balance = remainingBalance(b.totalCents, b.payments);
+  // SD-1129: what the owner saved for this stay, or the booking's own data as the starting point (the owner only confirms).
+  const saved = await readStayDetails(ctx.supabase, ctx.orgId, { bookingIds: [b.id], externalUids: [] });
+  const stay = saved.get(stayMapKey({ bookingId: b.id })) ?? {
+    ...EMPTY_STAY, name: b.guestSnapshot.name ?? b.guest.name, phone: b.guestSnapshot.phone ?? b.guest.phone, party: b.guests,
+  };
 
   return (
     <div className="space-y-4">
@@ -63,6 +71,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           )}
         </CardContent>
       </Card>
+      <StayDetailsCard key={b.id} stayKey={{ kind: "booking", bookingId: b.id }} initial={stay} />
 
       <Card>
         <CardHeader><CardTitle>Pagos</CardTitle></CardHeader>
