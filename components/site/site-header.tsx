@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Menu, X } from "lucide-react";
+import { CalendarDays, Menu, MessageCircle, X } from "lucide-react";
 import type { Dict } from "@/dictionaries/en";
 import { buttonStyles } from "./ui";
 
@@ -18,9 +18,13 @@ type Props = {
   overImage: boolean;
   languageHref?: string;
   bookingHref?: string;
+  /** SD-1134: the five main sections shown in the bar (Inicio, Villas…); `links` stay in the mobile menu. Defaults to `links`. */
+  primaryLinks?: Link[];
+  /** SD-1134: WhatsApp icon next to the booking button. */
+  waUrl?: string;
 };
 
-export function SiteHeader({ dict, lang, name, logoUrl, links, overImage, languageHref, bookingHref = "#availability" }: Props) {
+export function SiteHeader({ dict, lang, name, logoUrl, links, languageHref, bookingHref = "#availability", primaryLinks, waUrl }: Props) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -42,7 +46,8 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage, langua
     };
   }, [open]);
 
-  const transparent = overImage && !scrolled && !open;
+  // SD-1134: the bar is a solid strip above the hero photo (the new design), so `overImage` no longer changes it.
+  const barLinks = primaryLinks ?? links;
   const otherLang = lang === "es" ? "en" : "es";
 
   return (
@@ -54,21 +59,20 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage, langua
       {dict.skipToContent}
     </a>
     <header
-      className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${
-        transparent ? "text-white" : "border-b border-site-line bg-site-bg/95 text-site-fg backdrop-blur"
-      }`}
+      className={`fixed inset-x-0 top-0 z-40 border-b border-site-line bg-site-bg/95 text-site-fg backdrop-blur transition-shadow duration-300 ${scrolled ? "shadow-sm" : ""}`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:h-20 lg:px-10">
         <a href="#top" className="flex min-w-0 items-center gap-3">
           {logoUrl && (
             <Image src={logoUrl} alt="" width={36} height={36} className="size-9 rounded-full object-cover" />
           )}
-          <span className="truncate font-site-heading text-lg font-semibold tracking-tight lg:text-xl">{name}</span>
+          <span className="truncate font-site-heading text-lg font-semibold uppercase tracking-[0.12em] lg:text-xl">{name}</span>
         </a>
 
         <nav aria-label={name} className="hidden items-center gap-7 lg:flex">
-          {links.map((link) => (
-            <a key={link.href} href={link.href} className="text-sm font-medium opacity-85 transition hover:opacity-100">
+          {barLinks.map((link, index) => (
+            <a key={link.href} href={link.href} aria-current={index === 0 && !scrolled ? "page" : undefined}
+              className={`border-b-2 py-1.5 text-[15px] font-medium transition hover:border-site-accent hover:opacity-100 ${index === 0 && !scrolled ? "border-site-accent opacity-100" : "border-transparent opacity-85"}`}>
               {link.label}
             </a>
           ))}
@@ -83,11 +87,18 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage, langua
           >
             {otherLang}
           </a>
+          {waUrl && (
+            <a href={waUrl} target="_blank" rel="noopener noreferrer" aria-label={dict.whatsappLabel}
+              className="rounded-full p-2 opacity-85 transition hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent">
+              <MessageCircle className="size-6" strokeWidth={1.5} aria-hidden="true" />
+            </a>
+          )}
           <a
             href={bookingHref}
-            className={`${transparent ? buttonStyles.light : buttonStyles.primary} px-5! py-2.5! max-sm:hidden`}
+            className={`${buttonStyles.accent} px-5! py-2.5! max-sm:hidden`}
           >
-            {dict.book}
+            <CalendarDays className="size-4" aria-hidden="true" />
+            {dict.bookNow}
           </a>
           <button
             type="button"
@@ -116,8 +127,9 @@ export function SiteHeader({ dict, lang, name, logoUrl, links, overImage, langua
               </a>
             ))}
           </nav>
-          <a href={bookingHref} onClick={() => setOpen(false)} className={`${buttonStyles.primary} mt-8 w-full`}>
-            {dict.book}
+          <a href={bookingHref} onClick={() => setOpen(false)} className={`${buttonStyles.accent} mt-8 w-full`}>
+            <CalendarDays className="size-4" aria-hidden="true" />
+            {dict.bookNow}
           </a>
         </div>
       )}

@@ -1,11 +1,9 @@
 import { HeroVideo } from "./hero-video";
-import { BedDouble, MapPin, MessageCircle, Users } from "lucide-react";
-import type { Dict } from "@/dictionaries/en";
-import { format } from "@/lib/domain/format";
+import { ArrowRight, MapPin } from "lucide-react";
+import { MountainDivider } from "./mountain-divider";
 import { Photo, buttonStyles } from "./ui";
 
 type Props = {
-  dict: Dict["hero"];
   name: string;
   heroUrl: string;
   videoUrl?: string | null;
@@ -14,72 +12,63 @@ type Props = {
   region: string;
   headline: string;
   tagline: string;
-  capacity: number | undefined;
-  bedrooms: number;
   locality: string;
-  waUrl: string;
+  /** Where "Explorar villas" goes: the villas section when there is one, the gallery otherwise. */
+  exploreHref: string;
+  exploreLabel: string;
+  /** A second photo shown as a framed card on the right (large screens), with an optional one-line caption written by the owner. */
+  insetUrl?: string;
+  insetCaption?: string;
 };
 
-export function Hero({ dict, name, heroUrl, videoUrl, videoLabel, videoFallback, region, headline, tagline, capacity, bedrooms, locality, waUrl }: Props) {
-  const facts = [
-    capacity ? { icon: Users, text: format(dict.guests, { count: capacity }) } : null,
-    bedrooms > 0
-      ? { icon: BedDouble, text: bedrooms === 1 ? dict.bedroom : format(dict.bedrooms, { count: bedrooms }) }
-      : null,
-    locality ? { icon: MapPin, text: locality } : null,
-  ].filter((fact) => fact !== null);
-
-  // Without a photo the hero sits on the tenant's primary color, so text
-  // takes its computed foreground instead of assuming white-on-dark-photo.
+// SD-1134: left-aligned serif headline over the photo, mountain divider, italic tagline, one clear call to action, and a framed
+// second photo. Everything shown comes from the owner's content: nothing is invented here.
+export function Hero({ name, heroUrl, videoUrl, videoLabel, videoFallback, region, headline, tagline, locality, exploreHref, exploreLabel, insetUrl, insetCaption }: Props) {
   const onPhoto = Boolean(heroUrl);
-
+  const place = locality || region;
   return (
     <section
       id="top"
-      className={`relative isolate flex min-h-[88svh] items-end overflow-hidden lg:min-h-[92svh] ${
+      className={`relative isolate flex min-h-[560px] items-center overflow-hidden pb-24 pt-28 sm:min-h-[640px] lg:min-h-[680px] lg:pb-28 lg:pt-32 ${
         onPhoto ? "text-white" : "bg-site-primary text-site-primary-fg"
       }`}
     >
       {onPhoto && (
         <>
           <Photo src={heroUrl} alt={name} sizes="100vw" priority className="-z-20" />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 -z-10 bg-linear-to-t from-black/85 via-black/35 to-black/30"
-          />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-linear-to-r from-black/70 via-black/35 to-black/10" />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-linear-to-t from-black/45 via-transparent to-transparent" />
         </>
       )}
 
-      <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-32 sm:px-6 sm:pb-14 lg:px-10 lg:pb-20">
-        {region && (
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] opacity-90 sm:text-sm">{region}</p>
-        )}
-        <h1 className="mt-4 max-w-4xl font-site-heading text-4xl leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-          {headline || name}
-        </h1>
-        {tagline && <p className="mt-5 max-w-2xl text-lg leading-relaxed opacity-90 sm:text-xl">{tagline}</p>}
+      <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:px-10">
+        <div>
+          <h1 className="max-w-2xl font-site-heading text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">{headline || name}</h1>
+          <MountainDivider className="mt-6 max-w-md" />
+          {tagline && <p className="mt-5 max-w-xl font-site-heading text-xl italic leading-relaxed opacity-95 sm:text-2xl">{tagline}</p>}
 
-        {videoUrl && heroUrl && <div className="mt-6 max-w-xl"><HeroVideo src={videoUrl} poster={heroUrl} label={videoLabel ?? name} fallback={videoFallback ?? name} /></div>}
-
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <a href={waUrl} target="_blank" rel="noopener noreferrer" className={buttonStyles.light}>
-            <MessageCircle className="size-4" aria-hidden="true" />
-            {dict.whatsapp}
-          </a>
-          <a href="#gallery" className={onPhoto ? buttonStyles.glass : buttonStyles.outline}>
-            {dict.viewPhotos}
-          </a>
+          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <a href={exploreHref} className={`${buttonStyles.accent} px-7! py-3.5!`}>
+              {exploreLabel}
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </a>
+          </div>
+          {place && (
+            <p className="mt-6 flex items-center gap-2 text-sm opacity-90">
+              <MapPin className="size-4" strokeWidth={1.75} aria-hidden="true" />
+              {place}
+            </p>
+          )}
+          {videoUrl && heroUrl && <div className="mt-6 max-w-xl"><HeroVideo src={videoUrl} poster={heroUrl} label={videoLabel ?? name} fallback={videoFallback ?? name} /></div>}
         </div>
 
-        {facts.length > 0 && (
-          <ul className="mt-10 flex flex-wrap gap-x-8 gap-y-3 border-t border-current/25 pt-6 text-sm sm:text-base">
-            {facts.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-2.5">
-                <Icon className="size-5 opacity-80" strokeWidth={1.5} aria-hidden="true" />
-                {text}
-              </li>
-            ))}
-          </ul>
+        {insetUrl && (
+          <figure className="relative hidden aspect-[4/3] overflow-hidden rounded-site border-4 border-white shadow-2xl lg:block">
+            <Photo src={insetUrl} alt="" sizes="(min-width: 1024px) 40vw, 0px" />
+            {insetCaption && (
+              <figcaption className="absolute bottom-0 right-0 max-w-[75%] rounded-tl-site bg-black/60 px-4 py-3 text-sm leading-snug text-white backdrop-blur-sm">{insetCaption}</figcaption>
+            )}
+          </figure>
         )}
       </div>
     </section>

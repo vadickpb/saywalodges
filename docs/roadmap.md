@@ -2137,6 +2137,17 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Hecho**: pgTAP `0049`, Vitest (render, validación, DAL, acciones); probado en navegador. Guía: [`mensajes.md`](mensajes.md).
 - **Siguientes**: SD-1131 (marcar enviados y línea de tiempo), SD-1132 («Hoy»), SD-1133 (CSV de Airbnb por código HM).
 
+### [x] SD-1134 · feat(site): redesigned home (header, hero, availability bar, villas, amenities)
+`M` · Depende: SD-1129 · Review: `R`
+- **Alcance**: portada con el diseño cálido de referencia: cabecera sólida con marca en mayúsculas, 5 secciones principales (Inicio, Villas,
+  Experiencias, Galería, Ubicación), icono de WhatsApp y «Reservar ahora»; héroe con titular serif, divisor de montañas, lema en cursiva, un solo
+  botón («Explorar villas») y una foto enmarcada con leyenda (el primer destacado que escribió el dueño); **barra de disponibilidad** (llegada,
+  salida, huéspedes) que lleva a la cotización con las fechas ya puestas (`/cotizar` ahora también acepta `guests`); sección «Elige tu manera de
+  hospedarte» con tarjetas de foto por villa y una tarjeta aparte para el complejo completo (unidad compuesta); franja de 5 servicios con icono.
+- **Estilo**: preset nuevo **«Valle Sagrado»** (verde `#1F4031`, terracota `#A5522D`, crema `#F7F2E8`) y par de fuentes **«Refinada»** (Playfair +
+  Lora). Todo sale de datos del dueño (titular, lema, destacados, servicios, unidades): no se inventa ningún dato.
+- **Pendiente del dueño**: elegir el preset en Sitio → Apariencia (no se toca la base de producción desde aquí).
+
 ### [ ] SD-1112 · feat(marketing): SEO content
 `S` · Depende: SD-1110 · Review: `R`
 - **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.
