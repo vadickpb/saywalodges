@@ -15,7 +15,8 @@ import { CalendarBlockForm } from "@/components/dashboard/calendar-block-form";
 import { RowAction } from "@/components/dashboard/row-action";
 import { deleteManualBlockAction } from "./actions";
 import { listReminders } from "@/lib/dal/stay-details";
-import { reminderSummary } from "@/lib/domain/stay-details";
+import { getMessageLibrary } from "@/lib/dal/message-templates";
+import { firstName, reminderSummary } from "@/lib/domain/stay-details";
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await getCalendarContext();
@@ -48,6 +49,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   // SD-1129: reminders the owner set on a stay, for today and tomorrow. A failure here never hides the calendar.
   const today = todayInLima();
   const reminders = await listReminders(today, addDays(today, 1)).catch(() => []);
+  const library = await getMessageLibrary().catch(() => null); // SD-1130: messages ready to send, per stay
   const href = (target: string) => `/app/calendar?${new URLSearchParams({ month: target, unit: selected?.id ?? "all" })}`;
   return <div className="min-w-0 space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -75,7 +77,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       </nav>}
       <ul aria-label="Leyenda de fuentes" className="flex flex-wrap gap-2 text-xs">{Object.entries(CALENDAR_SOURCES).map(([key, source]) => <li key={key} className={`rounded border px-2 py-1 ${source.className}`}>{source.short} · {source.label}</li>)}</ul>
       <p className="text-xs text-muted-foreground">Los bloques importados por iCal toman el canal del calendario conectado (Airbnb, Booking, Vrbo). · = libre.</p>
-      {units.length === 0 ? <p>Aún no hay unidades. <Link href="/app/site/units" className="underline">Configurar unidades</Link></p> : selected ? <AirbnbCalendar key={selected.id} month={month} unit={selected} blocks={blocks} prices={prices} currency={currency} /> : <div className="space-y-4">{units.map((unit) => {
+      {units.length === 0 ? <p>Aún no hay unidades. <Link href="/app/site/units" className="underline">Configurar unidades</Link></p> : selected ? <AirbnbCalendar key={selected.id} month={month} unit={selected} blocks={blocks} prices={prices} currency={currency} library={library} today={today} /> : <div className="space-y-4">{units.map((unit) => {
         const unitBlocks = blocks.filter((block) => block.unitId === unit.id);
         const occupied = blockedDatesInMonth(unitBlocks, month).length;
         return <section key={unit.id} className="rounded-lg border p-3"><Link href={`/app/calendar?${new URLSearchParams({ month, unit: unit.id })}`} className="font-semibold underline">{unit.name}{unit.active ? "" : " (inactiva)"}</Link><p className="mb-2 text-xs text-muted-foreground">{occupied} de {bounds.days} noches ocupadas</p><div className="flex flex-wrap gap-1" aria-label={`Días de ${unit.name}`}>{bounds.dates.map((date) => {
@@ -88,7 +90,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     {units.length > 0 && !selected && <Card><CardHeader><CardTitle>Crear bloqueo manual</CardTitle></CardHeader><CardContent><CalendarBlockForm key={`${month}-${unitId ?? "all"}`} units={units} unitId={unitId} start={bounds.start} end={addDays(bounds.start, 1)} /></CardContent></Card>}
     <Card><CardHeader><CardTitle>Bloques del mes{selected ? ` · ${selected.name}` : ""}</CardTitle></CardHeader><CardContent>
       {blocks.length === 0 ? <p className="text-sm text-muted-foreground">No hay bloques en este mes.</p> : <ul className="space-y-3">{blocks.sort((a, b) => a.start.localeCompare(b.start) || a.id.localeCompare(b.id)).map((block) => <li key={block.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 space-y-1"><p className="break-words font-medium">{units.find((unit) => unit.id === block.unitId)?.name ?? "Unidad"}</p><p className="text-sm">{block.start} → {block.end} (salida libre)</p><span className={`inline-block rounded border px-2 py-1 text-xs ${blockStyle(block).className}`}>{blockStyle(block).label}</span>{block.note && <p className="whitespace-pre-wrap break-words text-sm">{block.note}</p>}</div>
+        <div className="min-w-0 space-y-1"><p className="break-words font-medium">{units.find((unit) => unit.id === block.unitId)?.name ?? "Unidad"}</p><p className="text-sm">{block.start} → {block.end} (salida libre)</p><span className={`inline-block rounded border px-2 py-1 text-xs ${blockStyle(block).className}`}>{blockStyle(block).label}</span>{firstName(block.stay?.name ?? null) && <p className="break-words text-sm font-medium">{block.stay?.name}</p>}{block.note && <p className="whitespace-pre-wrap break-words text-sm">{block.note}</p>}</div>
         {block.derived ? <p className="text-sm text-muted-foreground">Se libera sola al cancelar la reserva que la originó.</p> : block.source === "manual" && <RowAction action={deleteManualBlockAction} fields={{ id: block.id }} label="Eliminar bloqueo" ariaLabel={`Eliminar bloqueo del ${block.start} al ${block.end}`} confirm={{ title: "¿Eliminar bloqueo manual?", description: `${block.start} → ${block.end}. ${block.note ?? "Sin nota."} Las noches quedarán libres.` }} successMessage="Bloqueo eliminado" />}
       </li>)}</ul>}
     </CardContent></Card>

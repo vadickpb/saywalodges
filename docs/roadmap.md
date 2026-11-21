@@ -2123,6 +2123,20 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
   copiar, correo, registro de envíos); SD-1132 «Hoy» (llegadas, salidas, pendientes); SD-1133 completar nombres desde el CSV de
   reservas de Airbnb por código HM; sugerencia de huésped que repite (con SD-601).
 
+### [x] SD-1130 · feat(messages): message library with variables, ready to send per stay
+`M` · Depende: SD-1129 · Review: `R+S`
+- **Alcance**: biblioteca de mensajes del dueño (`message_templates`: 7 momentos de la estadía con texto de fábrica en es/en y hasta 6
+  propios; solo se guarda lo que el dueño personaliza) y «datos de la casa» (`message_house_info`: horas, WiFi, código, ubicación,
+  contacto, reglas). Variables `{saludo} {nombre} {villa} {llegada} {salida} {noches} {huespedes} {hora_checkin} {hora_checkout}
+  {wifi_nombre} {wifi_clave} {codigo_puerta} {ubicacion} {contacto} {reglas} {pedidos}`; una variable desconocida no se guarda.
+  Solo el dueño escribe (RPC `owner`); los miembros leen. Ajustes → Mensajes con chips de variables y vista previa.
+- **Por estadía**: bajo los datos de la estadía (calendario y ficha de la reserva) cada mensaje sale completado con ese huésped:
+  «Enviar por WhatsApp» (abre `wa.me` con el texto) o «Copiar» (Airbnb), con la etiqueta «Toca hoy». La línea cuyo dato falta se
+  omite; la clave del WiFi y el código de la puerta solo desde 2 días antes de la llegada.
+- **Calendario**: el primer nombre del huésped se ve en cada noche ocupada y en la lista de bloques.
+- **Hecho**: pgTAP `0049`, Vitest (render, validación, DAL, acciones); probado en navegador. Guía: [`mensajes.md`](mensajes.md).
+- **Siguientes**: SD-1131 (marcar enviados y línea de tiempo), SD-1132 («Hoy»), SD-1133 (CSV de Airbnb por código HM).
+
 ### [ ] SD-1112 · feat(marketing): SEO content
 `S` · Depende: SD-1110 · Review: `R`
 - **Alcance**: páginas por intención de búsqueda, metadatos, Open Graph, sitemap y datos estructurados.
