@@ -90,7 +90,10 @@ Plan y motivos del orden: [`plan-comercial.md`](plan-comercial.md). El lote 3 qu
 | 10 | CRM y portafolio | SD-601, SD-602, SD-904, SD-703 | Claude (601, 602), Codex (904, 703) |
 | 11 | Marketing con datos propios | SD-1201, SD-1202, SD-1203, SD-1204, SD-1205, SD-1206 | Claude (1201, 1203, 1204, 1206), Codex (1202, 1205, pantallas) |
 
-El lote 4 (Mercado Pago) va entre el 9 y el 10.
+| 12 | Inventario de la casa (por villa y por espacio) | SD-1301, SD-1302, SD-1303, SD-1304; después SD-1305 | Claude (1301, 1305 BD), Codex (1302, 1303, 1304 pantallas); Claude revisa |
+
+El lote 4 (Mercado Pago) va entre el 9 y el 10. El lote 12 lo pidió el dueño (2026-11-23) para Saywa Lodges y
+puede ir antes de los lotes de comercialización si él lo aprueba («dale al lote 12»).
 
 ## Después (sin lote)
 
