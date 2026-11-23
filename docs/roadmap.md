@@ -2207,6 +2207,59 @@ Plan completo: [`plan-comercial.md`](plan-comercial.md). SD-1006 (web de ventas)
 - **Alcance**: avisos de fechas con baja ocupación o alta demanda y una propuesta de ajuste que el dueño aprueba;
   nunca cambia precios solo.
 
+## Fase 12 — Inventario de la casa (pedido del dueño, 2026-11-23)
+
+Objetivo: que cada villa y cada espacio (habitación, cocina, piscina, patio, jardín, zona de parrilla) tenga su
+inventario: hoja impresa para pegar en la pared, vista en línea para el huésped dentro de la guía privada y
+control al check-out de lo que falta o se rompió. Reutiliza unidades y espacios (SD-211), áreas comunes y la guía
+privada con token y contraseña (PP-08, PP-10); no crea otra forma de acceso del huésped.
+
+Decisiones de diseño:
+- **Sin logo de Airbnb** en la hoja impresa ni en la web: es marca registrada de un tercero y su uso sugeriría una
+  afiliación que no existe. La hoja lleva el logo y los colores del alojamiento (tema del sitio) y un QR a la guía.
+- El inventario **no es público**: solo lo ven el equipo y el huésped con acceso a la guía privada. Publicar en la
+  web abierta qué objetos de valor hay en la casa facilita robos.
+- El costo de reposición es dato privado del dueño: nunca sale en la hoja ni en la guía del huésped.
+
+### [ ] SD-1301 · feat(db): inventory items per unit and space
+`M` · Depende: SD-211 · Review: `R+S` · Quién: Claude
+- **Alcance**: tabla `inventory_items` (`org_id`, unidad, espacio opcional o área común, nombre es/en, cantidad,
+  categoría, consumible sí/no, visible para el huésped sí/no, orden, nota, costo de reposición en céntimos +
+  `currency` solo para el dueño). RLS: el equipo lee; el dueño y el staff con permiso editan; lectura del huésped
+  solo mediante la sesión de la guía privada (RPC), sin columnas de costo. Los espacios que hoy no existan como
+  área común (piscina, patio, jardín, parrilla) se modelan sin duplicar los existentes.
+- **Criterios**
+  - [ ] Otra organización no lee ni escribe inventario ajeno; el huésped sin sesión de guía no lee nada (pgTAP).
+  - [ ] El costo de reposición no sale por ninguna ruta pública ni de la guía (pgTAP + test).
+
+### [ ] SD-1302 · feat(dashboard): inventory editor per villa and space
+`M` · Depende: SD-1301 · Review: `R` · Quién: Codex
+- **Alcance**: en el panel, por villa y por espacio: agregar, editar, ordenar y ocultar objetos; carga rápida
+  (una línea por objeto, «12 platos») y copiar el inventario de un espacio a otro parecido (Villa I → Villa II).
+  Importación CSV opcional siguiendo el asistente de SD-420. Textos es/en en `dictionaries/`.
+
+### [ ] SD-1303 · feat(dashboard): printable inventory sheet
+`S` · Depende: SD-1302 · Review: `R` · Quién: Codex
+- **Alcance**: hoja A4 por espacio o por villa, lista para imprimir y pegar en la pared: logo y colores del
+  alojamiento, nombre del espacio, objetos y cantidades, idioma es/en o ambos, y QR a la guía privada. Impresión
+  con CSS del navegador, sin dependencias ni generación en servidor (mismo enfoque que PP-10).
+- **Criterios**
+  - [ ] Ni el costo de reposición ni las notas internas aparecen en la hoja.
+
+### [ ] SD-1304 · feat(guide): inventory inside the private guest guide
+`S` · Depende: SD-1301 · Review: `R+S` · Quién: Codex (+ revisión de Claude)
+- **Alcance**: sección «¿Qué hay en la casa?» en la guía privada, agrupada por villa y espacio, solo con objetos
+  marcados como visibles y solo de la unidad reservada (más áreas comunes). Mismas reglas de sesión, revocación,
+  noindex y sin caché compartida que PP-08.
+
+### [ ] SD-1305 · feat(ops): check-out inventory check
+`M` · Depende: SD-1302 · Review: `R+S` · Quién: Claude (BD) + Codex (pantalla)
+- **Alcance**: al terminar una estancia, el staff abre la lista de su villa desde el celular, marca lo que falta
+  o está roto con foto y nota, y queda guardado en la estancia (evidencia para reclamar a Airbnb o al huésped).
+  Lista de reposición de consumibles. Opcional: registrar el costo como gasto en finanzas.
+- **Criterios**
+  - [ ] Las fotos usan Storage privado con las mismas reglas que comprobantes; sin URL pública.
+
 ## Propuesta de ticket fuera del alcance actual
 
 - **Mantenimiento de dependencias y revisión de avisos de seguridad** (convertido en SD-705): `npm audit` durante SD-206
