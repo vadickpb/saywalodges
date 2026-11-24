@@ -2220,6 +2220,15 @@ Decisiones de diseño:
 - El inventario **no es público**: solo lo ven el equipo y el huésped con acceso a la guía privada. Publicar en la
   web abierta qué objetos de valor hay en la casa facilita robos.
 - El costo de reposición es dato privado del dueño: nunca sale en la hoja ni en la guía del huésped.
+- **Sirve para cualquier tipo de alojamiento**, no solo villas: el inventario cuelga de la *unidad reservable*
+  (villa, casa, departamento, habitación, cabaña) y de sus espacios. «Villa» en este documento es solo el ejemplo
+  de Saywa Lodges; la UI usa el nombre de cada unidad y nunca escribe «villa» fijo.
+  - Departamentos: suelen no tener áreas comunes propias. Si el edificio tiene piscina o gimnasio compartidos con
+    otros vecinos, no se inventarían (no son del anfitrión); como mucho, una nota en la guía.
+  - Varios departamentos con la misma distribución: «copiar inventario» entre unidades (SD-1302) evita cargarlo N
+    veces. Plantillas por tipo de espacio (cocina, baño, dormitorio) como mejora posterior.
+  - Departamentos en direcciones distintas: cada uno es su propia unidad; agruparlos por edificio o zona depende
+    de SD-214 (varias ubicaciones por instalación) y no bloquea este lote.
 
 ### [ ] SD-1301 · feat(db): inventory items per unit and space
 `M` · Depende: SD-211 · Review: `R+S` · Quién: Claude
@@ -2234,13 +2243,13 @@ Decisiones de diseño:
 
 ### [ ] SD-1302 · feat(dashboard): inventory editor per villa and space
 `M` · Depende: SD-1301 · Review: `R` · Quién: Codex
-- **Alcance**: en el panel, por villa y por espacio: agregar, editar, ordenar y ocultar objetos; carga rápida
+- **Alcance**: en el panel, por unidad (villa, departamento, habitación) y por espacio: agregar, editar, ordenar y ocultar objetos; carga rápida
   (una línea por objeto, «12 platos») y copiar el inventario de un espacio a otro parecido (Villa I → Villa II).
   Importación CSV opcional siguiendo el asistente de SD-420. Textos es/en en `dictionaries/`.
 
 ### [ ] SD-1303 · feat(dashboard): printable inventory sheet
 `S` · Depende: SD-1302 · Review: `R` · Quién: Codex
-- **Alcance**: hoja A4 por espacio o por villa, lista para imprimir y pegar en la pared: logo y colores del
+- **Alcance**: hoja A4 por espacio o por unidad, lista para imprimir y pegar en la pared: logo y colores del
   alojamiento, nombre del espacio, objetos y cantidades, idioma es/en o ambos, y QR a la guía privada. Impresión
   con CSS del navegador, sin dependencias ni generación en servidor (mismo enfoque que PP-10).
 - **Criterios**
@@ -2248,13 +2257,13 @@ Decisiones de diseño:
 
 ### [ ] SD-1304 · feat(guide): inventory inside the private guest guide
 `S` · Depende: SD-1301 · Review: `R+S` · Quién: Codex (+ revisión de Claude)
-- **Alcance**: sección «¿Qué hay en la casa?» en la guía privada, agrupada por villa y espacio, solo con objetos
+- **Alcance**: sección «¿Qué hay en la casa?» en la guía privada, agrupada por unidad y espacio, solo con objetos
   marcados como visibles y solo de la unidad reservada (más áreas comunes). Mismas reglas de sesión, revocación,
   noindex y sin caché compartida que PP-08.
 
 ### [ ] SD-1305 · feat(ops): check-out inventory check
 `M` · Depende: SD-1302 · Review: `R+S` · Quién: Claude (BD) + Codex (pantalla)
-- **Alcance**: al terminar una estancia, el staff abre la lista de su villa desde el celular, marca lo que falta
+- **Alcance**: al terminar una estancia, el staff abre la lista de su unidad desde el celular, marca lo que falta
   o está roto con foto y nota, y queda guardado en la estancia (evidencia para reclamar a Airbnb o al huésped).
   Lista de reposición de consumibles. Opcional: registrar el costo como gasto en finanzas.
 - **Criterios**
