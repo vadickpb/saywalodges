@@ -43,6 +43,8 @@ select set_config('request.jwt.claims', '{"sub":"a3b45db1-7c15-4528-a4ba-be62566
 set local role authenticated;
 select lives_ok($$insert into public.inventory_item_costs (item_id, org_id, replacement_cents, currency)
   values ((select id from public.inventory_items where name_es = 'Platos'), 'bf88f504-051f-4fdc-ab73-4fa12d715817', 500, 'PEN')$$, 'the owner sets a replacement cost');
+select lives_ok($$update public.inventory_item_costs set replacement_cents = 650, currency = 'USD' where item_id = (select id from public.inventory_items where name_es = 'Platos')$$, 'the owner updates a cost (only cost and currency are writable)');
+select throws_ok($$update public.inventory_item_costs set org_id = 'ff24bacc-47d2-40bc-9210-f860e98892fd'$$, '42501', null, 'the cost''s tenant cannot be changed');
 select throws_ok($$insert into public.inventory_item_costs (item_id, org_id, replacement_cents, currency)
   values ((select id from public.inventory_items where name_es = 'Almohadas'), 'bf88f504-051f-4fdc-ab73-4fa12d715817', 500, 'EUR')$$, '23514', null, 'only PEN or USD');
 select is((select count(*) from public.inventory_item_costs), 1::bigint, 'the owner reads it');
@@ -64,7 +66,7 @@ set local role authenticated;
 update public.inventory_item_costs set replacement_cents = 1;
 delete from public.inventory_item_costs;
 reset role;
-select is((select replacement_cents from public.inventory_item_costs), 500, 'staff cannot update or delete a cost');
+select is((select replacement_cents from public.inventory_item_costs), 650, 'staff cannot update or delete a cost');
 insert into public.inventory_items (org_id, property_id, name_es)
   select 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'bulk ' || g from generate_series(1, 4996) g;
 select throws_ok($$insert into public.inventory_items (org_id, property_id, name_es) values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'one too many')$$, '54000', 'inventory limit reached', 'an organization cannot exceed 5000 items');
