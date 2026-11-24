@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
+import { inventoryDictionary } from "@/dictionaries/inventory";
 
 const TABS = [
   { href: "/app/site", label: "Ajustes" },
@@ -10,6 +11,7 @@ const TABS = [
   { href: "/app/site/guide", label: "Guía privada" },
   { href: "/app/site/units", label: "Unidades" },
   { href: "/app/site/spaces", label: "Espacios" },
+  { href: "/app/site/inventory", label: inventoryDictionary.es.tab },
   { href: "/app/site/amenities", label: "Comodidades" },
   { href: "/app/site/distances", label: "Distancias" },
   { href: "/app/site/photos", label: "Fotos" },

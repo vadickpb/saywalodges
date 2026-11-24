@@ -2244,7 +2244,7 @@ Decisiones de diseño:
   (nunca ambos); los enlaces de la guía son por organización, así que el huésped ve el inventario de toda la propiedad hasta que
   SD-1304 los asocie a una unidad. Tipos (`lib/database.types.ts`) los regenera SD-1302.
 
-### [ ] SD-1302 · feat(dashboard): inventory editor per villa and space
+### [x] SD-1302 · feat(dashboard): inventory editor per villa and space
 `M` · Depende: SD-1301 · Review: `R` · Quién: Codex
 - **Alcance**: en el panel, por unidad (villa, departamento, habitación) y por espacio: agregar, editar, ordenar y ocultar objetos; carga rápida
   (una línea por objeto, «12 platos») y copiar el inventario de un espacio a otro parecido (Villa I → Villa II).

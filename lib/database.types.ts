@@ -999,6 +999,133 @@ isOneToOne: true
           },
         ];
       };
+      inventory_item_costs: {
+        Row: {
+          created_at: string;
+          currency: string;
+          item_id: string;
+          org_id: string;
+          replacement_cents: number;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          currency: string;
+          item_id: string;
+          org_id: string;
+          replacement_cents: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          currency?: string;
+          item_id?: string;
+          org_id?: string;
+          replacement_cents?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "inventory_item_costs_item_fkey";
+            columns: ["item_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "inventory_items";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "inventory_item_costs_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      inventory_items: {
+        Row: {
+          category: string;
+          consumable: boolean;
+          created_at: string;
+          guest_visible: boolean;
+          id: string;
+          name_en: string;
+          name_es: string;
+          note: string;
+          org_id: string;
+          property_id: string;
+          quantity: number;
+          sort_order: number;
+          space_id: string | null;
+          unit_id: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          category?: string;
+          consumable?: boolean;
+          created_at?: string;
+          guest_visible?: boolean;
+          id?: string;
+          name_en?: string;
+          name_es: string;
+          note?: string;
+          org_id: string;
+          property_id: string;
+          quantity?: number;
+          sort_order?: number;
+          space_id?: string | null;
+          unit_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          category?: string;
+          consumable?: boolean;
+          created_at?: string;
+          guest_visible?: boolean;
+          id?: string;
+          name_en?: string;
+          name_es?: string;
+          note?: string;
+          org_id?: string;
+          property_id?: string;
+          quantity?: number;
+          sort_order?: number;
+          space_id?: string | null;
+          unit_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "inventory_items_property_org_fkey";
+            columns: ["property_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "inventory_items_space_property_fkey";
+            columns: ["space_id", "property_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id", "property_id"];
+          },
+          {
+            foreignKeyName: "inventory_items_unit_property_fkey";
+            columns: ["unit_id", "property_id"];
+            isOneToOne: false;
+            referencedRelation: "units";
+            referencedColumns: ["id", "property_id"];
+          },
+        ];
+      };
       memberships: {
         Row: {
           created_at: string;
@@ -2329,6 +2456,9 @@ isOneToOne: true
 { Args: { "p_expires_at": string,"p_label": string,"p_org_id": string,"p_password": string,"p_token_hash": string }; Returns: string
                            },
 "read_house_guide":
+{ Args: { "p_host": string,"p_session_hash": string,"p_token_hash": string }; Returns: Json
+                           },
+"read_house_inventory":
 { Args: { "p_host": string,"p_session_hash": string,"p_token_hash": string }; Returns: Json
                            },
 "register_verified_hero_video":
