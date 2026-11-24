@@ -3,6 +3,9 @@
 Fecha: 2026-11-14. Complementa a [`roadmap.md`](roadmap.md) (qué es cada ticket) y [`cola.md`](cola.md) (orden y
 quién). Modelo de negocio: instalación por cliente, [ADR 0010](adr/0010-installation-per-client.md).
 
+> **Actualización 2026-11-24:** precios, contrato, marketing, tutoriales y errores actuales están en
+> [`plan-negocio-hoststay.md`](plan-negocio-hoststay.md); sus tickets (SD-14xx) están en la cola (lotes 13 y 14).
+
 ## 1. Qué se vende
 
 Un sistema para anfitriones que hoy dependen de Airbnb/Booking: web propia con SEO y reservas directas, calendario

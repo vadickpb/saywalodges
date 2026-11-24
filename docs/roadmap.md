@@ -2275,6 +2275,134 @@ Decisiones de diseño:
 - **Criterios**
   - [ ] Las fotos usan Storage privado con las mismas reglas que comprobantes; sin URL pública.
 
+## Fase 14 — Negocio, errores y venta (plan 2026-11-24)
+
+Origen: [`plan-negocio-hoststay.md`](plan-negocio-hoststay.md) (evidencia de cada error, precios, contrato, marketing y
+tutoriales). Los marcados «dueño» no tienen código: el agente prepara el texto o la lista y el dueño ejecuta.
+
+### [ ] SD-1401 · fix(ops): booking-emails cron answers 500 and the workflow is noisy
+`S` · Depende: — · Review: `R+S` · Quién: Claude (+ dueño: variables de Vercel)
+- **Evidencia**: 15 eventos `cron.booking_emails.not_configured` desde el 2026-11-20; *Scheduled crons* falló en 10 de las últimas 12 ejecuciones.
+- **Alcance**: (dueño) cargar en `saywalodges` las variables de correo que exige la ruta y redeploy; (código) que `/api/health`
+  informe «correo sin configurar» y que un fallo de una ruta no pinte rojas las otras tres del workflow.
+- **Criterios**
+  - [ ] Dos ejecuciones seguidas de *Scheduled crons* con las 4 rutas en verde.
+  - [ ] Una instalación sin `RESEND_API_KEY` aparece como «degradada» en health con un código cerrado, sin revelar valores.
+
+### [ ] SD-1402 · ci(vercel): the `hoststay` preview must not fail
+`S` · Depende: — · Review: `R+S` (variables de entorno) · Quién: Claude
+- **Evidencia**: build de `hoststay` en PRs: `Invalid environment configuration` (faltan variables de Supabase); producción sí despliega.
+- **Alcance**: `DEPLOYMENT_MODE=vendor` también en *Preview* del proyecto (clic del dueño) o *Ignored Build Step* como `hoststay-demo`;
+  test que impida construir el modo vendor exigiendo credenciales de BD (continuación de SD-1127).
+- **Criterios**
+  - [ ] El check «Vercel – hoststay» pasa en un PR de prueba y en el de release-please.
+
+### [ ] SD-1403 · chore(deps): triage Dependabot (#149 and majors #70, #71, #72)
+`S` · Depende: — · Review: `R` · Quién: Claude
+- **Alcance**: mergear #149 con CI verde; probar cada mayor (`@types/node` 26, `eslint` 10, `typescript` 7; este último con CI en rojo)
+  en su rama y mergear o cerrar con motivo; Dependabot agrupa mayores y los abre una vez por trimestre.
+- **Criterios**
+  - [ ] Ningún PR de Dependabot con más de 14 días sin decisión.
+
+### [ ] SD-1404 · chore(release): merge release 1.1.0 and fix the release PR checks
+`S` · Depende: SD-1402 · Review: `R` · Quién: Claude
+- **Alcance**: #127 con todos los checks (incluido `hoststay`) en verde y mergeado; documentar por qué el CI del PR de release quedó en `action_required`.
+- **Criterios**
+  - [ ] Existe la etiqueta `v1.1.0` y el CHANGELOG la lista.
+
+### [ ] SD-1405 · chore(repo): duplicated « 2» files
+`S` · Depende: — · Review: `R` · Quién: dueño (borrar) + Claude (`.gitignore`)
+- **Evidencia**: 5 archivos sin seguir en la carpeta principal; `textarea 2.tsx`, `units 2.ts`, `rooms_to_spaces 2.sql` son idénticos al original;
+  `seed-local-storage 2.mjs` y `property_theme_and_content 2.sql` difieren (revisar con `diff` antes de borrar).
+- **Alcance**: borrar tras revisar; `.gitignore` y un test de CI que falle si hay un archivo `* 2.*` en `supabase/migrations/`.
+- **Criterios**
+  - [ ] `git status` limpio y `supabase db reset` local sin versiones duplicadas.
+
+### [ ] SD-1406 · fix(ops): database before code, and reads that degrade
+`M` · Depende: — · Review: `R+S` · Quién: Claude
+- **Evidencia**: `PGRST205` (21-nov) y `42501` en `getShowcaseUnits` (19-nov, 53 peticiones) por código desplegado antes de su migración.
+- **Alcance**: regla en `workflow.md` y plantilla de PR («migración aplicada antes de mergear»); lecturas que usan tablas nuevas devuelven vacío y registran un evento en vez de 500.
+- **Criterios**
+  - [ ] Test: con la tabla ausente la página responde 200 con estado vacío.
+
+### [ ] SD-1407 · fix(proxy): paths with `%5C` answer 404, not 500
+`S` · Depende: — · Review: `R+S` (`proxy.ts`) · Quién: Codex
+- **Evidencia**: `Cannot find module './.next/server/pages/login%5C.js'` en `saywalodges` y `hoststay`.
+- **Criterios**
+  - [ ] `GET /login%5C` responde 404 en el sitio, el panel y el modo vendor (test en `proxy.test.ts`).
+
+### [ ] SD-1408 · docs(db): document the Supabase advisor warnings as intentional
+`S` · Depende: — · Review: `R+S` · Quién: Claude
+- **Alcance**: en `docs/` y con `COMMENT ON` en las tablas: por qué 10 tablas tienen RLS sin política (solo servicio), por qué las RPC `SECURITY DEFINER` son ejecutables y cómo cada una valida host, token o membresía; índices en las claves foráneas que se consultan.
+
+### [ ] SD-1409 · chore(ops): Supabase Pro in a new HostStay organization (owner)
+`S` · Depende: D21 · Quién: solo dueño
+- **Alcance**: crear la organización, plan Pro, mover `saywa-lodges` y `hoststay-demo`, activar protección de contraseñas filtradas, comprobar el primer backup.
+- **Criterios**
+  - [ ] `Database → Backups` muestra un backup diario y no hay avisos de pausa.
+
+### [ ] SD-1410 · docs(legal): contract v2 and HostStay legal texts
+`M` · Depende: D14, D15, D16 · Review: `R` · Quién: Codex (borrador) + abogado
+- **Alcance**: contrato con costos de terceros, ajuste anual, escalera de impago, SLA, salida y traspaso; términos y privacidad de la web de ventas.
+- **Criterios**
+  - [ ] Un abogado peruano lo revisó y su versión queda fechada en `docs/legal/`.
+
+### [ ] SD-1411 · docs(sales): quote template and per-installation cost sheet
+`S` · Depende: D15 · Review: `R` · Quién: Codex
+- **Alcance**: plantilla de proforma (por plan, PEN, IGV, hitos de pago) y hoja de costos mensuales por instalación (fuera del repositorio público: sin datos de clientes).
+
+### [ ] SD-1412 · docs(marketing): sales kit
+`S` · Depende: — · Review: `R` · Quién: Codex
+- **Alcance**: guion de demo, objeciones, calendario de 30 días de contenido (Reels, LinkedIn, grupos) y mensajes de seguimiento en `docs/marketing/`.
+
+### [ ] SD-1413 · feat(marketing): sales-site measurement without third-party cookies
+`S` · Depende: SD-1110 · Review: `R+S` · Quién: Codex
+- **Alcance**: contar visitas, clics a WhatsApp y solicitudes de demo con analítica sin cookies; sin datos personales en eventos.
+- **Criterios**
+  - [ ] Ningún evento lleva nombre, correo ni teléfono (test).
+
+### [ ] SD-1420 · docs(help): scripts and written guides for 26 chapters
+`M` · Depende: — · Review: `R` · Quién: Codex
+- **Alcance**: `docs/ayuda/NN-slug.md` por capítulo (guion, pasos, texto en pantalla, capturas de la demo y subtítulos), según la lista de la sección 5.4 del plan. Prioridad: capítulos 1–7 y 26.
+
+### [ ] SD-1421 · feat(dashboard): Help page inside the panel
+`M` · Depende: SD-1420, SD-1106 · Review: `R` · Quién: Codex
+- **Alcance**: `/app/ayuda` con buscador, video no listado incrustado y guía escrita; enlace «¿Cómo se hace?» por pantalla; módulo apagable por instalación. Sin dependencias nuevas.
+- **Criterios**
+  - [ ] Las rutas de ayuda requieren sesión; los enlaces de video son configurables por instalación.
+
+### [ ] SD-1422 · chore(content): record and publish the tutorial videos (owner)
+`M` · Depende: SD-1420 · Quién: dueño
+- **Alcance**: grabar con la demo, subtítulos, YouTube no listado y pegar los enlaces en la configuración. Orden en la sección 5.4.
+
+### [ ] SD-1430 · docs(ops): billing and tax guide (owner + accountant)
+`S` · Depende: D17 · Quién: dueño
+- **Alcance**: RUC, régimen, emisión de facturas y control de IGV; resultado: una página de procedimiento sin datos sensibles.
+
+### [ ] SD-1431 · docs(ops): onboarding checklist and delivery record
+`S` · Depende: — · Review: `R` · Quién: Codex
+- **Alcance**: checklist de 9 pasos de la sección 7.5, plantilla de acta de entrega, correo de bienvenida y seguimiento a 7, 30 y 90 días; enlaza `runbook-instalacion.md`.
+
+### [ ] SD-1432 · chore(ops): external uptime check and cron failure alerts
+`S` · Depende: SD-1401 · Review: `R+S` · Quién: Claude + dueño
+- **Alcance**: monitor externo gratuito sobre `/es` y `/api/health`; alerta por correo o WhatsApp del dueño cuando un cron falle dos veces seguidas.
+
+### [ ] SD-1440 · chore(ops): technical close-out of Saywa Lodges (owner + Claude)
+`M` · Depende: SD-1401, SD-1409 · Quién: dueño + Claude
+- **Alcance**: host `app.<dominio>`, variables, Resend, secretos de cron, *Installation health* «healthy», reserva de prueba y go-live según [`lanzamiento-saywa-lodges.md`](lanzamiento-saywa-lodges.md).
+- **Criterios**
+  - [ ] Una reserva real pagada por el sistema y una semana sin alertas.
+
+### [ ] SD-1441 · chore(content): house data and photos (owner)
+`M` · Depende: — · Quién: dueño
+- **Alcance**: descripciones es/en, camas, tarifas, fechas especiales e inventario de Villa completa, Casa 1 y Casa 2; fotos por espacio.
+
+### [ ] SD-1442 · chore(marketing): Saywa Lodges reviews and social profiles (owner)
+`S` · Depende: SD-1440 · Quién: dueño
+- **Alcance**: Google Business Profile, Instagram profesional, TikTok, Facebook; pedir reseña a cada huésped con el mensaje de post-estadía.
+- **Criterios**
+  - [ ] 3 reseñas en Google y 10 publicaciones antes de armar el caso de éxito.
+
 ## Propuesta de ticket fuera del alcance actual
 
 - **Mantenimiento de dependencias y revisión de avisos de seguridad** (convertido en SD-705): `npm audit` durante SD-206
