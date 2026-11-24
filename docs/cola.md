@@ -92,6 +92,12 @@ Plan y motivos del orden: [`plan-comercial.md`](plan-comercial.md). El lote 3 qu
 
 | 12 | Inventario de la casa (por villa y por espacio) | SD-1301, SD-1302, SD-1303, SD-1304; después SD-1305 | Claude (1301, 1305 BD), Codex (1302, 1303, 1304 pantallas); Claude revisa |
 
+| 13 | Errores actuales y bases de la venta (semanas 1–2 de [`plan-negocio-hoststay.md`](plan-negocio-hoststay.md)) | SD-1401, SD-1402, SD-1406, SD-1409 (dueño), SD-1403, SD-1404, SD-1405, SD-1407, SD-1408, SD-1440 | Claude (1401, 1402, 1403, 1404, 1406, 1408), Codex (1407), dueño (1405, 1409, 1440) |
+| 14 | Vender y enseñar (semanas 3–4) | SD-1410, SD-1411, SD-1412, SD-1413, SD-1420, SD-1421, SD-1430 (dueño), SD-1431, SD-1432, SD-1441 y SD-1442 (dueño), SD-1422 (dueño) | Codex (1410–1413, 1420, 1421, 1431), Claude (1432); revisa Claude |
+
+El lote 13 va **antes** que los lotes 7 a 12 que aún estén abiertos: desbloquea la primera reserva real. El lote 14 corre en paralelo
+con SD-1105, SD-1122 y los tickets del lote 12 que ya están en curso (máximo 3 en curso a la vez).
+
 El lote 4 (Mercado Pago) va entre el 9 y el 10. El lote 12 lo pidió el dueño (2026-11-23) para Saywa Lodges y
 puede ir antes de los lotes de comercialización si él lo aprueba («dale al lote 12»).
 
