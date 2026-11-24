@@ -3,7 +3,8 @@
 --  * Anchor: unit_id (the whole unit) OR space_id (a space; the space's own unit_id tells which unit, null = common area).
 --    Neither = a property-wide item. Both at once is rejected. Composite foreign keys keep the unit/space inside the same
 --    property and organization.
---  * Deleting a space keeps its items (they become property-wide); deleting a unit or the property deletes them.
+--  * Deleting a space keeps its items (they become property-wide); deleting a unit deletes the items anchored to it, but items
+--    in that unit's spaces stay, because spaces.unit_id is set to null (the space becomes a common area). The owner reviews them in SD-1302.
 --  * inventory_items: members (owner + staff) read and write through RLS and column grants. It never holds money.
 --  * inventory_item_costs: the replacement cost is the owner's private data, so it lives in its own table that only the owner
 --    can read or write. No guest path and no staff path reads it.
@@ -12,7 +13,7 @@
 --    are per organization, so a guest sees the inventory of the whole property; narrowing it to the booked unit needs a link
 --    scoped to a unit and belongs to SD-1304.
 -- Additive. Rollback: drop function public.read_house_inventory(text,text,text);
---   drop table public.inventory_item_costs, public.inventory_items; drop function private.touch_inventory_item();
+--   drop table public.inventory_item_costs, public.inventory_items; drop function private.touch_inventory_item(), private.touch_inventory_cost();
 begin;
 
 create table public.inventory_items (
@@ -57,22 +58,28 @@ create table public.inventory_item_costs (
 );
 create index inventory_item_costs_org_id_idx on public.inventory_item_costs(org_id);
 
--- updated_at, and a ceiling of items per organization so a runaway import cannot fill the table.
+-- updated_at, and a ceiling of items per organization so a runaway import cannot fill the table (a plain count: a
+-- concurrent burst can overshoot a little, which is harmless here).
 create function private.touch_inventory_item()
 returns trigger language plpgsql set search_path = '' as $$
 begin
-  if tg_op = 'INSERT' and tg_table_name = 'inventory_items'
-     and (select count(*) from public.inventory_items where org_id = new.org_id) >= 5000 then
+  if tg_op = 'INSERT' and (select count(*) from public.inventory_items where org_id = new.org_id) >= 5000 then
     raise exception 'inventory limit reached' using errcode = '54000';
   end if;
   new.updated_at = now();
   return new;
 end $$;
-revoke all on function private.touch_inventory_item() from public, anon, authenticated;
+create function private.touch_inventory_cost()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$;
+revoke all on function private.touch_inventory_item(), private.touch_inventory_cost() from public, anon, authenticated;
 create trigger inventory_items_touch before insert or update on public.inventory_items
   for each row execute function private.touch_inventory_item();
 create trigger inventory_item_costs_touch before insert or update on public.inventory_item_costs
-  for each row execute function private.touch_inventory_item();
+  for each row execute function private.touch_inventory_cost();
 
 alter table public.inventory_items enable row level security;
 alter table public.inventory_item_costs enable row level security;
@@ -102,7 +109,8 @@ grant update (replacement_cents, currency) on public.inventory_item_costs to aut
 grant delete on public.inventory_item_costs to authenticated;
 grant all on public.inventory_items, public.inventory_item_costs to service_role;
 
--- Guest read through the private guide session (same checks as read_house_guide). Hides notes, costs, hidden items and
+-- Guest read through the private guide session (same checks as read_house_guide, including a published guide: unpublishing it
+-- hides the inventory too). Hides notes, costs, hidden items and
 -- inactive units. Returns a flat, ordered list; the app groups it by unit and space.
 create function public.read_house_inventory(p_host text, p_token_hash text, p_session_hash text) returns jsonb
 language sql security definer stable set search_path = '' as $$
@@ -115,6 +123,7 @@ language sql security definer stable set search_path = '' as $$
     ) order by u.sort_order nulls last, u.name nulls last, s.sort_order nulls last, i.sort_order, i.name_es), '[]'::jsonb)
   from public.house_guide_links l
   join private.house_guide_sessions ss on ss.link_id = l.id and ss.org_id = l.org_id
+  join public.house_guides g on g.org_id = l.org_id and g.published is not null
   join public.properties p on p.org_id = l.org_id
   join public.inventory_items i on i.org_id = l.org_id and i.property_id = p.id
   left join public.spaces s on s.id = i.space_id

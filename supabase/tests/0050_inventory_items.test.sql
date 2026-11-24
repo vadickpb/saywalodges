@@ -30,7 +30,7 @@ select throws_ok($$insert into public.inventory_items (org_id, property_id, unit
 select throws_ok($$insert into public.inventory_items (org_id, property_id, name_es, quantity) values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'x', -1)$$, '23514', null, 'negative quantity rejected');
 select throws_ok($$insert into public.inventory_items (org_id, property_id, name_es) values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', '   ')$$, '23514', null, 'blank name rejected');
 select throws_ok($$insert into public.inventory_items (org_id, property_id, name_es, category) values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'x', 'weapons')$$, '23514', null, 'unknown category rejected');
-select throws_ok($$insert into public.inventory_items (org_id, property_id, name_es) values ('ff24bacc-47d2-40bc-9210-f860e98892fd', '131583b5-785e-4127-81f0-e097163c5654', 'x')$$, null, null, 'a property of another organization is rejected');
+select throws_ok($$insert into public.inventory_items (org_id, property_id, name_es) values ('ff24bacc-47d2-40bc-9210-f860e98892fd', '131583b5-785e-4127-81f0-e097163c5654', 'x')$$, '42501', null, 'a property of another organization is rejected');
 select throws_ok($$update public.inventory_items set org_id = 'ff24bacc-47d2-40bc-9210-f860e98892fd' where id = (select id from public.inventory_items where name_es = 'Platos')$$, '42501', null, 'tenant cannot be moved');
 select lives_ok($$update public.inventory_items set quantity = 10 where id = (select id from public.inventory_items where name_es = 'Platos')$$, 'staff updates the quantity');
 select throws_ok($$insert into public.inventory_item_costs (item_id, org_id, replacement_cents, currency)
@@ -58,7 +58,20 @@ reset role;
 select is((select quantity from public.inventory_items where name_es = 'Platos'), 10, 'and cannot update or delete it');
 select is((select count(*) from public.inventory_items), 4::bigint, 'nothing was deleted');
 
+-- Staff cannot change or delete costs (0 rows affected), and the limit holds.
+select set_config('request.jwt.claims', '{"sub":"c5d77e30-4a6b-4e8c-9f21-7b3a1d2e6f40"}', true);
+set local role authenticated;
+update public.inventory_item_costs set replacement_cents = 1;
+delete from public.inventory_item_costs;
+reset role;
+select is((select replacement_cents from public.inventory_item_costs), 500, 'staff cannot update or delete a cost');
+insert into public.inventory_items (org_id, property_id, name_es)
+  select 'bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'bulk ' || g from generate_series(1, 4996) g;
+select throws_ok($$insert into public.inventory_items (org_id, property_id, name_es) values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '131583b5-785e-4127-81f0-e097163c5654', 'one too many')$$, '54000', 'inventory limit reached', 'an organization cannot exceed 5000 items');
+delete from public.inventory_items where name_es like 'bulk %';
+
 -- Guest read through a guide session.
+insert into public.house_guides (org_id, draft, published) values ('bf88f504-051f-4fdc-ab73-4fa12d715817', '{"title":"G","sections":[]}', '{"title":"G","sections":[]}') on conflict (org_id) do update set published = excluded.published;
 insert into public.house_guide_links (org_id, label, token_hash, password_hash, expires_at)
   values ('bf88f504-051f-4fdc-ab73-4fa12d715817', 'Stay', repeat('c', 64), extensions.crypt('secreto-2026', extensions.gen_salt('bf')), now() + interval '7 days'),
          ('ff24bacc-47d2-40bc-9210-f860e98892fd', 'Other', repeat('d', 64), extensions.crypt('secreto-2026', extensions.gen_salt('bf')), now() + interval '7 days');
@@ -80,6 +93,29 @@ reset role;
 update public.house_guide_links set revoked_at = now() where token_hash = repeat('c', 64);
 set local role anon;
 select is(public.read_house_inventory('saywa-lodges', repeat('c', 64), repeat('e', 64)), '[]'::jsonb, 'a revoked link returns nothing');
+reset role;
+
+-- An unpublished guide hides the inventory too.
+update public.house_guides set published = null where org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+update public.house_guide_links set revoked_at = null where token_hash = repeat('c', 64);
+set local role anon;
+select is(public.read_house_inventory('saywa-lodges', repeat('c', 64), repeat('e', 64)), '[]'::jsonb, 'an unpublished guide returns nothing');
+reset role;
+update public.house_guides set published = draft where org_id = 'bf88f504-051f-4fdc-ab73-4fa12d715817';
+
+-- An inactive unit and an expired session show nothing.
+update public.units set active = false where id = 'aaaa0001-0000-4000-8000-000000000002';
+update public.house_guide_links set revoked_at = null where token_hash = repeat('c', 64);
+set local role anon;
+select is(jsonb_array_length(public.read_house_inventory('saywa-lodges', repeat('c', 64), repeat('e', 64))), 3, 'inactive unit: its hidden item stays out and the rest remains');
+reset role;
+update public.units set active = false where id = 'aaaa0001-0000-4000-8000-000000000001';
+set local role anon;
+select is(jsonb_array_length(public.read_house_inventory('saywa-lodges', repeat('c', 64), repeat('e', 64))), 1, 'an inactive unit''s items are hidden from guests');
+reset role;
+update private.house_guide_sessions set expires_at = now() - interval '1 minute' where session_hash = repeat('e', 64);
+set local role anon;
+select is(public.read_house_inventory('saywa-lodges', repeat('c', 64), repeat('e', 64)), '[]'::jsonb, 'an expired session returns nothing');
 reset role;
 
 -- Deleting a space keeps its items; deleting a unit removes them.

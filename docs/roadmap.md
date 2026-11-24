@@ -2263,6 +2263,9 @@ Decisiones de diseño:
 - **Alcance**: sección «¿Qué hay en la casa?» en la guía privada, agrupada por unidad y espacio, solo con objetos
   marcados como visibles y solo de la unidad reservada (más áreas comunes). Mismas reglas de sesión, revocación,
   noindex y sin caché compartida que PP-08.
+- **Criterio obligatorio**: un huésped con enlace de la villa A no ve el inventario de la villa B. Hoy los enlaces son por organización
+  (SD-1301), así que este ticket asocia el enlace a una unidad antes de mostrar nada. Al borrar una unidad, los objetos de sus espacios
+  quedan como área común: SD-1302 avisa y deja revisarlos.
 
 ### [ ] SD-1305 · feat(ops): check-out inventory check
 `M` · Depende: SD-1302 · Review: `R+S` · Quién: Claude (BD) + Codex (pantalla)
