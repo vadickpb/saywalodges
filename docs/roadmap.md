@@ -2230,7 +2230,7 @@ Decisiones de diseño:
   - Departamentos en direcciones distintas: cada uno es su propia unidad; agruparlos por edificio o zona depende
     de SD-214 (varias ubicaciones por instalación) y no bloquea este lote.
 
-### [ ] SD-1301 · feat(db): inventory items per unit and space
+### [x] SD-1301 · feat(db): inventory items per unit and space
 `M` · Depende: SD-211 · Review: `R+S` · Quién: Claude
 - **Alcance**: tabla `inventory_items` (`org_id`, unidad, espacio opcional o área común, nombre es/en, cantidad,
   categoría, consumible sí/no, visible para el huésped sí/no, orden, nota, costo de reposición en céntimos +
@@ -2238,8 +2238,11 @@ Decisiones de diseño:
   solo mediante la sesión de la guía privada (RPC), sin columnas de costo. Los espacios que hoy no existan como
   área común (piscina, patio, jardín, parrilla) se modelan sin duplicar los existentes.
 - **Criterios**
-  - [ ] Otra organización no lee ni escribe inventario ajeno; el huésped sin sesión de guía no lee nada (pgTAP).
-  - [ ] El costo de reposición no sale por ninguna ruta pública ni de la guía (pgTAP + test).
+  - [x] Otra organización no lee ni escribe inventario ajeno; el huésped sin sesión de guía no lee nada (pgTAP 0050).
+  - [x] El costo de reposición vive en `inventory_item_costs` (solo el dueño) y no sale por ninguna ruta pública ni de la guía (pgTAP 0050).
+- **Hecho**: migración `20261123120000_inventory_items.sql`, RPC `read_house_inventory`. El ancla es la unidad **o** el espacio
+  (nunca ambos); los enlaces de la guía son por organización, así que el huésped ve el inventario de toda la propiedad hasta que
+  SD-1304 los asocie a una unidad. Tipos (`lib/database.types.ts`) los regenera SD-1302.
 
 ### [ ] SD-1302 · feat(dashboard): inventory editor per villa and space
 `M` · Depende: SD-1301 · Review: `R` · Quién: Codex
@@ -2260,6 +2263,9 @@ Decisiones de diseño:
 - **Alcance**: sección «¿Qué hay en la casa?» en la guía privada, agrupada por unidad y espacio, solo con objetos
   marcados como visibles y solo de la unidad reservada (más áreas comunes). Mismas reglas de sesión, revocación,
   noindex y sin caché compartida que PP-08.
+- **Criterio obligatorio**: un huésped con enlace de la villa A no ve el inventario de la villa B. Hoy los enlaces son por organización
+  (SD-1301), así que este ticket asocia el enlace a una unidad antes de mostrar nada. Al borrar una unidad, los objetos de sus espacios
+  quedan como área común: SD-1302 avisa y deja revisarlos.
 
 ### [ ] SD-1305 · feat(ops): check-out inventory check
 `M` · Depende: SD-1302 · Review: `R+S` · Quién: Claude (BD) + Codex (pantalla)
