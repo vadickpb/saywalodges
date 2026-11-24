@@ -395,9 +395,17 @@ export async function saveInventoryItemCost(itemId: string, replacementCents: nu
     }
     return { ok: true };
   }
-  const result = await ctx.supabase.from("inventory_item_costs")
-    .upsert({ item_id: itemId, org_id: ctx.orgId, replacement_cents: replacementCents, currency }, { onConflict: "item_id" })
-    .select("item_id");
+  // Not an upsert: PostgREST would also set item_id/org_id on conflict, and only (replacement_cents, currency) are updatable.
+  const existing = await ctx.supabase.from("inventory_item_costs").select("item_id").eq("item_id", itemId).eq("org_id", ctx.orgId).maybeSingle();
+  if (existing.error) {
+    logFailure("saveInventoryItemCost lookup", existing.error);
+    return { ok: false };
+  }
+  const result = existing.data
+    ? await ctx.supabase.from("inventory_item_costs").update({ replacement_cents: replacementCents, currency })
+      .eq("item_id", itemId).eq("org_id", ctx.orgId).select("item_id")
+    : await ctx.supabase.from("inventory_item_costs")
+      .insert({ item_id: itemId, org_id: ctx.orgId, replacement_cents: replacementCents, currency }).select("item_id");
   if (result.error || result.data.length !== 1) {
     logFailure("saveInventoryItemCost write", result.error ?? "expected one row");
     return { ok: false };
